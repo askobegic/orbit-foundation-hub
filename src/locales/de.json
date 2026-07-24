@@ -140,6 +140,7 @@
   "common": {
     "save": "Speichern",
     "cancel": "Abbrechen",
+    "close": "Schließen",
     "delete": "Löschen",
     "edit": "Bearbeiten",
     "loading": "Laden...",
