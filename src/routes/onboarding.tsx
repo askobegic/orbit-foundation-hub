@@ -6,7 +6,9 @@ import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
+import { CountrySelect } from "@/components/ui/CountrySelect";
 import { supabase } from "@/integrations/supabase/client";
+import type { UserLanguage } from "@/types/database";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({
@@ -23,11 +25,12 @@ export const Route = createFileRoute("/onboarding")({
 function OnboardingPage() {
   const { t } = useTranslation();
   const { user, profile, loading, updateProfile, refreshProfile } = useAuth();
-  const { language } = useLanguage();
+  const { language, setLanguage: setAppLanguage } = useLanguage();
   const navigate = useNavigate();
 
   const [step, setStep] = useState<1 | 2>(1);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarFromProvider, setAvatarFromProvider] = useState<null | "google" | "apple">(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [firstName, setFirstName] = useState("");
@@ -35,6 +38,7 @@ function OnboardingPage() {
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("BA");
   const [bio, setBio] = useState("");
+  const [lang, setLang] = useState<UserLanguage>(language);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -47,15 +51,26 @@ function OnboardingPage() {
       void navigate({ to: "/dashboard", replace: true });
       return;
     }
-    if (profile) {
-      setAvatarUrl(profile.avatar_url);
-      setFirstName(profile.first_name ?? user.user_metadata?.first_name ?? "");
-      setLastName(profile.last_name ?? user.user_metadata?.last_name ?? "");
-      setCity(profile.city ?? "");
-      setCountry(profile.country ?? "BA");
-      setBio(profile.bio ?? "");
+    const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+    const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : "");
+    const fullName = str(meta.full_name) || str(meta.name);
+    const [splitFirst, ...splitRest] = fullName.split(" ");
+    const metaFirst = str(meta.given_name) || str(meta.first_name) || splitFirst || "";
+    const metaLast = str(meta.family_name) || str(meta.last_name) || splitRest.join(" ") || "";
+    const metaAvatar = str(meta.avatar_url) || str(meta.picture);
+    const provider = ((user.app_metadata as Record<string, unknown> | undefined)?.provider ?? "").toString();
+
+    setAvatarUrl(profile?.avatar_url ?? metaAvatar ?? null);
+    setFirstName(profile?.first_name ?? metaFirst);
+    setLastName(profile?.last_name ?? metaLast);
+    setCity(profile?.city ?? "");
+    setCountry(profile?.country ?? "BA");
+    setBio(profile?.bio ?? "");
+    setLang(profile?.language ?? language);
+    if (metaAvatar && (!profile?.avatar_url || profile.avatar_url === metaAvatar)) {
+      setAvatarFromProvider(provider === "apple" ? "apple" : provider === "google" ? "google" : null);
     }
-  }, [loading, user, profile, navigate]);
+  }, [loading, user, profile, navigate, language]);
 
   async function handleUpload(file: File) {
     if (!user) return;
@@ -103,9 +118,10 @@ function OnboardingPage() {
         country: country.trim(),
         bio: bio.trim() || null,
         avatar_url: avatarUrl,
-        language,
+        language: lang,
         profile_complete: true,
       });
+      await setAppLanguage(lang);
       await refreshProfile();
       toast.success(t("auth.profileSaved"));
       void navigate({ to: "/dashboard", replace: true });
