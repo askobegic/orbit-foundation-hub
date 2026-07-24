@@ -44,8 +44,8 @@ function LoginPage() {
 
   useEffect(() => {
     if (loading || !user) return;
-    if (profile && !profile.profile_complete) void navigate({ to: "/onboarding", replace: true });
-    else if (profile?.profile_complete) void navigate({ to: "/dashboard", replace: true });
+    if (!profile || !profile.profile_complete) void navigate({ to: "/onboarding", replace: true });
+    else void navigate({ to: "/dashboard", replace: true });
   }, [loading, user, profile, navigate]);
 
   async function handle(provider: "google" | "apple") {
