@@ -171,18 +171,28 @@ export function DashboardPage() {
                   <div>
                     <div className="flex items-center gap-2">
                       <h2 className="text-lg font-semibold">
-                        {fullName || user?.email}
+                        {fullName || user?.email || t("profile.notEntered")}
                       </h2>
                       {profile?.is_verified && (
                         <BadgeCheck className="h-4 w-4 text-[#1D6BF3]" aria-label={t("profile.verified")} />
                       )}
                     </div>
                     <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-gray-500">
-                      {profile?.city && (
-                        <span className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {profile.city}
-                          {profile.country ? `, ${profile.country}` : ""}
+                      <span className="flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        {profile?.city ? (
+                          <>
+                            {profile.city}
+                            {profile.country ? `, ${profile.country}` : ""}
+                          </>
+                        ) : (
+                          <span className="text-gray-400">{t("profile.notEntered")}</span>
+                        )}
+                      </span>
+                      {profile?.created_at && (
+                        <span>
+                          {t("profile.memberSince")}{" "}
+                          {new Date(profile.created_at).toLocaleDateString(i18n.language)}
                         </span>
                       )}
                       <span
