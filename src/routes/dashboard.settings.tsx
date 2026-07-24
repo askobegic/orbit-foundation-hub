@@ -1,14 +1,15 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Save } from "lucide-react";
+import { Save, Download, Trash2, Loader2 } from "lucide-react";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { updateUserSettings } from "@/lib/notifications.functions";
+import { exportUserData, deleteMyAccount } from "@/lib/gdpr.functions";
 import { supabase } from "@/integrations/supabase/client";
 import type { ApplicationRow } from "@/types/database";
 
@@ -32,9 +33,17 @@ export const Route = createFileRoute("/dashboard/settings")({
 
 function SettingsPage() {
   const { t } = useTranslation();
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile, signOut } = useAuth();
   const { setLanguage } = useLanguage();
+  const navigate = useNavigate();
   const save = useServerFn(updateUserSettings);
+  const runExport = useServerFn(exportUserData);
+  const runDelete = useServerFn(deleteMyAccount);
+
+  const [exporting, setExporting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
 
   const [lang, setLang] = useState<"bs" | "en" | "de">("bs");
   const [email, setEmail] = useState(true);
@@ -138,6 +147,48 @@ function SettingsPage() {
       toast.error(t("common.errorGeneric"));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      const data = await runExport();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const username = (profile?.username || profile?.email?.split("@")[0] || "user").replace(
+        /[^a-z0-9-]/gi,
+        "-",
+      );
+      a.href = url;
+      a.download = `moji-podaci-${username}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success(t("privacy.exportReady"));
+    } catch {
+      toast.error(t("common.errorGeneric"));
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (deleteConfirm !== "OBRIŠI") {
+      toast.error(t("privacy.deleteMismatch"));
+      return;
+    }
+    setDeleting(true);
+    try {
+      await runDelete();
+      await signOut();
+      toast.success(t("privacy.deleteDone"));
+      navigate({ to: "/login" });
+    } catch {
+      toast.error(t("common.errorGeneric"));
+      setDeleting(false);
     }
   }
 
@@ -250,6 +301,78 @@ function SettingsPage() {
           <Save className="h-4 w-4" />
           {saving ? t("common.saving") : t("common.save")}
         </button>
+
+        <section className="mt-8 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
+          <h2 className="mb-1 text-sm font-semibold text-gray-900">{t("privacy.title")}</h2>
+          <p className="mb-4 text-xs text-gray-500">{t("privacy.subtitle")}</p>
+
+          <div className="flex flex-col gap-3 border-b border-gray-100 pb-5">
+            <div>
+              <p className="text-sm font-medium text-gray-900">{t("privacy.exportTitle")}</p>
+              <p className="text-xs text-gray-500">{t("privacy.exportHint")}</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={exporting}
+              className="inline-flex w-fit items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-60"
+            >
+              {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              {exporting ? t("privacy.exporting") : t("privacy.exportCta")}
+            </button>
+          </div>
+
+          <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4">
+            <p className="text-sm font-semibold text-red-800">{t("privacy.dangerZone")}</p>
+            <p className="mt-1 text-xs text-red-700">{t("privacy.deleteHint")}</p>
+            <button
+              type="button"
+              onClick={() => setShowDeleteDialog(true)}
+              className="mt-3 inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+            >
+              <Trash2 className="h-4 w-4" />
+              {t("privacy.deleteCta")}
+            </button>
+          </div>
+        </section>
+
+        {showDeleteDialog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+              <h3 className="text-base font-semibold text-gray-900">{t("privacy.confirmTitle")}</h3>
+              <p className="mt-2 text-sm text-gray-600">{t("privacy.confirmBody")}</p>
+              <p className="mt-3 text-xs text-gray-500">{t("privacy.typeToConfirm")}</p>
+              <input
+                type="text"
+                value={deleteConfirm}
+                onChange={(e) => setDeleteConfirm(e.target.value)}
+                placeholder="OBRIŠI"
+                className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+              />
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDeleteDialog(false);
+                    setDeleteConfirm("");
+                  }}
+                  className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  {t("common.cancel")}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={deleting || deleteConfirm !== "OBRIŠI"}
+                  className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+                >
+                  {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  {t("privacy.deleteConfirm")}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

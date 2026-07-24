@@ -140,6 +140,7 @@
   "common": {
     "save": "Speichern",
     "cancel": "Abbrechen",
+    "close": "Schließen",
     "delete": "Löschen",
     "edit": "Bearbeiten",
     "loading": "Laden...",
@@ -241,5 +242,37 @@
     "send": "Nachricht senden",
     "sent": "Ihre Nachricht wurde gesendet.",
     "formInvalid": "Bitte Betreff und Nachricht ausfüllen."
+  }
+  ,
+  "install": {
+    "title": "Core Platform installieren",
+    "hint": "Fügen Sie die App zum Startbildschirm hinzu für schnelleren Zugriff.",
+    "iosHint": "In Safari auf Teilen tippen, dann 'Zum Home-Bildschirm'.",
+    "cta": "Installieren"
+  },
+  "trial": {
+    "activeTitle": "🎉 Sie haben 7 Tage kostenlosen Premium-Zugang!",
+    "activeExpires": "Läuft ab",
+    "expiredTitle": "Ihre Testphase ist abgelaufen",
+    "expiredHint": "Nutzen Sie alle Premium-Funktionen ohne Unterbrechung weiter.",
+    "upgradeNow": "Jetzt upgraden"
+  },
+  "privacy": {
+    "title": "Datenschutz & Daten",
+    "subtitle": "Laden Sie Ihre Daten herunter oder löschen Sie Ihr Konto endgültig.",
+    "exportTitle": "Meine Daten herunterladen",
+    "exportHint": "Erstellt eine JSON-Datei mit all Ihren Daten auf der Plattform.",
+    "exportCta": "Herunterladen (JSON)",
+    "exporting": "Wird vorbereitet...",
+    "exportReady": "Ihre Daten wurden heruntergeladen.",
+    "dangerZone": "Gefahrenzone",
+    "deleteHint": "Konto und alle zugehörigen Daten endgültig löschen.",
+    "deleteCta": "Mein Konto löschen",
+    "confirmTitle": "Konto löschen",
+    "confirmBody": "Diese Aktion kann nicht rückgängig gemacht werden. Alle Ihre Daten werden gelöscht.",
+    "typeToConfirm": "Geben Sie OBRIŠI ein, um zu bestätigen:",
+    "deleteConfirm": "Endgültig löschen",
+    "deleteMismatch": "Bitte geben Sie genau OBRIŠI ein.",
+    "deleteDone": "Ihr Konto wurde gelöscht."
   }
 }

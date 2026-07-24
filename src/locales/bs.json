@@ -140,6 +140,7 @@
   "common": {
     "save": "Sačuvaj",
     "cancel": "Otkaži",
+    "close": "Zatvori",
     "delete": "Obriši",
     "edit": "Uredi",
     "loading": "Učitavanje...",
@@ -241,5 +242,37 @@
     "send": "Pošalji poruku",
     "sent": "Vaša poruka je poslana.",
     "formInvalid": "Molimo popunite naslov i poruku."
+  }
+  ,
+  "install": {
+    "title": "Instalirajte Core Platform",
+    "hint": "Dodajte aplikaciju na početni ekran za brži pristup.",
+    "iosHint": "U Safariju pritisnite Podijeli, zatim 'Dodaj na početni ekran'.",
+    "cta": "Instaliraj"
+  },
+  "trial": {
+    "activeTitle": "🎉 Imate 7 dana besplatnog Premium pristupa!",
+    "activeExpires": "Istječe",
+    "expiredTitle": "Vaš trial je istekao",
+    "expiredHint": "Nastavite koristiti sve premium funkcije bez prekida.",
+    "upgradeNow": "Nadogradi sada"
+  },
+  "privacy": {
+    "title": "Privatnost i podaci",
+    "subtitle": "Preuzmite svoje podatke ili trajno obrišite nalog.",
+    "exportTitle": "Preuzmi moje podatke",
+    "exportHint": "Generiše JSON fajl sa svim vašim podacima na platformi.",
+    "exportCta": "Preuzmi (JSON)",
+    "exporting": "Priprema...",
+    "exportReady": "Vaši podaci su preuzeti.",
+    "dangerZone": "Opasna zona",
+    "deleteHint": "Trajno obriši nalog i sve povezane podatke.",
+    "deleteCta": "Obriši moj nalog",
+    "confirmTitle": "Obriši nalog",
+    "confirmBody": "Ova akcija je nepovratna. Svi vaši podaci će biti obrisani.",
+    "typeToConfirm": "Za potvrdu upišite OBRIŠI:",
+    "deleteConfirm": "Trajno obriši",
+    "deleteMismatch": "Molimo upišite tačno OBRIŠI za potvrdu.",
+    "deleteDone": "Vaš nalog je obrisan."
   }
 }
