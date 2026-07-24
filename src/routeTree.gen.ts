@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -21,6 +22,11 @@ import { Route as UUsernameShareRouteImport } from './routes/u.$username.share'
 import { Route as ApiPublicWebhooksStripeRouteImport } from './routes/api/public/webhooks/stripe'
 import { Route as ApiPublicWebhooksPaypalRouteImport } from './routes/api/public/webhooks/paypal'
 
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
@@ -83,6 +89,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/pricing': typeof PricingRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/profile/$username': typeof ProfileUsernameRoute
   '/u/$username': typeof UUsernameRouteWithChildren
@@ -96,6 +103,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/pricing': typeof PricingRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/profile/$username': typeof ProfileUsernameRoute
   '/u/$username': typeof UUsernameRouteWithChildren
@@ -110,6 +118,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/pricing': typeof PricingRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/profile/$username': typeof ProfileUsernameRoute
   '/u/$username': typeof UUsernameRouteWithChildren
@@ -125,6 +134,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/onboarding'
+    | '/pricing'
     | '/dashboard/profile'
     | '/profile/$username'
     | '/u/$username'
@@ -138,6 +148,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/onboarding'
+    | '/pricing'
     | '/dashboard/profile'
     | '/profile/$username'
     | '/u/$username'
@@ -151,6 +162,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/onboarding'
+    | '/pricing'
     | '/dashboard/profile'
     | '/profile/$username'
     | '/u/$username'
@@ -165,6 +177,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRouteWithChildren
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
+  PricingRoute: typeof PricingRoute
   ProfileUsernameRoute: typeof ProfileUsernameRoute
   UUsernameRoute: typeof UUsernameRouteWithChildren
   ApiPublicWebhooksPaypalRoute: typeof ApiPublicWebhooksPaypalRoute
@@ -173,6 +186,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/onboarding': {
       id: '/onboarding'
       path: '/onboarding'
@@ -283,6 +303,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRouteWithChildren,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
+  PricingRoute: PricingRoute,
   ProfileUsernameRoute: ProfileUsernameRoute,
   UUsernameRoute: UUsernameRouteWithChildren,
   ApiPublicWebhooksPaypalRoute: ApiPublicWebhooksPaypalRoute,
