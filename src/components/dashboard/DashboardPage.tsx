@@ -290,12 +290,22 @@ export function DashboardPage() {
                           key={app.id}
                           className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50/40 p-3 opacity-60"
                         >
-                          <div
-                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-white grayscale"
-                            style={{ backgroundColor: app.primary_color }}
-                          >
-                            {app.name.slice(0, 1)}
-                          </div>
+                          {app.logo_url ? (
+                            <img
+                              src={app.logo_url}
+                              alt={app.name}
+                              width={44}
+                              height={44}
+                              className="h-11 w-11 shrink-0 rounded-xl object-cover grayscale"
+                            />
+                          ) : (
+                            <div
+                              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-white grayscale"
+                              style={{ backgroundColor: app.primary_color }}
+                            >
+                              {app.name.slice(0, 1)}
+                            </div>
+                          )}
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
                               <span className="truncate text-sm font-medium text-gray-500">
@@ -319,14 +329,26 @@ export function DashboardPage() {
                             : "border-gray-100 bg-gray-50/40 hover:border-gray-200"
                         }`}
                       >
-                        <div
-                          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-white ${
-                            isPremium ? "" : "grayscale opacity-70"
-                          }`}
-                          style={{ backgroundColor: app.primary_color }}
-                        >
-                          {app.name.slice(0, 1)}
-                        </div>
+                        {app.logo_url ? (
+                          <img
+                            src={app.logo_url}
+                            alt={app.name}
+                            width={44}
+                            height={44}
+                            className={`h-11 w-11 shrink-0 rounded-xl object-cover ${
+                              isPremium ? "" : "grayscale opacity-70"
+                            }`}
+                          />
+                        ) : (
+                          <div
+                            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-white ${
+                              isPremium ? "" : "grayscale opacity-70"
+                            }`}
+                            style={{ backgroundColor: app.primary_color }}
+                          >
+                            {app.name.slice(0, 1)}
+                          </div>
+                        )}
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
                             <span
