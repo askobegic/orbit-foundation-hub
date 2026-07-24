@@ -190,6 +190,10 @@
     "notifyEmailHint": "Wichtige Updates per E-Mail senden.",
     "notifyMarketing": "Marketing-E-Mails",
     "notifyMarketingHint": "Neuigkeiten, Angebote und Ankündigungen.",
-    "saved": "Einstellungen gespeichert."
+    "saved": "Einstellungen gespeichert.",
+    "appVisibility": "App-Sichtbarkeit",
+    "appVisibilityHint": "Wählen Sie, wo Sie erscheinen und wer Sie kontaktieren kann.",
+    "visibleInDirectory": "Im Verzeichnis sichtbar",
+    "canBeContacted": "Kann kontaktiert werden"
   }
 }
