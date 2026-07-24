@@ -333,6 +333,9 @@ export type Database = {
           is_verified: boolean | null
           language: string | null
           last_name: string | null
+          notify_email: boolean
+          notify_in_app: boolean
+          notify_marketing: boolean
           profile_complete: boolean | null
           updated_at: string | null
           user_type: string | null
@@ -351,6 +354,9 @@ export type Database = {
           is_verified?: boolean | null
           language?: string | null
           last_name?: string | null
+          notify_email?: boolean
+          notify_in_app?: boolean
+          notify_marketing?: boolean
           profile_complete?: boolean | null
           updated_at?: string | null
           user_type?: string | null
@@ -369,6 +375,9 @@ export type Database = {
           is_verified?: boolean | null
           language?: string | null
           last_name?: string | null
+          notify_email?: boolean
+          notify_in_app?: boolean
+          notify_marketing?: boolean
           profile_complete?: boolean | null
           updated_at?: string | null
           user_type?: string | null
