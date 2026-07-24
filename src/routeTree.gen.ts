@@ -19,6 +19,7 @@ import { Route as ProfileUsernameRouteImport } from './routes/profile.$username'
 import { Route as DashboardProfileRouteImport } from './routes/dashboard.profile'
 import { Route as UUsernameShareRouteImport } from './routes/u.$username.share'
 import { Route as ApiPublicWebhooksStripeRouteImport } from './routes/api/public/webhooks/stripe'
+import { Route as ApiPublicWebhooksPaypalRouteImport } from './routes/api/public/webhooks/paypal'
 
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
@@ -70,6 +71,11 @@ const ApiPublicWebhooksStripeRoute = ApiPublicWebhooksStripeRouteImport.update({
   path: '/api/public/webhooks/stripe',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicWebhooksPaypalRoute = ApiPublicWebhooksPaypalRouteImport.update({
+  id: '/api/public/webhooks/paypal',
+  path: '/api/public/webhooks/paypal',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -81,6 +87,7 @@ export interface FileRoutesByFullPath {
   '/profile/$username': typeof ProfileUsernameRoute
   '/u/$username': typeof UUsernameRouteWithChildren
   '/u/$username/share': typeof UUsernameShareRoute
+  '/api/public/webhooks/paypal': typeof ApiPublicWebhooksPaypalRoute
   '/api/public/webhooks/stripe': typeof ApiPublicWebhooksStripeRoute
 }
 export interface FileRoutesByTo {
@@ -93,6 +100,7 @@ export interface FileRoutesByTo {
   '/profile/$username': typeof ProfileUsernameRoute
   '/u/$username': typeof UUsernameRouteWithChildren
   '/u/$username/share': typeof UUsernameShareRoute
+  '/api/public/webhooks/paypal': typeof ApiPublicWebhooksPaypalRoute
   '/api/public/webhooks/stripe': typeof ApiPublicWebhooksStripeRoute
 }
 export interface FileRoutesById {
@@ -106,6 +114,7 @@ export interface FileRoutesById {
   '/profile/$username': typeof ProfileUsernameRoute
   '/u/$username': typeof UUsernameRouteWithChildren
   '/u/$username/share': typeof UUsernameShareRoute
+  '/api/public/webhooks/paypal': typeof ApiPublicWebhooksPaypalRoute
   '/api/public/webhooks/stripe': typeof ApiPublicWebhooksStripeRoute
 }
 export interface FileRouteTypes {
@@ -120,6 +129,7 @@ export interface FileRouteTypes {
     | '/profile/$username'
     | '/u/$username'
     | '/u/$username/share'
+    | '/api/public/webhooks/paypal'
     | '/api/public/webhooks/stripe'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -132,6 +142,7 @@ export interface FileRouteTypes {
     | '/profile/$username'
     | '/u/$username'
     | '/u/$username/share'
+    | '/api/public/webhooks/paypal'
     | '/api/public/webhooks/stripe'
   id:
     | '__root__'
@@ -144,6 +155,7 @@ export interface FileRouteTypes {
     | '/profile/$username'
     | '/u/$username'
     | '/u/$username/share'
+    | '/api/public/webhooks/paypal'
     | '/api/public/webhooks/stripe'
   fileRoutesById: FileRoutesById
 }
@@ -155,6 +167,7 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   ProfileUsernameRoute: typeof ProfileUsernameRoute
   UUsernameRoute: typeof UUsernameRouteWithChildren
+  ApiPublicWebhooksPaypalRoute: typeof ApiPublicWebhooksPaypalRoute
   ApiPublicWebhooksStripeRoute: typeof ApiPublicWebhooksStripeRoute
 }
 
@@ -230,6 +243,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicWebhooksStripeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/webhooks/paypal': {
+      id: '/api/public/webhooks/paypal'
+      path: '/api/public/webhooks/paypal'
+      fullPath: '/api/public/webhooks/paypal'
+      preLoaderRoute: typeof ApiPublicWebhooksPaypalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -265,6 +285,7 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRoute: OnboardingRoute,
   ProfileUsernameRoute: ProfileUsernameRoute,
   UUsernameRoute: UUsernameRouteWithChildren,
+  ApiPublicWebhooksPaypalRoute: ApiPublicWebhooksPaypalRoute,
   ApiPublicWebhooksStripeRoute: ApiPublicWebhooksStripeRoute,
 }
 export const routeTree = rootRouteImport
