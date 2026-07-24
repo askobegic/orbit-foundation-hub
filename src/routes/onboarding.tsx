@@ -158,6 +158,14 @@ function OnboardingPage() {
                 <span className="text-gray-400">?</span>
               )}
             </div>
+            {avatarFromProvider && (
+              <div className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+                <span>✓</span>
+                {avatarFromProvider === "apple"
+                  ? t("auth.photoImportedApple")
+                  : t("auth.photoImportedGoogle")}
+              </div>
+            )}
             <input
               ref={fileRef}
               type="file"
@@ -165,7 +173,10 @@ function OnboardingPage() {
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0];
-                if (f) void handleUpload(f);
+                if (f) {
+                  setAvatarFromProvider(null);
+                  void handleUpload(f);
+                }
               }}
             />
             <button
@@ -194,8 +205,20 @@ function OnboardingPage() {
           <div className="flex flex-col gap-3">
             <Field label={t("profile.firstName")} value={firstName} onChange={setFirstName} required />
             <Field label={t("profile.lastName")} value={lastName} onChange={setLastName} required />
-            <Field label={t("profile.city")} value={city} onChange={setCity} required />
-            <Field label={t("profile.country")} value={country} onChange={setCountry} required />
+            <label className="text-sm font-medium text-gray-700">
+              {t("profile.city")} *
+              <input
+                type="text"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder={t("profile.cityPlaceholder")}
+                className="mt-1 w-full rounded-lg border border-[#E5E7EB] px-3 py-2 text-sm outline-none focus:border-[#1D6BF3]"
+              />
+            </label>
+            <label className="text-sm font-medium text-gray-700">
+              {t("profile.country")} *
+              <CountrySelect value={country} onChange={setCountry} />
+            </label>
             <label className="text-sm font-medium text-gray-700">
               {t("profile.bio")}
               <textarea
@@ -206,6 +229,23 @@ function OnboardingPage() {
               />
               <span className="text-xs text-gray-400">{bio.length}/300</span>
             </label>
+            <div>
+              <span className="text-sm font-medium text-gray-700">{t("common.language")}</span>
+              <div className="mt-2 flex gap-3">
+                {(["bs", "en", "de"] as UserLanguage[]).map((l) => (
+                  <label key={l} className="flex items-center gap-1 text-sm text-gray-700">
+                    <input
+                      type="radio"
+                      name="lang"
+                      value={l}
+                      checked={lang === l}
+                      onChange={() => setLang(l)}
+                    />
+                    {l.toUpperCase()}
+                  </label>
+                ))}
+              </div>
+            </div>
             <button
               type="button"
               onClick={handleComplete}
