@@ -21,6 +21,7 @@ export type Database = {
           domain: string | null
           favicon_url: string | null
           id: string
+          is_enabled: boolean
           logo_url: string | null
           name: string
           primary_color: string | null
@@ -39,6 +40,7 @@ export type Database = {
           domain?: string | null
           favicon_url?: string | null
           id?: string
+          is_enabled?: boolean
           logo_url?: string | null
           name: string
           primary_color?: string | null
@@ -57,6 +59,7 @@ export type Database = {
           domain?: string | null
           favicon_url?: string | null
           id?: string
+          is_enabled?: boolean
           logo_url?: string | null
           name?: string
           primary_color?: string | null
