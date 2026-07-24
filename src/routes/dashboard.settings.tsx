@@ -31,7 +31,7 @@ export const Route = createFileRoute("/dashboard/settings")({
 function SettingsPage() {
   const { t } = useTranslation();
   const { profile, refreshProfile } = useAuth();
-  const { setAppLanguage } = useLanguage();
+  const { setLanguage } = useLanguage();
   const save = useServerFn(updateUserSettings);
 
   const [lang, setLang] = useState<"bs" | "en" | "de">("bs");
@@ -64,7 +64,7 @@ function SettingsPage() {
           notify_marketing: marketing,
         },
       });
-      await setAppLanguage(lang);
+      await setLanguage(lang);
       await refreshProfile();
       toast.success(t("settings.saved"));
     } catch {
