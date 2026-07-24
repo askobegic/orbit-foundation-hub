@@ -49,19 +49,18 @@ export const deleteMyAccount = createServerFn({ method: "POST" })
     } as never);
 
     // Cascade-delete related rows (RLS bypassed via admin).
-    const tables = [
+    const userIdTables = [
       "user_app_settings",
       "notifications",
       "payments",
       "subscriptions",
       "premium_profiles",
       "user_roles",
-      "profiles",
     ] as const;
-    for (const t of tables) {
+    for (const t of userIdTables) {
       await supabaseAdmin.from(t).delete().eq("user_id", userId);
     }
-    // profiles keyed by id (not user_id)
+    // profiles is keyed by id (matches auth.users.id)
     await supabaseAdmin.from("profiles").delete().eq("id", userId);
 
     // Finally remove the auth user.
