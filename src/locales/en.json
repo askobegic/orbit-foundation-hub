@@ -87,7 +87,17 @@
     "validUntil": "Valid until",
     "comingSoon": "Coming Soon",
     "active": "Active",
-    "expired": "Expired"
+    "expired": "Expired",
+    "standard": "Standard",
+    "premium": "Premium",
+    "noSubscription": "No active subscription",
+    "noPayments": "No payments yet",
+    "editProfile": "Edit profile",
+    "notifications": "Notifications",
+    "trustSecure": "Secure payments",
+    "trustGDPR": "GDPR compliant",
+    "trustSupport": "24/7 support",
+    "footerRights": "All rights reserved."
   },
   "subscription": {
     "title": "Premium Subscription",
