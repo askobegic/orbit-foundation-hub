@@ -195,5 +195,51 @@
     "appVisibilityHint": "Wählen Sie, wo Sie erscheinen und wer Sie kontaktieren kann.",
     "visibleInDirectory": "Im Verzeichnis sichtbar",
     "canBeContacted": "Kann kontaktiert werden"
+  },
+  "security": {
+    "title": "Sicherheit",
+    "subtitle": "Übersicht Ihrer Aktivität und Sitzungen.",
+    "lastLogin": "Letzte Anmeldung",
+    "loginHistory": "Anmeldeverlauf",
+    "noHistory": "Kein Verlauf verfügbar.",
+    "historyHint": "Aktuelle Sitzung wird angezeigt. Ausführlicher Geräteverlauf folgt bald.",
+    "currentSession": "Aktuelle Sitzung",
+    "active": "Aktiv",
+    "accountCreated": "Konto erstellt",
+    "notAvailable": "Nicht verfügbar",
+    "signOutAllTitle": "Von allen Geräten abmelden",
+    "signOutAllHint": "Meldet Sie von allen Geräten und Sitzungen ab.",
+    "signOutAll": "Alle Geräte abmelden",
+    "signedOutAll": "Sie wurden von allen Geräten abgemeldet."
+  },
+  "help": {
+    "title": "Hilfe & Support",
+    "subtitle": "Antworten auf häufige Fragen und Kontakt.",
+    "faq": "Häufig gestellte Fragen",
+    "faqs": [
+      { "q": "Wie führe ich ein Upgrade auf Premium durch?", "a": "Öffnen Sie Preise, wählen Sie eine App und einen Plan und schließen Sie die Zahlung per Stripe oder PayPal ab." },
+      { "q": "Wie ändere ich die Sprache?", "a": "In den Einstellungen können Sie die Sprache (BS/EN/DE) wählen. Sie wird in Ihrem Profil gespeichert." },
+      { "q": "Wie kündige ich ein Abonnement?", "a": "Unter Meine Abonnements können Sie aktive Pläne verwalten oder kündigen." },
+      { "q": "Wie bearbeite ich mein Profil?", "a": "Öffnen Sie Mein Profil in der Seitenleiste, um Daten, Avatar und Kontakte zu ändern." },
+      { "q": "Ich erhalte keine E-Mail-Benachrichtigungen.", "a": "Prüfen Sie die Einstellungen und Ihren Spam-Ordner." },
+      { "q": "Wie kontaktiere ich den Support?", "a": "Verwenden Sie das Formular unten – Ihre Nachricht geht direkt an unser Team." }
+    ],
+    "docsTitle": "Dokumentation",
+    "docsPricing": "Pläne und Abrechnung",
+    "docsProfile": "Profil bearbeiten",
+    "docsSettings": "Einstellungen und Präferenzen",
+    "docsSubs": "Abonnements verwalten",
+    "contactTitle": "Support kontaktieren",
+    "contactHint": "Wir antworten innerhalb von 24 Stunden.",
+    "category": "Kategorie",
+    "catGeneral": "Allgemein",
+    "catBilling": "Abrechnung",
+    "catTechnical": "Technisches Problem",
+    "catAccount": "Konto",
+    "subject": "Betreff",
+    "message": "Nachricht",
+    "send": "Nachricht senden",
+    "sent": "Ihre Nachricht wurde gesendet.",
+    "formInvalid": "Bitte Betreff und Nachricht ausfüllen."
   }
 }

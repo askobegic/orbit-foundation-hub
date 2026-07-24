@@ -195,5 +195,51 @@
     "appVisibilityHint": "Odaberite gdje se prikazujete i ko vas može kontaktirati.",
     "visibleInDirectory": "Vidljiv u direktoriju",
     "canBeContacted": "Mogu me kontaktirati"
+  },
+  "security": {
+    "title": "Sigurnost",
+    "subtitle": "Pregled vaše aktivnosti i sesija.",
+    "lastLogin": "Posljednja prijava",
+    "loginHistory": "Historija prijava",
+    "noHistory": "Nema dostupne historije.",
+    "historyHint": "Prikazana je vaša trenutna sesija. Detaljna historija uređaja bit će uskoro dostupna.",
+    "currentSession": "Trenutna sesija",
+    "active": "Aktivna",
+    "accountCreated": "Nalog kreiran",
+    "notAvailable": "Nedostupno",
+    "signOutAllTitle": "Odjavi sve uređaje",
+    "signOutAllHint": "Odjavljuje vas sa svih uređaja i sesija.",
+    "signOutAll": "Odjavi sa svih uređaja",
+    "signedOutAll": "Odjavljeni ste sa svih uređaja."
+  },
+  "help": {
+    "title": "Pomoć i podrška",
+    "subtitle": "Odgovori na česta pitanja i kontakt sa timom.",
+    "faq": "Česta pitanja",
+    "faqs": [
+      { "q": "Kako da nadogradim na Premium?", "a": "Otvorite stranicu Cijene, odaberite aplikaciju i plan koji vam odgovara, i završite plaćanje putem Stripe ili PayPal." },
+      { "q": "Kako mogu promijeniti jezik?", "a": "U Postavkama odaberite željeni jezik (BS/EN/DE). Postavka se čuva na vašem profilu." },
+      { "q": "Kako da otkažem pretplatu?", "a": "Na stranici Moje pretplate možete upravljati ili otkazati aktivne pretplate." },
+      { "q": "Kako da uredim profil?", "a": "Otvorite Moj profil u sidebaru i uredite osnovne podatke, avatar i kontakte." },
+      { "q": "Ne primam email obavještenja.", "a": "Provjerite u Postavkama da su email obavještenja uključena i pogledajte spam folder." },
+      { "q": "Kako da kontaktiram podršku?", "a": "Koristite formu ispod. Vaša poruka se šalje direktno našem timu." }
+    ],
+    "docsTitle": "Dokumentacija",
+    "docsPricing": "Vodič za planove i plaćanje",
+    "docsProfile": "Uređivanje profila",
+    "docsSettings": "Postavke i preferencije",
+    "docsSubs": "Upravljanje pretplatama",
+    "contactTitle": "Kontaktirajte podršku",
+    "contactHint": "Odgovaramo u roku od 24 sata.",
+    "category": "Kategorija",
+    "catGeneral": "Općenito",
+    "catBilling": "Plaćanje",
+    "catTechnical": "Tehnički problem",
+    "catAccount": "Nalog",
+    "subject": "Naslov",
+    "message": "Poruka",
+    "send": "Pošalji poruku",
+    "sent": "Vaša poruka je poslana.",
+    "formInvalid": "Molimo popunite naslov i poruku."
   }
 }

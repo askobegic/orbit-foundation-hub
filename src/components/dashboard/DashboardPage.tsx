@@ -100,6 +100,13 @@ export function DashboardPage() {
     () => new Set((subsQuery.data ?? []).map((s) => s.app_id).filter(Boolean) as string[]),
     [subsQuery.data],
   );
+  const premiumExpiryByApp = useMemo(() => {
+    const map = new Map<string, string>();
+    (subsQuery.data ?? []).forEach((s) => {
+      if (s.app_id && s.expires_at) map.set(s.app_id, s.expires_at);
+    });
+    return map;
+  }, [subsQuery.data]);
   const activeSub = subsQuery.data?.[0] ?? null;
 
   const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim();
@@ -235,47 +242,85 @@ export function DashboardPage() {
                       app[`short_description_${lang}` as const] ??
                       app.short_description_en ??
                       "";
+                    const expiry = premiumExpiryByApp.get(app.id);
                     return (
                       <div
                         key={app.id}
-                        className="flex items-center gap-3 rounded-xl border border-gray-100 p-3 transition hover:border-gray-200 hover:shadow-sm"
+                        className={`flex items-center gap-3 rounded-xl border p-3 transition hover:shadow-sm ${
+                          isPremium
+                            ? "border-purple-200 bg-gradient-to-br from-purple-50/60 to-white hover:border-purple-300"
+                            : "border-gray-100 bg-gray-50/40 hover:border-gray-200"
+                        }`}
                       >
                         <div
-                          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-white"
+                          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-white ${
+                            isPremium ? "" : "grayscale opacity-70"
+                          }`}
                           style={{ backgroundColor: app.primary_color }}
                         >
                           {app.name.slice(0, 1)}
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="truncate text-sm font-medium">{app.name}</span>
+                            <span
+                              className={`truncate text-sm ${
+                                isPremium
+                                  ? "font-semibold text-gray-900"
+                                  : "font-medium text-gray-500"
+                              }`}
+                            >
+                              {app.name}
+                            </span>
                             <span
                               className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
                                 isPremium
-                                  ? "bg-gradient-to-r from-[#F59E0B] to-[#EF4444] text-white"
-                                  : "bg-gray-100 text-gray-500"
+                                  ? "bg-gradient-to-r from-[#8B5CF6] to-[#6366F1] text-white"
+                                  : "bg-gray-200 text-gray-500"
                               }`}
                             >
                               {isPremium ? t("dashboard.premium") : t("dashboard.standard")}
                             </span>
                           </div>
-                          <p className="truncate text-xs text-gray-500">{desc}</p>
-                        </div>
-                        {app.status === "active" && app.domain ? (
-                          <a
-                            href={`https://${app.domain}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            aria-label={t("dashboard.openApp")}
-                            className="rounded-lg p-2 text-gray-400 hover:bg-gray-50 hover:text-gray-700"
+                          <p
+                            className={`truncate text-xs ${
+                              isPremium ? "text-gray-600" : "text-gray-400"
+                            }`}
                           >
-                            <ExternalLink className="h-4 w-4" />
-                          </a>
-                        ) : (
-                          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-500">
-                            {t("dashboard.comingSoon")}
-                          </span>
-                        )}
+                            {isPremium && expiry
+                              ? `${t("dashboard.validUntil")}: ${new Date(expiry).toLocaleDateString(i18n.language)}`
+                              : desc}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1">
+                          {!isPremium && app.status === "active" && (
+                            <Link
+                              to="/pricing"
+                              search={{ app: app.slug }}
+                              className="rounded-lg bg-gradient-to-r from-[#8B5CF6] to-[#6366F1] px-2.5 py-1 text-[11px] font-semibold text-white hover:opacity-90"
+                            >
+                              {t("dashboard.upgrade")}
+                            </Link>
+                          )}
+                          {app.status === "active" && app.domain ? (
+                            <a
+                              href={`https://${app.domain}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              aria-label={t("dashboard.openApp")}
+                              className={`rounded-lg p-2 hover:bg-gray-50 ${
+                                isPremium
+                                  ? "text-[#1D6BF3] hover:text-[#1858cf]"
+                                  : "text-gray-300 hover:text-gray-500"
+                              }`}
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </a>
+                          ) : (
+                            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-500">
+                              {t("dashboard.comingSoon")}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -379,8 +424,8 @@ export function DashboardPage() {
                 {[
                   { to: "/dashboard/profile", icon: User, label: t("nav.profile") },
                   { to: "/dashboard", icon: Settings, label: t("nav.settings") },
-                  { to: "/dashboard", icon: Shield, label: t("nav.security") },
-                  { to: "/dashboard", icon: HelpCircle, label: t("nav.help") },
+                  { to: "/dashboard/security", icon: Shield, label: t("nav.security") },
+                  { to: "/dashboard/help", icon: HelpCircle, label: t("nav.help") },
                 ].map((q) => (
                   <Link
                     key={q.label}
@@ -431,9 +476,9 @@ function Sidebar({ onSignOut }: { onSignOut: () => void }) {
     { to: "/dashboard/subscriptions", icon: CreditCard, label: t("nav.subscriptions") },
     { to: "/dashboard", icon: Receipt, label: t("nav.payments") },
     { to: "/dashboard/settings", icon: Settings, label: t("nav.settings") },
-    { to: "/dashboard", icon: Shield, label: t("nav.security") },
+    { to: "/dashboard/security", icon: Shield, label: t("nav.security") },
     { to: "/dashboard/notifications", icon: Bell, label: t("nav.notifications") },
-    { to: "/dashboard", icon: HelpCircle, label: t("nav.help") },
+    { to: "/dashboard/help", icon: HelpCircle, label: t("nav.help") },
   ] as const;
 
   return (
