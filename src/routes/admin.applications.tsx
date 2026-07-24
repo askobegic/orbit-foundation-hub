@@ -323,6 +323,48 @@ function PlanForm({
   );
 }
 
+function AppSettings({
+  app,
+  onToggle,
+  busy,
+}: {
+  app: ApplicationRow;
+  onToggle: (v: boolean) => void;
+  busy?: boolean;
+}) {
+  const enabled = app.is_enabled !== false;
+  return (
+    <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
+      <h2 className="mb-3 text-sm font-semibold text-gray-900">App Settings</h2>
+      <div className="mb-3 text-sm text-gray-700">
+        Status:{" "}
+        <span className={enabled ? "font-medium text-green-700" : "font-medium text-gray-500"}>
+          {enabled ? "Aktivna" : "Uskoro dostupno"}
+        </span>
+      </div>
+      <label className="inline-flex cursor-pointer items-center gap-3">
+        <span className="relative inline-block h-6 w-11">
+          <input
+            type="checkbox"
+            className="peer sr-only"
+            checked={enabled}
+            disabled={busy}
+            onChange={(e) => onToggle(e.target.checked)}
+          />
+          <span className="absolute inset-0 rounded-full bg-gray-300 transition peer-checked:bg-[#1D6BF3]" />
+          <span className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition peer-checked:translate-x-5" />
+        </span>
+        <span className="text-sm text-gray-800">
+          {enabled ? "Aplikacija aktivna" : "Aplikacija neaktivna"}
+        </span>
+      </label>
+      <p className="mt-3 text-xs text-gray-500">
+        Kada je neaktivna, korisnici vide samo "Uskoro dostupno" badge.
+      </p>
+    </div>
+  );
+}
+
 function Field({
   label,
   children,
