@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { BadgeCheck, CreditCard, LayoutGrid, MegaphoneIcon, TrendingUp, UserPlus, Users, Wallet } from "lucide-react";
@@ -34,52 +34,24 @@ function AdminGate() {
     enabled: !!user?.id,
     queryFn: async () => {
       if (!user) throw new Error("Not authenticated");
-      console.log("[admin] checking role for user:", user?.id);
       const { data, error } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id)
-        .maybeSingle();
-      console.log("[admin] user_roles row:", data, "error:", error);
-      if (error) throw new Error(error.message);
+        .single();
+      if (error && error.code !== "PGRST116") throw new Error(error.message);
       const role = (data?.role ?? null) as string | null;
-      const isAdmin = role === "admin";
-      return { isAdmin, role };
+      return { isAdmin: role === "admin", role };
     },
     retry: 1,
   });
-  const [timedOut, setTimedOut] = useState(false);
   useEffect(() => {
-    console.log("[admin] query state:", { status: q.status, data: q.data, error: q.error });
-    if (q.data && !q.data.isAdmin) {
+    if (q.isSuccess && !q.data?.isAdmin) {
       void navigate({ to: "/dashboard", replace: true });
     }
-  }, [q.status, q.data, q.error, navigate]);
-  useEffect(() => {
-    const t = setTimeout(() => {
-      setTimedOut(true);
-      if (!q.data?.isAdmin) void navigate({ to: "/dashboard", replace: true });
-    }, 3000);
-    return () => clearTimeout(t);
-  }, [navigate, q.data?.isAdmin]);
+  }, [q.isSuccess, q.data, navigate]);
 
-  if (q.isLoading) {
-    if (timedOut) {
-      return (
-        <main className="flex min-h-screen items-center justify-center bg-[#F7F8FA] px-6">
-          <div className="max-w-md rounded-2xl bg-white p-8 text-center shadow-sm ring-1 ring-gray-100">
-            <h1 className="text-lg font-semibold text-gray-900">Provjera pristupa traje predugo</h1>
-            <p className="mt-2 text-sm text-gray-500">Vraćamo vas na kontrolnu ploču.</p>
-            <button
-              onClick={() => void navigate({ to: "/dashboard", replace: true })}
-              className="mt-4 rounded-lg bg-[#1D6BF3] px-4 py-2 text-sm font-medium text-white"
-            >
-              Idi na dashboard
-            </button>
-          </div>
-        </main>
-      );
-    }
+  if (q.isPending) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#1D6BF3] border-t-transparent" />
