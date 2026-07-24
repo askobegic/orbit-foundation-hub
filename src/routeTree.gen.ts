@@ -14,7 +14,9 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as UUsernameRouteImport } from './routes/u.$username'
 import { Route as ProfileUsernameRouteImport } from './routes/profile.$username'
+import { Route as DashboardProfileRouteImport } from './routes/dashboard.profile'
 import { Route as UUsernameShareRouteImport } from './routes/u.$username.share'
 
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -42,43 +44,59 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UUsernameRoute = UUsernameRouteImport.update({
+  id: '/u/$username',
+  path: '/u/$username',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProfileUsernameRoute = ProfileUsernameRouteImport.update({
   id: '/profile/$username',
   path: '/profile/$username',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardProfileRoute = DashboardProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const UUsernameShareRoute = UUsernameShareRouteImport.update({
-  id: '/u/$username/share',
-  path: '/u/$username/share',
-  getParentRoute: () => rootRouteImport,
+  id: '/share',
+  path: '/share',
+  getParentRoute: () => UUsernameRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
-  '/dashboard': typeof DashboardRoute
+  '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/dashboard/profile': typeof DashboardProfileRoute
   '/profile/$username': typeof ProfileUsernameRoute
+  '/u/$username': typeof UUsernameRouteWithChildren
   '/u/$username/share': typeof UUsernameShareRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
-  '/dashboard': typeof DashboardRoute
+  '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/dashboard/profile': typeof DashboardProfileRoute
   '/profile/$username': typeof ProfileUsernameRoute
+  '/u/$username': typeof UUsernameRouteWithChildren
   '/u/$username/share': typeof UUsernameShareRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
-  '/dashboard': typeof DashboardRoute
+  '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/dashboard/profile': typeof DashboardProfileRoute
   '/profile/$username': typeof ProfileUsernameRoute
+  '/u/$username': typeof UUsernameRouteWithChildren
   '/u/$username/share': typeof UUsernameShareRoute
 }
 export interface FileRouteTypes {
@@ -89,7 +107,9 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/onboarding'
+    | '/dashboard/profile'
     | '/profile/$username'
+    | '/u/$username'
     | '/u/$username/share'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -98,7 +118,9 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/onboarding'
+    | '/dashboard/profile'
     | '/profile/$username'
+    | '/u/$username'
     | '/u/$username/share'
   id:
     | '__root__'
@@ -107,18 +129,20 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/onboarding'
+    | '/dashboard/profile'
     | '/profile/$username'
+    | '/u/$username'
     | '/u/$username/share'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
-  DashboardRoute: typeof DashboardRoute
+  DashboardRoute: typeof DashboardRouteWithChildren
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
   ProfileUsernameRoute: typeof ProfileUsernameRoute
-  UUsernameShareRoute: typeof UUsernameShareRoute
+  UUsernameRoute: typeof UUsernameRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -158,6 +182,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/u/$username': {
+      id: '/u/$username'
+      path: '/u/$username'
+      fullPath: '/u/$username'
+      preLoaderRoute: typeof UUsernameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/profile/$username': {
       id: '/profile/$username'
       path: '/profile/$username'
@@ -165,24 +196,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfileUsernameRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/profile': {
+      id: '/dashboard/profile'
+      path: '/profile'
+      fullPath: '/dashboard/profile'
+      preLoaderRoute: typeof DashboardProfileRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/u/$username/share': {
       id: '/u/$username/share'
-      path: '/u/$username/share'
+      path: '/share'
       fullPath: '/u/$username/share'
       preLoaderRoute: typeof UUsernameShareRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof UUsernameRoute
     }
   }
 }
 
+interface DashboardRouteChildren {
+  DashboardProfileRoute: typeof DashboardProfileRoute
+}
+
+const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardProfileRoute: DashboardProfileRoute,
+}
+
+const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
+  DashboardRouteChildren,
+)
+
+interface UUsernameRouteChildren {
+  UUsernameShareRoute: typeof UUsernameShareRoute
+}
+
+const UUsernameRouteChildren: UUsernameRouteChildren = {
+  UUsernameShareRoute: UUsernameShareRoute,
+}
+
+const UUsernameRouteWithChildren = UUsernameRoute._addFileChildren(
+  UUsernameRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
-  DashboardRoute: DashboardRoute,
+  DashboardRoute: DashboardRouteWithChildren,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
   ProfileUsernameRoute: ProfileUsernameRoute,
-  UUsernameShareRoute: UUsernameShareRoute,
+  UUsernameRoute: UUsernameRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
