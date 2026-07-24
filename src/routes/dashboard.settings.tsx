@@ -290,3 +290,37 @@ function Row({
     </div>
   );
 }
+
+function MiniToggle({
+  label,
+  value,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <label className="flex items-center gap-2 text-xs text-gray-700">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={value}
+        disabled={disabled}
+        onClick={() => onChange(!value)}
+        className={`relative h-5 w-9 rounded-full transition disabled:opacity-60 ${
+          value ? "bg-[#1D6BF3]" : "bg-gray-300"
+        }`}
+      >
+        <span
+          className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition ${
+            value ? "left-[18px]" : "left-0.5"
+          }`}
+        />
+      </button>
+      {label}
+    </label>
+  );
+}
