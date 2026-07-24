@@ -1,11 +1,13 @@
 import { createFileRoute, Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutGrid, Users } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { BadgeCheck, CreditCard, LayoutGrid, MegaphoneIcon, TrendingUp, UserPlus, Users, Wallet } from "lucide-react";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { adminOverviewStats } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -130,12 +132,31 @@ function AdminGate() {
       title: "Users & Subscriptions",
       desc: "Grant or revoke Premium, view audit log.",
     },
+    {
+      to: "/admin/communication",
+      icon: MegaphoneIcon,
+      title: "Communication",
+      desc: "Broadcast notifications to all or Premium users.",
+    },
+    {
+      to: "/admin/payments",
+      icon: Wallet,
+      title: "Payments",
+      desc: "View full payments history across all apps.",
+    },
+    {
+      to: "/admin/verification",
+      icon: BadgeCheck,
+      title: "Verification",
+      desc: "Approve or reject user verification requests.",
+    },
   ] as const;
   return (
     <main className="min-h-screen bg-[#F7F8FA] px-6 py-10">
-      <div className="mx-auto max-w-4xl">
+      <div className="mx-auto max-w-6xl">
         <h1 className="text-2xl font-semibold text-gray-900">Admin</h1>
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <OverviewStats />
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {cards.map((c) => (
             <Link
               key={c.to}
@@ -150,5 +171,30 @@ function AdminGate() {
         </div>
       </div>
     </main>
+  );
+}
+
+function OverviewStats() {
+  const statsFn = useServerFn(adminOverviewStats);
+  const q = useQuery({ queryKey: ["admin-overview"], queryFn: () => statsFn() });
+  const s = q.data;
+  const items = [
+    { icon: Users, label: "Total users", value: s?.totalUsers ?? "—", tone: "text-[#1D6BF3]" },
+    { icon: CreditCard, label: "Active Premium", value: s?.activePremium ?? "—", tone: "text-purple-600" },
+    { icon: TrendingUp, label: "Revenue this month", value: s ? `€${s.revenueThisMonth.toFixed(2)}` : "—", tone: "text-green-600" },
+    { icon: UserPlus, label: "New users this week", value: s?.newUsersThisWeek ?? "—", tone: "text-orange-600" },
+  ];
+  return (
+    <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {items.map((i) => (
+        <div key={i.label} className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium uppercase tracking-wide text-gray-500">{i.label}</span>
+            <i.icon className={`h-5 w-5 ${i.tone}`} />
+          </div>
+          <p className="mt-2 text-2xl font-semibold text-gray-900">{q.isLoading ? "…" : i.value}</p>
+        </div>
+      ))}
+    </div>
   );
 }

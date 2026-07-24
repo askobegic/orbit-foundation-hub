@@ -20,6 +20,7 @@ import { Route as ProfileUsernameRouteImport } from './routes/profile.$username'
 import { Route as PaymentSuccessRouteImport } from './routes/payment.success'
 import { Route as DashboardSubscriptionsRouteImport } from './routes/dashboard.subscriptions'
 import { Route as DashboardProfileRouteImport } from './routes/dashboard.profile'
+import { Route as AdminVerificationRouteImport } from './routes/admin.verification'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminPaymentsRouteImport } from './routes/admin.payments'
 import { Route as AdminCommunicationRouteImport } from './routes/admin.communication'
@@ -83,6 +84,11 @@ const DashboardProfileRoute = DashboardProfileRouteImport.update({
   path: '/dashboard/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminVerificationRoute = AdminVerificationRouteImport.update({
+  id: '/verification',
+  path: '/verification',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminUsersRoute = AdminUsersRouteImport.update({
   id: '/users',
   path: '/users',
@@ -129,6 +135,7 @@ export interface FileRoutesByFullPath {
   '/admin/communication': typeof AdminCommunicationRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/admin/verification': typeof AdminVerificationRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/subscriptions': typeof DashboardSubscriptionsRoute
   '/payment/success': typeof PaymentSuccessRoute
@@ -149,6 +156,7 @@ export interface FileRoutesByTo {
   '/admin/communication': typeof AdminCommunicationRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/admin/verification': typeof AdminVerificationRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/subscriptions': typeof DashboardSubscriptionsRoute
   '/payment/success': typeof PaymentSuccessRoute
@@ -170,6 +178,7 @@ export interface FileRoutesById {
   '/admin/communication': typeof AdminCommunicationRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/admin/verification': typeof AdminVerificationRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/subscriptions': typeof DashboardSubscriptionsRoute
   '/payment/success': typeof PaymentSuccessRoute
@@ -192,6 +201,7 @@ export interface FileRouteTypes {
     | '/admin/communication'
     | '/admin/payments'
     | '/admin/users'
+    | '/admin/verification'
     | '/dashboard/profile'
     | '/dashboard/subscriptions'
     | '/payment/success'
@@ -212,6 +222,7 @@ export interface FileRouteTypes {
     | '/admin/communication'
     | '/admin/payments'
     | '/admin/users'
+    | '/admin/verification'
     | '/dashboard/profile'
     | '/dashboard/subscriptions'
     | '/payment/success'
@@ -232,6 +243,7 @@ export interface FileRouteTypes {
     | '/admin/communication'
     | '/admin/payments'
     | '/admin/users'
+    | '/admin/verification'
     | '/dashboard/profile'
     | '/dashboard/subscriptions'
     | '/payment/success'
@@ -338,6 +350,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/verification': {
+      id: '/admin/verification'
+      path: '/verification'
+      fullPath: '/admin/verification'
+      preLoaderRoute: typeof AdminVerificationRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/users': {
       id: '/admin/users'
       path: '/users'
@@ -395,6 +414,7 @@ interface AdminRouteChildren {
   AdminCommunicationRoute: typeof AdminCommunicationRoute
   AdminPaymentsRoute: typeof AdminPaymentsRoute
   AdminUsersRoute: typeof AdminUsersRoute
+  AdminVerificationRoute: typeof AdminVerificationRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
@@ -402,6 +422,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCommunicationRoute: AdminCommunicationRoute,
   AdminPaymentsRoute: AdminPaymentsRoute,
   AdminUsersRoute: AdminUsersRoute,
+  AdminVerificationRoute: AdminVerificationRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
