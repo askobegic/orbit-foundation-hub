@@ -195,5 +195,51 @@
     "appVisibilityHint": "Choose where you appear and who can contact you.",
     "visibleInDirectory": "Visible in directory",
     "canBeContacted": "Can be contacted"
+  },
+  "security": {
+    "title": "Security",
+    "subtitle": "Review your activity and sessions.",
+    "lastLogin": "Last login",
+    "loginHistory": "Login history",
+    "noHistory": "No history available.",
+    "historyHint": "Showing your current session. Detailed device history is coming soon.",
+    "currentSession": "Current session",
+    "active": "Active",
+    "accountCreated": "Account created",
+    "notAvailable": "Not available",
+    "signOutAllTitle": "Sign out all devices",
+    "signOutAllHint": "Signs you out of every device and session.",
+    "signOutAll": "Sign out all devices",
+    "signedOutAll": "Signed out of all devices."
+  },
+  "help": {
+    "title": "Help & support",
+    "subtitle": "Answers to common questions and contact.",
+    "faq": "Frequently asked questions",
+    "faqs": [
+      { "q": "How do I upgrade to Premium?", "a": "Open Pricing, pick an app and a plan, then complete checkout with Stripe or PayPal." },
+      { "q": "How can I change my language?", "a": "In Settings pick your language (BS/EN/DE). It is saved to your profile." },
+      { "q": "How do I cancel a subscription?", "a": "Go to My subscriptions to manage or cancel any active plan." },
+      { "q": "How do I edit my profile?", "a": "Open My profile in the sidebar to update details, avatar and contacts." },
+      { "q": "I'm not receiving email notifications.", "a": "Check Settings to ensure email notifications are on and look in your spam folder." },
+      { "q": "How do I contact support?", "a": "Use the form below — your message is sent to our team directly." }
+    ],
+    "docsTitle": "Documentation",
+    "docsPricing": "Plans and billing guide",
+    "docsProfile": "Editing your profile",
+    "docsSettings": "Settings and preferences",
+    "docsSubs": "Managing subscriptions",
+    "contactTitle": "Contact support",
+    "contactHint": "We reply within 24 hours.",
+    "category": "Category",
+    "catGeneral": "General",
+    "catBilling": "Billing",
+    "catTechnical": "Technical issue",
+    "catAccount": "Account",
+    "subject": "Subject",
+    "message": "Message",
+    "send": "Send message",
+    "sent": "Your message has been sent.",
+    "formInvalid": "Please fill in subject and message."
   }
 }
