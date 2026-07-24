@@ -126,6 +126,11 @@ function OnboardingPage() {
       });
       await setAppLanguage(lang);
       await refreshProfile();
+      try {
+        await notifyNewUser({});
+      } catch (err) {
+        console.warn("[n8n] notify new user failed", err);
+      }
       toast.success(t("auth.profileSaved"));
       void navigate({ to: "/dashboard", replace: true });
     } catch {
