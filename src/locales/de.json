@@ -147,7 +147,9 @@
     "success": "Erfolgreich",
     "search": "Suchen",
     "filter": "Filtern",
-    "language": "Sprache"
+    "language": "Sprache",
+    "errorGeneric": "Etwas ist schiefgelaufen",
+    "saving": "Speichern..."
   },
   "pricing": {
     "title": "Premium-Tarife",
@@ -168,5 +170,26 @@
     "successBody": "Ihr Premium-Abonnement ist jetzt aktiv.",
     "activating": "Abonnement wird aktiviert…",
     "activatingBody": "Das dauert normalerweise nur wenige Sekunden."
+  },
+  "notifications": {
+    "title": "Benachrichtigungen",
+    "subtitle": "Alle Benachrichtigungen an einem Ort.",
+    "markAllRead": "Alle als gelesen markieren",
+    "allMarkedRead": "Alle als gelesen markiert.",
+    "empty": "Keine Benachrichtigungen.",
+    "viewAll": "Alle anzeigen"
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "subtitle": "Sprache und Benachrichtigungen verwalten.",
+    "language": "Sprache",
+    "notificationPrefs": "Benachrichtigungseinstellungen",
+    "notifyInApp": "In-App-Benachrichtigungen",
+    "notifyInAppHint": "Benachrichtigungen in der Plattform anzeigen.",
+    "notifyEmail": "E-Mail-Benachrichtigungen",
+    "notifyEmailHint": "Wichtige Updates per E-Mail senden.",
+    "notifyMarketing": "Marketing-E-Mails",
+    "notifyMarketingHint": "Neuigkeiten, Angebote und Ankündigungen.",
+    "saved": "Einstellungen gespeichert."
   }
 }

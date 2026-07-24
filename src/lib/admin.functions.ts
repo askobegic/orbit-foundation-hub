@@ -132,6 +132,15 @@ export const adminGrantPremium = createServerFn({ method: "POST" })
       app_id: data.app_id,
     } as never);
 
+    const { sendN8nEvent } = await import("@/lib/n8n.server");
+    await sendN8nEvent("premium_activated", {
+      provider: "admin_grant",
+      user_id: data.user_id,
+      app_id: data.app_id,
+      subscription_id: (sub as { id: string }).id,
+      duration_months: data.duration_months,
+    });
+
     return sub;
   });
 

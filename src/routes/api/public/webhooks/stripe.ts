@@ -123,6 +123,23 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
           newData: { session_id: session.id, amount, currency },
         });
 
+        const { sendN8nEvent } = await import("@/lib/n8n.server");
+        await sendN8nEvent("payment_received", {
+          provider: "stripe",
+          user_id: ref.user_id,
+          app_id: ref.app_id,
+          subscription_id: (sub as { id: string }).id,
+          amount,
+          currency,
+          session_id: session.id,
+        });
+        await sendN8nEvent("premium_activated", {
+          provider: "stripe",
+          user_id: ref.user_id,
+          app_id: ref.app_id,
+          subscription_id: (sub as { id: string }).id,
+        });
+
         return Response.json({ received: true });
       },
     },

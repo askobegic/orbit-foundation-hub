@@ -147,7 +147,9 @@
     "success": "Success",
     "search": "Search",
     "filter": "Filter",
-    "language": "Language"
+    "language": "Language",
+    "errorGeneric": "Something went wrong",
+    "saving": "Saving..."
   },
   "pricing": {
     "title": "Premium plans",
@@ -168,5 +170,26 @@
     "successBody": "Your Premium subscription is now active.",
     "activating": "Activating your subscription…",
     "activatingBody": "This usually takes a few seconds. Do not close this window."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "subtitle": "All your notifications in one place.",
+    "markAllRead": "Mark all as read",
+    "allMarkedRead": "All marked as read.",
+    "empty": "No notifications yet.",
+    "viewAll": "View all"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage language and notification preferences.",
+    "language": "Language",
+    "notificationPrefs": "Notification preferences",
+    "notifyInApp": "In-app notifications",
+    "notifyInAppHint": "Show notifications inside the platform.",
+    "notifyEmail": "Email notifications",
+    "notifyEmailHint": "Send important updates via email.",
+    "notifyMarketing": "Marketing emails",
+    "notifyMarketingHint": "News, offers and announcements.",
+    "saved": "Settings saved."
   }
 }

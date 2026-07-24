@@ -146,6 +146,23 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
           newData: { paypal_id: resource.id, amount, currency },
         });
 
+        const { sendN8nEvent } = await import("@/lib/n8n.server");
+        await sendN8nEvent("payment_received", {
+          provider: "paypal",
+          user_id: ref.user_id,
+          app_id: ref.app_id,
+          subscription_id: (sub as { id: string }).id,
+          amount,
+          currency,
+          paypal_id: resource.id,
+        });
+        await sendN8nEvent("premium_activated", {
+          provider: "paypal",
+          user_id: ref.user_id,
+          app_id: ref.app_id,
+          subscription_id: (sub as { id: string }).id,
+        });
+
         return Response.json({ received: true });
       },
     },

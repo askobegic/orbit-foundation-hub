@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
+import { NotificationBell } from "@/components/dashboard/NotificationBell";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
@@ -121,18 +122,7 @@ export function DashboardPage() {
           </div>
           <div className="flex items-center gap-3">
             <LanguageSwitcher />
-            <button
-              type="button"
-              aria-label={t("dashboard.notifications")}
-              className="relative rounded-full border border-gray-200 bg-white p-2 text-gray-600 hover:bg-gray-50"
-            >
-              <Bell className="h-4 w-4" />
-              {(notificationsQuery.data ?? 0) > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#EF4444] px-1 text-[10px] font-semibold text-white">
-                  {notificationsQuery.data}
-                </span>
-              )}
-            </button>
+            <NotificationBell />
             <div className="flex items-center gap-2 rounded-full border border-gray-200 bg-white py-1 pl-1 pr-3">
               <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#1D6BF3] to-[#6366F1] text-xs font-semibold text-white">
                 {profile?.avatar_url ? (
@@ -440,9 +430,9 @@ function Sidebar({ onSignOut }: { onSignOut: () => void }) {
     { to: "/dashboard", icon: LayoutGrid, label: t("nav.applications") },
     { to: "/dashboard/subscriptions", icon: CreditCard, label: t("nav.subscriptions") },
     { to: "/dashboard", icon: Receipt, label: t("nav.payments") },
-    { to: "/dashboard", icon: Settings, label: t("nav.settings") },
+    { to: "/dashboard/settings", icon: Settings, label: t("nav.settings") },
     { to: "/dashboard", icon: Shield, label: t("nav.security") },
-    { to: "/dashboard", icon: Bell, label: t("nav.notifications") },
+    { to: "/dashboard/notifications", icon: Bell, label: t("nav.notifications") },
     { to: "/dashboard", icon: HelpCircle, label: t("nav.help") },
   ] as const;
 
