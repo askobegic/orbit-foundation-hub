@@ -9,6 +9,9 @@ import { supabase } from "@/integrations/supabase/client";
 import type { ApplicationRow, SubscriptionPlanRow } from "@/types/database";
 
 export const Route = createFileRoute("/pricing")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    app: typeof search.app === "string" ? search.app : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Pricing — Core Platform" },
@@ -33,6 +36,7 @@ function appendParams(url: string, params: Record<string, string>) {
 function PricingPage() {
   const { t, i18n } = useTranslation();
   const { user, profile } = useAuth();
+  const { app: appSlugFromUrl } = Route.useSearch();
   const lang = (i18n.language?.slice(0, 2) ?? "bs") as "bs" | "en" | "de";
   const [selectedApp, setSelectedApp] = useState<string | null>(null);
 
@@ -48,7 +52,10 @@ function PricingPage() {
     },
   });
 
-  const activeAppId = selectedApp ?? appsQuery.data?.[0]?.id ?? null;
+  const appFromSlug = appSlugFromUrl
+    ? appsQuery.data?.find((a) => a.slug === appSlugFromUrl)?.id ?? null
+    : null;
+  const activeAppId = selectedApp ?? appFromSlug ?? appsQuery.data?.[0]?.id ?? null;
 
   const plansQuery = useQuery({
     queryKey: ["pricing", "plans", activeAppId],
