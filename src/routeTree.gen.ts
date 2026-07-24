@@ -18,6 +18,7 @@ import { Route as UUsernameRouteImport } from './routes/u.$username'
 import { Route as ProfileUsernameRouteImport } from './routes/profile.$username'
 import { Route as DashboardProfileRouteImport } from './routes/dashboard.profile'
 import { Route as UUsernameShareRouteImport } from './routes/u.$username.share'
+import { Route as ApiPublicWebhooksStripeRouteImport } from './routes/api/public/webhooks/stripe'
 
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
@@ -64,6 +65,11 @@ const UUsernameShareRoute = UUsernameShareRouteImport.update({
   path: '/share',
   getParentRoute: () => UUsernameRoute,
 } as any)
+const ApiPublicWebhooksStripeRoute = ApiPublicWebhooksStripeRouteImport.update({
+  id: '/api/public/webhooks/stripe',
+  path: '/api/public/webhooks/stripe',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -75,6 +81,7 @@ export interface FileRoutesByFullPath {
   '/profile/$username': typeof ProfileUsernameRoute
   '/u/$username': typeof UUsernameRouteWithChildren
   '/u/$username/share': typeof UUsernameShareRoute
+  '/api/public/webhooks/stripe': typeof ApiPublicWebhooksStripeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -86,6 +93,7 @@ export interface FileRoutesByTo {
   '/profile/$username': typeof ProfileUsernameRoute
   '/u/$username': typeof UUsernameRouteWithChildren
   '/u/$username/share': typeof UUsernameShareRoute
+  '/api/public/webhooks/stripe': typeof ApiPublicWebhooksStripeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -98,6 +106,7 @@ export interface FileRoutesById {
   '/profile/$username': typeof ProfileUsernameRoute
   '/u/$username': typeof UUsernameRouteWithChildren
   '/u/$username/share': typeof UUsernameShareRoute
+  '/api/public/webhooks/stripe': typeof ApiPublicWebhooksStripeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -111,6 +120,7 @@ export interface FileRouteTypes {
     | '/profile/$username'
     | '/u/$username'
     | '/u/$username/share'
+    | '/api/public/webhooks/stripe'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -122,6 +132,7 @@ export interface FileRouteTypes {
     | '/profile/$username'
     | '/u/$username'
     | '/u/$username/share'
+    | '/api/public/webhooks/stripe'
   id:
     | '__root__'
     | '/'
@@ -133,6 +144,7 @@ export interface FileRouteTypes {
     | '/profile/$username'
     | '/u/$username'
     | '/u/$username/share'
+    | '/api/public/webhooks/stripe'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -143,6 +155,7 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   ProfileUsernameRoute: typeof ProfileUsernameRoute
   UUsernameRoute: typeof UUsernameRouteWithChildren
+  ApiPublicWebhooksStripeRoute: typeof ApiPublicWebhooksStripeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -210,6 +223,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UUsernameShareRouteImport
       parentRoute: typeof UUsernameRoute
     }
+    '/api/public/webhooks/stripe': {
+      id: '/api/public/webhooks/stripe'
+      path: '/api/public/webhooks/stripe'
+      fullPath: '/api/public/webhooks/stripe'
+      preLoaderRoute: typeof ApiPublicWebhooksStripeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -245,6 +265,7 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRoute: OnboardingRoute,
   ProfileUsernameRoute: ProfileUsernameRoute,
   UUsernameRoute: UUsernameRouteWithChildren,
+  ApiPublicWebhooksStripeRoute: ApiPublicWebhooksStripeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
