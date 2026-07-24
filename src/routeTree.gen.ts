@@ -20,6 +20,7 @@ import { Route as ProfileUsernameRouteImport } from './routes/profile.$username'
 import { Route as PaymentSuccessRouteImport } from './routes/payment.success'
 import { Route as DashboardSubscriptionsRouteImport } from './routes/dashboard.subscriptions'
 import { Route as DashboardSettingsRouteImport } from './routes/dashboard.settings'
+import { Route as DashboardSecurityRouteImport } from './routes/dashboard.security'
 import { Route as DashboardProfileRouteImport } from './routes/dashboard.profile'
 import { Route as DashboardNotificationsRouteImport } from './routes/dashboard.notifications'
 import { Route as AdminVerificationRouteImport } from './routes/admin.verification'
@@ -86,6 +87,11 @@ const DashboardSettingsRoute = DashboardSettingsRouteImport.update({
   path: '/dashboard/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardSecurityRoute = DashboardSecurityRouteImport.update({
+  id: '/dashboard/security',
+  path: '/dashboard/security',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardProfileRoute = DashboardProfileRouteImport.update({
   id: '/dashboard/profile',
   path: '/dashboard/profile',
@@ -150,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/admin/verification': typeof AdminVerificationRoute
   '/dashboard/notifications': typeof DashboardNotificationsRoute
   '/dashboard/profile': typeof DashboardProfileRoute
+  '/dashboard/security': typeof DashboardSecurityRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/subscriptions': typeof DashboardSubscriptionsRoute
   '/payment/success': typeof PaymentSuccessRoute
@@ -173,6 +180,7 @@ export interface FileRoutesByTo {
   '/admin/verification': typeof AdminVerificationRoute
   '/dashboard/notifications': typeof DashboardNotificationsRoute
   '/dashboard/profile': typeof DashboardProfileRoute
+  '/dashboard/security': typeof DashboardSecurityRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/subscriptions': typeof DashboardSubscriptionsRoute
   '/payment/success': typeof PaymentSuccessRoute
@@ -197,6 +205,7 @@ export interface FileRoutesById {
   '/admin/verification': typeof AdminVerificationRoute
   '/dashboard/notifications': typeof DashboardNotificationsRoute
   '/dashboard/profile': typeof DashboardProfileRoute
+  '/dashboard/security': typeof DashboardSecurityRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/subscriptions': typeof DashboardSubscriptionsRoute
   '/payment/success': typeof PaymentSuccessRoute
@@ -222,6 +231,7 @@ export interface FileRouteTypes {
     | '/admin/verification'
     | '/dashboard/notifications'
     | '/dashboard/profile'
+    | '/dashboard/security'
     | '/dashboard/settings'
     | '/dashboard/subscriptions'
     | '/payment/success'
@@ -245,6 +255,7 @@ export interface FileRouteTypes {
     | '/admin/verification'
     | '/dashboard/notifications'
     | '/dashboard/profile'
+    | '/dashboard/security'
     | '/dashboard/settings'
     | '/dashboard/subscriptions'
     | '/payment/success'
@@ -268,6 +279,7 @@ export interface FileRouteTypes {
     | '/admin/verification'
     | '/dashboard/notifications'
     | '/dashboard/profile'
+    | '/dashboard/security'
     | '/dashboard/settings'
     | '/dashboard/subscriptions'
     | '/payment/success'
@@ -287,6 +299,7 @@ export interface RootRouteChildren {
   PricingRoute: typeof PricingRoute
   DashboardNotificationsRoute: typeof DashboardNotificationsRoute
   DashboardProfileRoute: typeof DashboardProfileRoute
+  DashboardSecurityRoute: typeof DashboardSecurityRoute
   DashboardSettingsRoute: typeof DashboardSettingsRoute
   DashboardSubscriptionsRoute: typeof DashboardSubscriptionsRoute
   PaymentSuccessRoute: typeof PaymentSuccessRoute
@@ -374,6 +387,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard/settings'
       fullPath: '/dashboard/settings'
       preLoaderRoute: typeof DashboardSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/security': {
+      id: '/dashboard/security'
+      path: '/dashboard/security'
+      fullPath: '/dashboard/security'
+      preLoaderRoute: typeof DashboardSecurityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard/profile': {
@@ -487,6 +507,7 @@ const rootRouteChildren: RootRouteChildren = {
   PricingRoute: PricingRoute,
   DashboardNotificationsRoute: DashboardNotificationsRoute,
   DashboardProfileRoute: DashboardProfileRoute,
+  DashboardSecurityRoute: DashboardSecurityRoute,
   DashboardSettingsRoute: DashboardSettingsRoute,
   DashboardSubscriptionsRoute: DashboardSubscriptionsRoute,
   PaymentSuccessRoute: PaymentSuccessRoute,
