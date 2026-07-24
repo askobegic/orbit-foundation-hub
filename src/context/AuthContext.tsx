@@ -24,13 +24,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadProfile = async (userId: string) => {
+  const loadProfile = async (u: User) => {
     const { data } = await supabase
       .from("profiles")
       .select("*")
-      .eq("id", userId)
+      .eq("id", u.id)
       .maybeSingle();
-    setProfile((data as ProfileRow | null) ?? null);
+    let row = (data as ProfileRow | null) ?? null;
+
+    // Auto-import OAuth metadata (Google/Apple) into profile if fields are empty.
+    // Apple only sends name on very first login — must capture immediately.
+    if (row) {
+      const meta = (u.user_metadata ?? {}) as Record<string, unknown>;
+      const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : "");
+      const fullName = str(meta.full_name) || str(meta.name);
+      const [splitFirst, ...splitRest] = fullName.split(" ");
+      const metaFirst = str(meta.given_name) || str(meta.first_name) || splitFirst || "";
+      const metaLast = str(meta.family_name) || str(meta.last_name) || splitRest.join(" ") || "";
+      const metaAvatar = str(meta.avatar_url) || str(meta.picture);
+      const patch: ProfileUpdate = {};
+      if (!row.first_name && metaFirst) patch.first_name = metaFirst;
+      if (!row.last_name && metaLast) patch.last_name = metaLast;
+      if (!row.avatar_url && metaAvatar) patch.avatar_url = metaAvatar;
+      if (!row.email && u.email) patch.email = u.email;
+      if (Object.keys(patch).length > 0) {
+        const { data: updated } = await supabase
+          .from("profiles")
+          .update(patch)
+          .eq("id", u.id)
+          .select("*")
+          .single();
+        if (updated) row = updated as ProfileRow;
+      }
+    }
+    setProfile(row);
   };
 
   useEffect(() => {
@@ -38,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
       if (nextSession?.user) {
-        setTimeout(() => void loadProfile(nextSession.user.id), 0);
+        setTimeout(() => void loadProfile(nextSession.user), 0);
       } else {
         setProfile(null);
       }
@@ -47,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       if (data.session?.user) {
-        void loadProfile(data.session.user.id);
+        void loadProfile(data.session.user);
       }
       setLoading(false);
     });
@@ -79,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await supabase.auth.signOut();
       },
       refreshProfile: async () => {
-        if (session?.user) await loadProfile(session.user.id);
+        if (session?.user) await loadProfile(session.user);
       },
       updateProfile: async (data) => {
         if (!session?.user) throw new Error("Not authenticated");
