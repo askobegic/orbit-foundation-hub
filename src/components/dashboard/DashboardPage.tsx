@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Link } from "@tanstack/react-router";
 import { NotificationBell } from "@/components/dashboard/NotificationBell";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useTranslation } from "react-i18next";
 import {
   Home,
@@ -26,6 +27,9 @@ import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TrialBanner } from "@/components/dashboard/TrialBanner";
+import { InstallPrompt } from "@/components/InstallPrompt";
+import { activateTrialIfEligible } from "@/lib/trial.functions";
 import type {
   ApplicationRow,
   PaymentRow,
@@ -39,6 +43,9 @@ export function DashboardPage() {
   const { t, i18n } = useTranslation();
   const { user, profile, signOut } = useAuth();
   const lang = (i18n.language?.slice(0, 2) ?? "bs") as "bs" | "en" | "de";
+  const queryClient = useQueryClient();
+  const activateTrial = useServerFn(activateTrialIfEligible);
+  const triedTrialRef = useRef(false);
 
   const appsQuery = useQuery({
     queryKey: ["dashboard", "applications"],
@@ -66,6 +73,37 @@ export function DashboardPage() {
       return (data ?? []) as unknown as SubscriptionWithPlan[];
     },
   });
+
+  // All subs (any status) — used to drive trial banner and one-time activation.
+  const allSubsQuery = useQuery({
+    queryKey: ["dashboard", "subscriptions-all", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("subscriptions")
+        .select("*")
+        .eq("user_id", user!.id)
+        .order("expires_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as SubscriptionRow[];
+    },
+  });
+
+  useEffect(() => {
+    if (!user?.id) return;
+    if (allSubsQuery.isLoading) return;
+    if (triedTrialRef.current) return;
+    if ((allSubsQuery.data ?? []).length > 0) return;
+    triedTrialRef.current = true;
+    void activateTrial({ data: undefined as unknown as void })
+      .then((res) => {
+        if (res?.activated) {
+          void queryClient.invalidateQueries({ queryKey: ["dashboard", "subscriptions", user.id] });
+          void queryClient.invalidateQueries({ queryKey: ["dashboard", "subscriptions-all", user.id] });
+        }
+      })
+      .catch(() => {});
+  }, [user?.id, allSubsQuery.data, allSubsQuery.isLoading, activateTrial, queryClient]);
 
   const paymentsQuery = useQuery({
     queryKey: ["dashboard", "payments", user?.id],
@@ -118,6 +156,7 @@ export function DashboardPage() {
       <Sidebar onSignOut={() => void signOut()} />
 
       <div className="lg:pl-64">
+        <InstallPrompt />
         {/* Header */}
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-gray-100 bg-white/80 px-4 backdrop-blur lg:px-8">
           <div>
@@ -148,6 +187,7 @@ export function DashboardPage() {
         <main className="grid gap-6 p-4 lg:grid-cols-3 lg:p-8">
           {/* LEFT (2 cols) */}
           <div className="flex flex-col gap-6 lg:col-span-2">
+            <TrialBanner subscriptions={allSubsQuery.data ?? []} />
             {/* Profile card */}
             <section className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-100">
               <div className="h-24 bg-gradient-to-r from-[#1D6BF3] via-[#6366F1] to-[#8B5CF6]" />
