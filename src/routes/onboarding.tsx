@@ -9,6 +9,8 @@ import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { CountrySelect } from "@/components/ui/CountrySelect";
 import { supabase } from "@/integrations/supabase/client";
 import type { UserLanguage } from "@/types/database";
+import { useServerFn } from "@tanstack/react-start";
+import { notifyNewUserRegistered } from "@/lib/notifications.functions";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({
@@ -27,6 +29,7 @@ function OnboardingPage() {
   const { user, profile, loading, updateProfile, refreshProfile } = useAuth();
   const { language, setLanguage: setAppLanguage } = useLanguage();
   const navigate = useNavigate();
+  const notifyNewUser = useServerFn(notifyNewUserRegistered);
 
   const [step, setStep] = useState<1 | 2>(1);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
