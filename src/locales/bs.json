@@ -29,7 +29,11 @@
     "photoRequired": "Fotografija profila je obavezna.",
     "continue": "Nastavi",
     "completeRegistration": "Završi registraciju",
-    "profileSaved": "Profil je sačuvan."
+    "profileSaved": "Profil je uspješno sačuvan.",
+    "photoImportedGoogle": "Preuzeto sa Google naloga",
+    "photoImportedApple": "Preuzeto sa Apple naloga",
+    "photoImported": "Fotografija preuzeta iz vašeg naloga",
+    "backToDashboard": "Nazad na Dashboard"
   },
   "profile": {
     "title": "Moj profil",
@@ -71,7 +75,25 @@
     "whatsapp": "WhatsApp",
     "contactEmail": "Kontakt email",
     "notFound": "Profil nije pronađen",
-    "registerFree": "Registruj se besplatno"
+    "registerFree": "Registruj se besplatno",
+    "notEntered": "Nije uneseno",
+    "basicInfo": "Osnovni podaci",
+    "cityPlaceholder": "Npr. Sarajevo",
+    "selectCountry": "Odaberi državu"
+  },
+  "countries": {
+    "BA": "Bosna i Hercegovina",
+    "HR": "Hrvatska",
+    "RS": "Srbija",
+    "SI": "Slovenija",
+    "MK": "Sjeverna Makedonija",
+    "ME": "Crna Gora",
+    "DE": "Njemačka",
+    "AT": "Austrija",
+    "CH": "Švicarska",
+    "US": "SAD",
+    "AU": "Australija",
+    "other": "Ostalo"
   },
   "dashboard": {
     "welcome": "Dobrodošao",
