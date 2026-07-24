@@ -122,14 +122,20 @@
     "footerRights": "Alle Rechte vorbehalten."
   },
   "subscription": {
-    "title": "Premium-Abonnement",
+    "title": "Meine Abonnements",
     "month1": "1 Monat",
     "month3": "3 Monate",
     "month6": "6 Monate",
     "month12": "12 Monate",
     "upgradeNow": "Jetzt upgraden",
-    "managePlan": "Plan verwalten",
-    "cancelPlan": "Plan kündigen"
+    "managePlan": "Tarif verwalten",
+    "cancelPlan": "Plan kündigen",
+    "status": {
+      "active": "Aktiv",
+      "pending": "Ausstehend",
+      "expired": "Abgelaufen",
+      "cancelled": "Gekündigt"
+    }
   },
   "common": {
     "save": "Speichern",
@@ -142,5 +148,25 @@
     "search": "Suchen",
     "filter": "Filtern",
     "language": "Sprache"
+  },
+  "pricing": {
+    "title": "Premium-Tarife",
+    "subtitle": "Wählen Sie App und Laufzeit.",
+    "premium": "Premium",
+    "loading": "Wird geladen…",
+    "noPlans": "Noch keine aktiven Tarife.",
+    "months": "Monate",
+    "perMonth": "Monat",
+    "payStripe": "Mit Karte zahlen (Stripe)",
+    "payPaypal": "Mit PayPal zahlen",
+    "stripeUnavailable": "Stripe nicht verfügbar",
+    "paypalUnavailable": "PayPal nicht verfügbar",
+    "signInHint": "um den Kauf abzuschließen."
+  },
+  "payment": {
+    "successTitle": "Zahlung erhalten",
+    "successBody": "Ihr Premium-Abonnement ist jetzt aktiv.",
+    "activating": "Abonnement wird aktiviert…",
+    "activatingBody": "Das dauert normalerweise nur wenige Sekunden."
   }
 }
