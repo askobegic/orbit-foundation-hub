@@ -8,7 +8,7 @@ export async function assertAdmin(
     .from("user_roles")
     .select("role")
     .eq("user_id", userId)
-    .in("role", ["admin", "super_admin"])
+    .eq("role", "admin")
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) throw new Response("Forbidden", { status: 403 });
