@@ -21,7 +21,14 @@ import {
   ChevronRight,
   Lock,
   BadgeCheck,
+  Link2,
+  Share2,
+  Facebook,
+  Linkedin,
+  MessageCircle,
+  Mail,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -251,12 +258,15 @@ export function DashboardPage() {
                     </div>
                   </div>
                 </div>
-                <Link
-                  to="/dashboard/profile"
-                  className="inline-flex items-center justify-center rounded-lg bg-[#1D6BF3] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#1858cf]"
-                >
-                  {t("dashboard.editProfile")}
-                </Link>
+                <div className="flex flex-col gap-3">
+                  {profile?.username && <ShareProfile username={profile.username} />}
+                  <Link
+                    to="/dashboard/profile"
+                    className="inline-flex items-center justify-center rounded-lg bg-[#1D6BF3] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#1858cf]"
+                  >
+                    {t("dashboard.editProfile")}
+                  </Link>
+                </div>
               </div>
             </section>
 
