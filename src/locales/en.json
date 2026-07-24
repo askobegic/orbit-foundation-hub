@@ -1,0 +1,75 @@
+{
+  "nav": {
+    "home": "Home",
+    "profile": "My Profile",
+    "applications": "My Applications",
+    "subscriptions": "My Subscriptions",
+    "payments": "Payment History",
+    "settings": "Settings",
+    "security": "Security",
+    "notifications": "Notifications",
+    "help": "Help & Support",
+    "logout": "Sign Out"
+  },
+  "auth": {
+    "login": "Sign In",
+    "register": "Register",
+    "loginWithGoogle": "Continue with Google",
+    "loginWithApple": "Continue with Apple",
+    "welcome": "Welcome back",
+    "noAccount": "Don't have an account?"
+  },
+  "profile": {
+    "title": "My Profile",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "city": "City",
+    "country": "Country",
+    "bio": "About Me",
+    "phone": "Phone",
+    "website": "Website",
+    "profession": "Profession",
+    "save": "Save Changes",
+    "uploadPhoto": "Upload Photo",
+    "public": "Public",
+    "private": "Private"
+  },
+  "dashboard": {
+    "welcome": "Welcome",
+    "subtitle": "This is your control center.",
+    "myProfile": "My Profile",
+    "myApps": "My Applications",
+    "activeSubscription": "Active Subscription",
+    "paymentHistory": "Payment History",
+    "quickLinks": "Quick Links",
+    "upgrade": "Upgrade",
+    "openApp": "Open Application",
+    "viewAll": "View All",
+    "validUntil": "Valid until",
+    "comingSoon": "Coming Soon",
+    "active": "Active",
+    "expired": "Expired"
+  },
+  "subscription": {
+    "title": "Premium Subscription",
+    "month1": "1 Month",
+    "month3": "3 Months",
+    "month6": "6 Months",
+    "month12": "12 Months",
+    "upgradeNow": "Upgrade Now",
+    "managePlan": "Manage Plan",
+    "cancelPlan": "Cancel Plan"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "search": "Search",
+    "filter": "Filter",
+    "language": "Language"
+  }
+}
