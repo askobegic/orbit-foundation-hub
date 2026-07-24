@@ -242,4 +242,36 @@
     "sent": "Your message has been sent.",
     "formInvalid": "Please fill in subject and message."
   }
+  ,
+  "install": {
+    "title": "Install Core Platform",
+    "hint": "Add the app to your home screen for faster access.",
+    "iosHint": "In Safari tap Share, then 'Add to Home Screen'.",
+    "cta": "Install"
+  },
+  "trial": {
+    "activeTitle": "🎉 You have 7 days of free Premium access!",
+    "activeExpires": "Expires",
+    "expiredTitle": "Your trial has expired",
+    "expiredHint": "Keep using all premium features without interruption.",
+    "upgradeNow": "Upgrade now"
+  },
+  "privacy": {
+    "title": "Privacy & data",
+    "subtitle": "Download your data or permanently delete your account.",
+    "exportTitle": "Download my data",
+    "exportHint": "Generates a JSON file with all your data on the platform.",
+    "exportCta": "Download (JSON)",
+    "exporting": "Preparing...",
+    "exportReady": "Your data has been downloaded.",
+    "dangerZone": "Danger zone",
+    "deleteHint": "Permanently delete your account and all related data.",
+    "deleteCta": "Delete my account",
+    "confirmTitle": "Delete account",
+    "confirmBody": "This action cannot be undone. All your data will be deleted.",
+    "typeToConfirm": "Type OBRIŠI to confirm:",
+    "deleteConfirm": "Permanently delete",
+    "deleteMismatch": "Please type OBRIŠI exactly to confirm.",
+    "deleteDone": "Your account has been deleted."
+  }
 }
