@@ -130,7 +130,25 @@ function PricingPage() {
                 activeAppId === app.id ? { backgroundColor: app.primary_color } : undefined
               }
             >
-              {app.name}
+              <span className="inline-flex items-center gap-2">
+                {app.logo_url ? (
+                  <img
+                    src={app.logo_url}
+                    alt=""
+                    width={20}
+                    height={20}
+                    className="h-5 w-5 rounded object-cover"
+                  />
+                ) : (
+                  <span
+                    className="flex h-5 w-5 items-center justify-center rounded text-[10px] font-semibold text-white"
+                    style={{ backgroundColor: app.primary_color }}
+                  >
+                    {app.name.slice(0, 1)}
+                  </span>
+                )}
+                {app.name}
+              </span>
             </button>
           ))}
         </div>
@@ -163,7 +181,25 @@ function PricingPage() {
                 className="flex flex-col rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100"
               >
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">{plan.name}</h3>
+                  <div className="flex items-center gap-2">
+                    {activeApp?.logo_url ? (
+                      <img
+                        src={activeApp.logo_url}
+                        alt=""
+                        width={24}
+                        height={24}
+                        className="h-6 w-6 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div
+                        className="flex h-6 w-6 items-center justify-center rounded-lg text-xs font-semibold text-white"
+                        style={{ backgroundColor: activeApp?.primary_color ?? "#1D6BF3" }}
+                      >
+                        {activeApp?.name.slice(0, 1) ?? "A"}
+                      </div>
+                    )}
+                    <h3 className="text-lg font-semibold text-gray-900">{plan.name}</h3>
+                  </div>
                   <span
                     className="rounded-full px-2 py-0.5 text-[10px] font-semibold text-white"
                     style={{

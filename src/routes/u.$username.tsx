@@ -226,7 +226,22 @@ function PublicBioCard() {
               <div className="grid grid-cols-2 gap-2">
                 {apps.map((a) => (
                   <div key={a.id} className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white p-2">
-                    <div className="h-8 w-8 rounded-lg" style={{ background: a.primary_color }} />
+                    {a.logo_url ? (
+                      <img
+                        src={a.logo_url}
+                        alt={a.name}
+                        width={24}
+                        height={24}
+                        className="h-6 w-6 shrink-0 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[10px] font-semibold text-white"
+                        style={{ background: a.primary_color }}
+                      >
+                        {a.name.slice(0, 1)}
+                      </div>
+                    )}
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-gray-900">{a.name}</p>
                       <p className="text-[10px] text-gray-400">{isPremiumActive ? t("profile.premium") : "Free"}</p>
