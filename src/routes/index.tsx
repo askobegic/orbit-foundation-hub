@@ -21,8 +21,8 @@ function Index() {
   useEffect(() => {
     if (loading) return;
     if (!user) void navigate({ to: "/login", replace: true });
-    else if (profile && !profile.profile_complete) void navigate({ to: "/onboarding", replace: true });
-    else if (profile?.profile_complete) void navigate({ to: "/dashboard", replace: true });
+    else if (!profile || !profile.profile_complete) void navigate({ to: "/onboarding", replace: true });
+    else void navigate({ to: "/dashboard", replace: true });
   }, [loading, user, profile, navigate]);
   return (
     <div className="flex min-h-screen items-center justify-center">
