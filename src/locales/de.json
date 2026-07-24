@@ -87,7 +87,17 @@
     "validUntil": "Gültig bis",
     "comingSoon": "Demnächst",
     "active": "Aktiv",
-    "expired": "Abgelaufen"
+    "expired": "Abgelaufen",
+    "standard": "Standard",
+    "premium": "Premium",
+    "noSubscription": "Kein aktives Abonnement",
+    "noPayments": "Noch keine Zahlungen",
+    "editProfile": "Profil bearbeiten",
+    "notifications": "Benachrichtigungen",
+    "trustSecure": "Sichere Zahlungen",
+    "trustGDPR": "DSGVO-konform",
+    "trustSupport": "24/7 Support",
+    "footerRights": "Alle Rechte vorbehalten."
   },
   "subscription": {
     "title": "Premium-Abonnement",
