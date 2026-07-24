@@ -140,6 +140,7 @@
   "common": {
     "save": "Sačuvaj",
     "cancel": "Otkaži",
+    "close": "Zatvori",
     "delete": "Obriši",
     "edit": "Uredi",
     "loading": "Učitavanje...",
