@@ -62,3 +62,29 @@ export const markNotificationRead = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+const supportSchema = z.object({
+  subject: z.string().min(2).max(200),
+  message: z.string().min(5).max(5000),
+  category: z.string().max(60).optional(),
+});
+
+export const sendSupportRequest = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => supportSchema.parse(raw))
+  .handler(async ({ data, context }) => {
+    const { sendN8nEvent } = await import("@/lib/n8n.server");
+    const { data: profile } = await context.supabase
+      .from("profiles")
+      .select("id, email, first_name, last_name, language")
+      .eq("id", context.userId)
+      .maybeSingle();
+    await sendN8nEvent("support_request", {
+      user_id: context.userId,
+      profile: profile ?? null,
+      subject: data.subject,
+      message: data.message,
+      category: data.category ?? null,
+    });
+    return { ok: true };
+  });
