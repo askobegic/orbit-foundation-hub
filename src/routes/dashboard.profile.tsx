@@ -57,10 +57,8 @@ function EditProfilePage() {
   const [lastName, setLastName] = useState("");
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("BA");
-  const [bio, setBio] = useState("");
   const [language, setLanguage] = useState<UserLanguage>("bs");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [username, setUsername] = useState("");
   const [savingStd, setSavingStd] = useState(false);
 
   const [premium, setPremium] = useState<PremiumProfileRow | null>(null);
@@ -84,10 +82,8 @@ function EditProfilePage() {
     setLastName(profile.last_name ?? "");
     setCity(profile.city ?? "");
     setCountry(profile.country ?? "BA");
-    setBio(profile.bio ?? "");
     setLanguage(profile.language);
     setAvatarUrl(profile.avatar_url);
-    setUsername(profile.username ?? "");
   }, [profile]);
 
   useEffect(() => {
@@ -140,7 +136,7 @@ function EditProfilePage() {
     }
     setSavingStd(true);
     try {
-      let finalUsername = username.trim();
+      let finalUsername = profile?.username ?? "";
       if (!finalUsername) {
         finalUsername = await generateUniqueUsername(firstName, lastName, user.id);
       }
@@ -149,7 +145,6 @@ function EditProfilePage() {
         last_name: lastName.trim(),
         city: city.trim(),
         country: country.trim(),
-        bio: bio.trim() || null,
         language,
         avatar_url: avatarUrl,
         username: finalUsername,
@@ -157,7 +152,6 @@ function EditProfilePage() {
       });
       await setAppLanguage(language);
       await refreshProfile();
-      setUsername(finalUsername);
       toast.success(t("auth.profileSaved"));
     } catch {
       toast.error(t("auth.saveError"));
@@ -238,18 +232,7 @@ function EditProfilePage() {
                 {t("profile.country")} *
                 <CountrySelect value={country} onChange={setCountry} />
               </label>
-              <TextField label={t("profile.username")} value={username} onChange={setUsername} />
             </div>
-            <label className="text-sm font-medium text-gray-700">
-              {t("profile.bio")}
-              <textarea
-                value={bio}
-                onChange={(e) => setBio(e.target.value.slice(0, 300))}
-                rows={3}
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#1D6BF3]"
-              />
-              <span className="text-xs text-gray-400">{bio.length}/300</span>
-            </label>
             <div>
               <span className="text-sm font-medium text-gray-700">{t("common.language")}</span>
               <div className="mt-2 flex gap-3">
