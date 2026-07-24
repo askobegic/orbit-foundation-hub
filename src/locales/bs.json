@@ -190,6 +190,10 @@
     "notifyEmailHint": "Šalji važna obavještenja na email.",
     "notifyMarketing": "Marketing poruke",
     "notifyMarketingHint": "Novosti, ponude i najave.",
-    "saved": "Postavke sačuvane."
+    "saved": "Postavke sačuvane.",
+    "appVisibility": "Vidljivost na aplikacijama",
+    "appVisibilityHint": "Odaberite gdje se prikazujete i ko vas može kontaktirati.",
+    "visibleInDirectory": "Vidljiv u direktoriju",
+    "canBeContacted": "Mogu me kontaktirati"
   }
 }
