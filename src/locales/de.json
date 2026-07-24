@@ -1,0 +1,75 @@
+{
+  "nav": {
+    "home": "Startseite",
+    "profile": "Mein Profil",
+    "applications": "Meine Anwendungen",
+    "subscriptions": "Meine Abonnements",
+    "payments": "Zahlungsverlauf",
+    "settings": "Einstellungen",
+    "security": "Sicherheit",
+    "notifications": "Benachrichtigungen",
+    "help": "Hilfe & Support",
+    "logout": "Abmelden"
+  },
+  "auth": {
+    "login": "Anmelden",
+    "register": "Registrieren",
+    "loginWithGoogle": "Mit Google fortfahren",
+    "loginWithApple": "Mit Apple fortfahren",
+    "welcome": "Willkommen zurück",
+    "noAccount": "Kein Konto?"
+  },
+  "profile": {
+    "title": "Mein Profil",
+    "firstName": "Vorname",
+    "lastName": "Nachname",
+    "city": "Stadt",
+    "country": "Land",
+    "bio": "Über mich",
+    "phone": "Telefon",
+    "website": "Webseite",
+    "profession": "Beruf",
+    "save": "Änderungen speichern",
+    "uploadPhoto": "Foto hochladen",
+    "public": "Öffentlich",
+    "private": "Privat"
+  },
+  "dashboard": {
+    "welcome": "Willkommen",
+    "subtitle": "Dies ist dein Kontrollzentrum.",
+    "myProfile": "Mein Profil",
+    "myApps": "Meine Anwendungen",
+    "activeSubscription": "Aktives Abonnement",
+    "paymentHistory": "Zahlungsverlauf",
+    "quickLinks": "Schnelllinks",
+    "upgrade": "Upgraden",
+    "openApp": "Anwendung öffnen",
+    "viewAll": "Alle anzeigen",
+    "validUntil": "Gültig bis",
+    "comingSoon": "Demnächst",
+    "active": "Aktiv",
+    "expired": "Abgelaufen"
+  },
+  "subscription": {
+    "title": "Premium-Abonnement",
+    "month1": "1 Monat",
+    "month3": "3 Monate",
+    "month6": "6 Monate",
+    "month12": "12 Monate",
+    "upgradeNow": "Jetzt upgraden",
+    "managePlan": "Plan verwalten",
+    "cancelPlan": "Plan kündigen"
+  },
+  "common": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "loading": "Laden...",
+    "error": "Fehler",
+    "success": "Erfolgreich",
+    "search": "Suchen",
+    "filter": "Filtern",
+    "language": "Sprache"
+  }
+}

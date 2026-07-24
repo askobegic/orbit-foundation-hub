@@ -1,0 +1,75 @@
+{
+  "nav": {
+    "home": "Početna",
+    "profile": "Moj profil",
+    "applications": "Moje aplikacije",
+    "subscriptions": "Moje pretplate",
+    "payments": "Historija uplata",
+    "settings": "Postavke",
+    "security": "Sigurnost",
+    "notifications": "Obavještenja",
+    "help": "Pomoć i podrška",
+    "logout": "Odjavi se"
+  },
+  "auth": {
+    "login": "Prijava",
+    "register": "Registracija",
+    "loginWithGoogle": "Nastavi sa Google",
+    "loginWithApple": "Nastavi sa Apple",
+    "welcome": "Dobrodošli nazad",
+    "noAccount": "Nemate nalog?"
+  },
+  "profile": {
+    "title": "Moj profil",
+    "firstName": "Ime",
+    "lastName": "Prezime",
+    "city": "Grad",
+    "country": "Država",
+    "bio": "O meni",
+    "phone": "Telefon",
+    "website": "Web stranica",
+    "profession": "Profesija",
+    "save": "Sačuvaj promjene",
+    "uploadPhoto": "Dodaj fotografiju",
+    "public": "Vidljivo",
+    "private": "Skriveno"
+  },
+  "dashboard": {
+    "welcome": "Dobrodošao",
+    "subtitle": "Ovo je tvoj kontrolni centar.",
+    "myProfile": "Moj profil",
+    "myApps": "Moje aplikacije",
+    "activeSubscription": "Aktivna pretplata",
+    "paymentHistory": "Historija uplata",
+    "quickLinks": "Brzi linkovi",
+    "upgrade": "Nadogradi",
+    "openApp": "Otvori aplikaciju",
+    "viewAll": "Prikaži sve",
+    "validUntil": "Važi do",
+    "comingSoon": "Uskoro",
+    "active": "Aktivna",
+    "expired": "Istekla"
+  },
+  "subscription": {
+    "title": "Premium pretplata",
+    "month1": "1 mjesec",
+    "month3": "3 mjeseca",
+    "month6": "6 mjeseci",
+    "month12": "12 mjeseci",
+    "upgradeNow": "Nadogradi sada",
+    "managePlan": "Upravljaj pretplatom",
+    "cancelPlan": "Otkaži pretplatu"
+  },
+  "common": {
+    "save": "Sačuvaj",
+    "cancel": "Otkaži",
+    "delete": "Obriši",
+    "edit": "Uredi",
+    "loading": "Učitavanje...",
+    "error": "Greška",
+    "success": "Uspješno",
+    "search": "Pretraži",
+    "filter": "Filtriraj",
+    "language": "Jezik"
+  }
+}
