@@ -424,8 +424,8 @@ export function DashboardPage() {
                 {[
                   { to: "/dashboard/profile", icon: User, label: t("nav.profile") },
                   { to: "/dashboard", icon: Settings, label: t("nav.settings") },
-                  { to: "/dashboard", icon: Shield, label: t("nav.security") },
-                  { to: "/dashboard", icon: HelpCircle, label: t("nav.help") },
+                  { to: "/dashboard/security", icon: Shield, label: t("nav.security") },
+                  { to: "/dashboard/help", icon: HelpCircle, label: t("nav.help") },
                 ].map((q) => (
                   <Link
                     key={q.label}
