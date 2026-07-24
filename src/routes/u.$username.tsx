@@ -61,7 +61,17 @@ function PublicBioCard() {
       ]);
       setPremium((prem as PremiumProfileRow | null) ?? null);
       setIsPremiumActive(!!subs && subs.length > 0);
-      setApps((allApps as ApplicationRow[] | null) ?? []);
+      const appsList = (allApps as ApplicationRow[] | null) ?? [];
+      const { data: visSettings } = await supabase
+        .from("user_app_settings")
+        .select("app_id, is_visible")
+        .eq("user_id", p.id);
+      const hidden = new Set(
+        ((visSettings ?? []) as { app_id: string; is_visible: boolean }[])
+          .filter((s) => s.is_visible === false)
+          .map((s) => s.app_id),
+      );
+      setApps(appsList.filter((a) => !hidden.has(a.id)));
       setLoading(false);
     })();
   }, [username]);
