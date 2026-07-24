@@ -18,7 +18,7 @@ export function ProtectedRoute({ children, requireComplete = true }: Props) {
       void navigate({ to: "/login", replace: true });
       return;
     }
-    if (requireComplete && profile && !profile.profile_complete) {
+    if (requireComplete && (!profile || !profile.profile_complete)) {
       void navigate({ to: "/onboarding", replace: true });
     }
   }, [loading, user, profile, requireComplete, navigate]);
