@@ -122,14 +122,20 @@
     "footerRights": "Sva prava zadržana."
   },
   "subscription": {
-    "title": "Premium pretplata",
+    "title": "Moje pretplate",
     "month1": "1 mjesec",
     "month3": "3 mjeseca",
     "month6": "6 mjeseci",
     "month12": "12 mjeseci",
     "upgradeNow": "Nadogradi sada",
-    "managePlan": "Upravljaj pretplatom",
-    "cancelPlan": "Otkaži pretplatu"
+    "managePlan": "Upravljaj planom",
+    "cancelPlan": "Otkaži pretplatu",
+    "status": {
+      "active": "Aktivno",
+      "pending": "U toku",
+      "expired": "Isteklo",
+      "cancelled": "Otkazano"
+    }
   },
   "common": {
     "save": "Sačuvaj",
@@ -142,5 +148,25 @@
     "search": "Pretraži",
     "filter": "Filtriraj",
     "language": "Jezik"
+  },
+  "pricing": {
+    "title": "Premium planovi",
+    "subtitle": "Odaberite aplikaciju i trajanje koje vam odgovara.",
+    "premium": "Premium",
+    "loading": "Učitavanje…",
+    "noPlans": "Nema aktivnih planova za ovu aplikaciju.",
+    "months": "mjeseci",
+    "perMonth": "mjesečno",
+    "payStripe": "Plati karticom (Stripe)",
+    "payPaypal": "Plati preko PayPala",
+    "stripeUnavailable": "Stripe nedostupan",
+    "paypalUnavailable": "PayPal nedostupan",
+    "signInHint": "kako biste završili kupovinu."
+  },
+  "payment": {
+    "successTitle": "Uplata primljena",
+    "successBody": "Vaša premium pretplata je sada aktivna.",
+    "activating": "Aktiviramo vašu pretplatu…",
+    "activatingBody": "Ovo obično traje nekoliko sekundi. Ne zatvarajte prozor."
   }
 }

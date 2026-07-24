@@ -59,7 +59,8 @@ export function DashboardPage() {
         .from("subscriptions")
         .select("*, plan:subscription_plans(*)")
         .eq("user_id", user!.id)
-        .eq("status", "active");
+        .eq("status", "active")
+        .gt("expires_at", new Date().toISOString());
       if (error) throw error;
       return (data ?? []) as unknown as SubscriptionWithPlan[];
     },
@@ -314,22 +315,22 @@ export function DashboardPage() {
                     {t("dashboard.validUntil")}:{" "}
                     {new Date(activeSub.expires_at).toLocaleDateString(i18n.language)}
                   </p>
-                  <button
-                    type="button"
+                  <Link
+                    to="/dashboard/subscriptions"
                     className="mt-4 inline-flex items-center justify-center rounded-lg bg-white/15 px-3 py-1.5 text-xs font-medium backdrop-blur hover:bg-white/25"
                   >
                     {t("subscription.managePlan")}
-                  </button>
+                  </Link>
                 </div>
               ) : (
                 <div>
                   <p className="text-sm opacity-90">{t("dashboard.noSubscription")}</p>
-                  <button
-                    type="button"
+                  <Link
+                    to="/pricing"
                     className="mt-3 inline-flex items-center justify-center rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-[#1D6BF3] hover:bg-white/90"
                   >
                     {t("dashboard.upgrade")}
-                  </button>
+                  </Link>
                 </div>
               )}
             </section>
@@ -437,7 +438,7 @@ function Sidebar({ onSignOut }: { onSignOut: () => void }) {
     { to: "/dashboard", icon: Home, label: t("nav.home") },
     { to: "/dashboard/profile", icon: User, label: t("nav.profile") },
     { to: "/dashboard", icon: LayoutGrid, label: t("nav.applications") },
-    { to: "/dashboard", icon: CreditCard, label: t("nav.subscriptions") },
+    { to: "/dashboard/subscriptions", icon: CreditCard, label: t("nav.subscriptions") },
     { to: "/dashboard", icon: Receipt, label: t("nav.payments") },
     { to: "/dashboard", icon: Settings, label: t("nav.settings") },
     { to: "/dashboard", icon: Shield, label: t("nav.security") },
