@@ -278,11 +278,38 @@ export function DashboardPage() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   {(appsQuery.data ?? []).map((app) => {
                     const isPremium = premiumAppIds.has(app.id);
+                    const isActive = app.status === "active";
                     const desc =
                       app[`short_description_${lang}` as const] ??
                       app.short_description_en ??
                       "";
                     const expiry = premiumExpiryByApp.get(app.id);
+                    if (!isActive) {
+                      return (
+                        <div
+                          key={app.id}
+                          className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50/40 p-3 opacity-60"
+                        >
+                          <div
+                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-white grayscale"
+                            style={{ backgroundColor: app.primary_color }}
+                          >
+                            {app.name.slice(0, 1)}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="truncate text-sm font-medium text-gray-500">
+                                {app.name}
+                              </span>
+                              <span className="shrink-0 rounded-full bg-gray-200 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500">
+                                {t("dashboard.comingSoon")}
+                              </span>
+                            </div>
+                            <p className="truncate text-xs text-gray-400">{desc}</p>
+                          </div>
+                        </div>
+                      );
+                    }
                     return (
                       <div
                         key={app.id}
@@ -332,7 +359,7 @@ export function DashboardPage() {
                           </p>
                         </div>
                         <div className="flex shrink-0 items-center gap-1">
-                          {!isPremium && app.status === "active" && (
+                          {!isPremium && (
                             <Link
                               to="/pricing"
                               search={{ app: app.slug }}
@@ -341,7 +368,7 @@ export function DashboardPage() {
                               {t("dashboard.upgrade")}
                             </Link>
                           )}
-                          {app.status === "active" && app.domain ? (
+                          {app.domain && (
                             <a
                               href={`https://${app.domain}`}
                               target="_blank"
@@ -355,10 +382,6 @@ export function DashboardPage() {
                             >
                               <ExternalLink className="h-4 w-4" />
                             </a>
-                          ) : (
-                            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-500">
-                              {t("dashboard.comingSoon")}
-                            </span>
                           )}
                         </div>
                       </div>
