@@ -9,6 +9,8 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { updateUserSettings } from "@/lib/notifications.functions";
+import { supabase } from "@/integrations/supabase/client";
+import type { ApplicationRow } from "@/types/database";
 
 export const Route = createFileRoute("/dashboard/settings")({
   head: () => ({
@@ -30,7 +32,7 @@ export const Route = createFileRoute("/dashboard/settings")({
 
 function SettingsPage() {
   const { t } = useTranslation();
-  const { profile, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const { setLanguage } = useLanguage();
   const save = useServerFn(updateUserSettings);
 
@@ -39,6 +41,71 @@ function SettingsPage() {
   const [inApp, setInApp] = useState(true);
   const [marketing, setMarketing] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  type AppSettingRow = {
+    app: ApplicationRow;
+    is_visible: boolean;
+    is_contactable: boolean;
+  };
+  const [appSettings, setAppSettings] = useState<AppSettingRow[]>([]);
+  const [savingApps, setSavingApps] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (!user) return;
+    void (async () => {
+      const [{ data: apps }, { data: settings }] = await Promise.all([
+        supabase.from("applications").select("*").eq("status", "active").order("sort_order"),
+        supabase
+          .from("user_app_settings")
+          .select("app_id, is_visible, is_contactable")
+          .eq("user_id", user.id),
+      ]);
+      const map = new Map(
+        (settings ?? []).map((s: { app_id: string; is_visible: boolean; is_contactable: boolean }) => [
+          s.app_id,
+          s,
+        ]),
+      );
+      const merged = ((apps as ApplicationRow[] | null) ?? []).map((app) => {
+        const s = map.get(app.id);
+        return {
+          app,
+          is_visible: s?.is_visible ?? true,
+          is_contactable: s?.is_contactable ?? true,
+        };
+      });
+      setAppSettings(merged);
+    })();
+  }, [user]);
+
+  async function updateAppSetting(
+    appId: string,
+    patch: { is_visible?: boolean; is_contactable?: boolean },
+  ) {
+    if (!user) return;
+    setAppSettings((prev) =>
+      prev.map((r) => (r.app.id === appId ? { ...r, ...patch } : r)),
+    );
+    setSavingApps((s) => ({ ...s, [appId]: true }));
+    try {
+      const current = appSettings.find((r) => r.app.id === appId);
+      const payload = {
+        user_id: user.id,
+        app_id: appId,
+        is_visible: patch.is_visible ?? current?.is_visible ?? true,
+        is_contactable: patch.is_contactable ?? current?.is_contactable ?? true,
+      };
+      const { error } = await supabase
+        .from("user_app_settings")
+        .upsert(payload, { onConflict: "user_id,app_id" });
+      if (error) throw error;
+      toast.success(t("settings.saved"));
+    } catch {
+      toast.error(t("common.errorGeneric"));
+    } finally {
+      setSavingApps((s) => ({ ...s, [appId]: false }));
+    }
+  }
 
   useEffect(() => {
     if (!profile) return;
@@ -128,6 +195,52 @@ function SettingsPage() {
           </div>
         </section>
 
+        <section className="mb-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
+          <h2 className="mb-1 text-sm font-semibold text-gray-900">
+            {t("settings.appVisibility")}
+          </h2>
+          <p className="mb-4 text-xs text-gray-500">{t("settings.appVisibilityHint")}</p>
+          <div className="divide-y divide-gray-100">
+            {appSettings.length === 0 && (
+              <p className="py-4 text-sm text-gray-500">{t("common.loading")}</p>
+            )}
+            {appSettings.map((row) => (
+              <div key={row.app.id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg text-xs font-semibold text-white"
+                    style={{ background: row.app.primary_color ?? "#1D6BF3" }}
+                  >
+                    {row.app.logo_url ? (
+                      <img src={row.app.logo_url} alt={row.app.name} className="h-full w-full object-cover" />
+                    ) : (
+                      row.app.name.slice(0, 2).toUpperCase()
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{row.app.name}</p>
+                    <p className="text-xs text-gray-500">{row.app.domain}</p>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+                  <MiniToggle
+                    label={t("settings.visibleInDirectory")}
+                    value={row.is_visible}
+                    onChange={(v) => void updateAppSetting(row.app.id, { is_visible: v })}
+                    disabled={savingApps[row.app.id]}
+                  />
+                  <MiniToggle
+                    label={t("settings.canBeContacted")}
+                    value={row.is_contactable}
+                    onChange={(v) => void updateAppSetting(row.app.id, { is_contactable: v })}
+                    disabled={savingApps[row.app.id]}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
         <button
           type="button"
           onClick={handleSave}
@@ -175,5 +288,39 @@ function Row({
         />
       </button>
     </div>
+  );
+}
+
+function MiniToggle({
+  label,
+  value,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <label className="flex items-center gap-2 text-xs text-gray-700">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={value}
+        disabled={disabled}
+        onClick={() => onChange(!value)}
+        className={`relative h-5 w-9 rounded-full transition disabled:opacity-60 ${
+          value ? "bg-[#1D6BF3]" : "bg-gray-300"
+        }`}
+      >
+        <span
+          className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition ${
+            value ? "left-[18px]" : "left-0.5"
+          }`}
+        />
+      </button>
+      {label}
+    </label>
   );
 }

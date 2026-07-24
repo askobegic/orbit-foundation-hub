@@ -127,6 +127,25 @@ function OnboardingPage() {
       await setAppLanguage(lang);
       await refreshProfile();
       try {
+        const { data: apps } = await supabase
+          .from("applications")
+          .select("id")
+          .eq("status", "active");
+        if (apps && apps.length > 0 && user) {
+          const rows = apps.map((a) => ({
+            user_id: user.id,
+            app_id: a.id,
+            is_visible: true,
+            is_contactable: true,
+          }));
+          await supabase
+            .from("user_app_settings")
+            .upsert(rows, { onConflict: "user_id,app_id", ignoreDuplicates: true });
+        }
+      } catch (err) {
+        console.warn("[onboarding] seed user_app_settings failed", err);
+      }
+      try {
         await notifyNewUser({});
       } catch (err) {
         console.warn("[n8n] notify new user failed", err);
