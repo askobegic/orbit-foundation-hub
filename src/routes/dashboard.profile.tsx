@@ -13,7 +13,9 @@ import {
 } from "@/components/profile/SocialLinksSection";
 import { ProfileCompletionBar } from "@/components/profile/ProfileCompletionBar";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
+import { CountrySelect } from "@/components/ui/CountrySelect";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { generateUniqueUsername } from "@/lib/username";
 import type {
@@ -49,6 +51,7 @@ const EMPTY_SOCIAL: SocialLinks = {
 function EditProfilePage() {
   const { t } = useTranslation();
   const { user, profile, refreshProfile, updateProfile } = useAuth();
+  const { setLanguage: setAppLanguage } = useLanguage();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -152,6 +155,7 @@ function EditProfilePage() {
         username: finalUsername,
         profile_complete: true,
       });
+      await setAppLanguage(language);
       await refreshProfile();
       setUsername(finalUsername);
       toast.success(t("auth.profileSaved"));
@@ -223,8 +227,17 @@ function EditProfilePage() {
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <TextField label={t("profile.firstName")} value={firstName} onChange={setFirstName} required />
               <TextField label={t("profile.lastName")} value={lastName} onChange={setLastName} required />
-              <TextField label={t("profile.city")} value={city} onChange={setCity} required />
-              <TextField label={t("profile.country")} value={country} onChange={setCountry} required />
+              <TextField
+                label={t("profile.city")}
+                value={city}
+                onChange={setCity}
+                required
+                placeholder={t("profile.cityPlaceholder")}
+              />
+              <label className="text-sm font-medium text-gray-700">
+                {t("profile.country")} *
+                <CountrySelect value={country} onChange={setCountry} />
+              </label>
               <TextField label={t("profile.username")} value={username} onChange={setUsername} />
             </div>
             <label className="text-sm font-medium text-gray-700">
@@ -262,6 +275,12 @@ function EditProfilePage() {
             >
               {savingStd ? t("common.loading") : t("profile.save")}
             </button>
+            <Link
+              to="/dashboard"
+              className="text-sm text-[#1D6BF3] hover:underline"
+            >
+              ← {t("auth.backToDashboard")}
+            </Link>
           </div>
         </section>
 
@@ -310,11 +329,13 @@ function TextField({
   value,
   onChange,
   required,
+  placeholder,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   required?: boolean;
+  placeholder?: string;
 }) {
   return (
     <label className="text-sm font-medium text-gray-700">
@@ -324,6 +345,7 @@ function TextField({
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
         className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#1D6BF3]"
       />
     </label>
