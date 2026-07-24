@@ -334,45 +334,222 @@ function PlanForm({
   );
 }
 
+type AppSettingsPayload = {
+  logo_url: string | null;
+  favicon_url: string | null;
+  short_description_bs: string | null;
+  short_description_en: string | null;
+  short_description_de: string | null;
+  is_enabled: boolean;
+};
+
 function AppSettings({
   app,
-  onToggle,
+  onSave,
   busy,
 }: {
   app: ApplicationRow;
-  onToggle: (v: boolean) => void;
+  onSave: (v: AppSettingsPayload) => void;
   busy?: boolean;
 }) {
-  const enabled = app.is_enabled !== false;
+  const [logoUrl, setLogoUrl] = useState<string | null>(app.logo_url);
+  const [faviconUrl, setFaviconUrl] = useState<string | null>(app.favicon_url);
+  const [dBs, setDBs] = useState(app.short_description_bs ?? "");
+  const [dEn, setDEn] = useState(app.short_description_en ?? "");
+  const [dDe, setDDe] = useState(app.short_description_de ?? "");
+  const [enabled, setEnabled] = useState(app.is_enabled !== false);
+  const [uploading, setUploading] = useState<null | "logo" | "favicon">(null);
+  const logoRef = useRef<HTMLInputElement>(null);
+  const favRef = useRef<HTMLInputElement>(null);
+
+  useEffectR(() => {
+    setLogoUrl(app.logo_url);
+    setFaviconUrl(app.favicon_url);
+    setDBs(app.short_description_bs ?? "");
+    setDEn(app.short_description_en ?? "");
+    setDDe(app.short_description_de ?? "");
+    setEnabled(app.is_enabled !== false);
+  }, [app.id, app.logo_url, app.favicon_url, app.short_description_bs, app.short_description_en, app.short_description_de, app.is_enabled]);
+
+  async function upload(kind: "logo" | "favicon", file: File) {
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Fajl je prevelik (max 2MB)");
+      return;
+    }
+    if (!["image/png", "image/svg+xml", "image/jpeg", "image/webp", "image/x-icon", "image/vnd.microsoft.icon"].includes(file.type)) {
+      toast.error("Nepodržan format");
+      return;
+    }
+    setUploading(kind);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `${app.slug}/${kind}.${ext}`;
+      const { error } = await supabase.storage
+        .from("app-logos")
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (error) throw error;
+      const { data, error: signErr } = await supabase.storage
+        .from("app-logos")
+        .createSignedUrl(path, 60 * 60 * 24 * 365);
+      if (signErr) throw signErr;
+      if (kind === "logo") setLogoUrl(data.signedUrl);
+      else setFaviconUrl(data.signedUrl);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setUploading(null);
+    }
+  }
+
+  function submit() {
+    onSave({
+      logo_url: logoUrl,
+      favicon_url: faviconUrl,
+      short_description_bs: dBs.trim() || null,
+      short_description_en: dEn.trim() || null,
+      short_description_de: dDe.trim() || null,
+      is_enabled: enabled,
+    });
+  }
+
   return (
     <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
-      <h2 className="mb-3 text-sm font-semibold text-gray-900">App Settings</h2>
-      <div className="mb-3 text-sm text-gray-700">
-        Status:{" "}
-        <span className={enabled ? "font-medium text-green-700" : "font-medium text-gray-500"}>
-          {enabled ? "Aktivna" : "Uskoro dostupno"}
+      <h2 className="mb-4 text-sm font-semibold text-gray-900">App Settings</h2>
+
+      <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-8">
+        <div>
+          <div className="mb-1 text-xs font-medium text-gray-600">Logo</div>
+          <div className="flex items-center gap-3">
+            <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl bg-gray-50 ring-1 ring-gray-200">
+              {logoUrl ? (
+                <img src={logoUrl} alt="logo" className="h-full w-full object-contain" />
+              ) : (
+                <span className="text-xs text-gray-400">—</span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => logoRef.current?.click()}
+              disabled={uploading === "logo"}
+              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+            >
+              {uploading === "logo" ? "Uploading…" : "Promijeni logo"}
+            </button>
+            <input
+              ref={logoRef}
+              type="file"
+              accept="image/png,image/svg+xml,image/jpeg,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void upload("logo", f);
+              }}
+            />
+          </div>
+          <p className="mt-1 text-[11px] text-gray-400">PNG, SVG, JPG · max 2MB</p>
+        </div>
+
+        <div>
+          <div className="mb-1 text-xs font-medium text-gray-600">Favicon</div>
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded bg-gray-50 ring-1 ring-gray-200">
+              {faviconUrl ? (
+                <img src={faviconUrl} alt="favicon" className="h-full w-full object-contain" />
+              ) : (
+                <span className="text-[10px] text-gray-400">—</span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => favRef.current?.click()}
+              disabled={uploading === "favicon"}
+              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+            >
+              {uploading === "favicon" ? "Uploading…" : "Promijeni favicon"}
+            </button>
+            <input
+              ref={favRef}
+              type="file"
+              accept="image/png,image/svg+xml,image/x-icon,image/vnd.microsoft.icon"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void upload("favicon", f);
+              }}
+            />
+          </div>
+          <p className="mt-1 text-[11px] text-gray-400">PNG, SVG, ICO · max 2MB</p>
+        </div>
+      </div>
+
+      <div className="grid gap-3">
+        <DescField label="Kratki opis (BS)" value={dBs} onChange={setDBs} />
+        <DescField label="Kratki opis (EN)" value={dEn} onChange={setDEn} />
+        <DescField label="Kratki opis (DE)" value={dDe} onChange={setDDe} />
+      </div>
+
+      <div className="mt-4 border-t border-gray-100 pt-4">
+        <div className="mb-2 text-xs font-medium text-gray-600">Status</div>
+        <label className="inline-flex cursor-pointer items-center gap-3">
+          <span className="relative inline-block h-6 w-11">
+            <input
+              type="checkbox"
+              className="peer sr-only"
+              checked={enabled}
+              onChange={(e) => setEnabled(e.target.checked)}
+            />
+            <span className="absolute inset-0 rounded-full bg-gray-300 transition peer-checked:bg-[#1D6BF3]" />
+            <span className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition peer-checked:translate-x-5" />
+          </span>
+          <span className="text-sm text-gray-800">
+            {enabled ? "Aplikacija aktivna" : "Aplikacija neaktivna"}
+          </span>
+        </label>
+        <p className="mt-2 text-xs text-gray-500">
+          Kada je neaktivna, korisnici vide samo "Uskoro dostupno" badge.
+        </p>
+      </div>
+
+      <div className="mt-5 flex justify-end">
+        <button
+          type="button"
+          onClick={submit}
+          disabled={busy}
+          className="inline-flex items-center gap-2 rounded-lg bg-[#1D6BF3] px-4 py-2 text-sm font-medium text-white hover:bg-[#1858cf] disabled:opacity-60"
+        >
+          <Save className="h-4 w-4" />
+          {busy ? "Spremam…" : "Sačuvaj postavke"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function DescField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const max = 160;
+  return (
+    <label className="flex flex-col gap-1">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-gray-600">{label}</span>
+        <span className={`text-[11px] ${value.length > max ? "text-red-500" : "text-gray-400"}`}>
+          {value.length}/{max}
         </span>
       </div>
-      <label className="inline-flex cursor-pointer items-center gap-3">
-        <span className="relative inline-block h-6 w-11">
-          <input
-            type="checkbox"
-            className="peer sr-only"
-            checked={enabled}
-            disabled={busy}
-            onChange={(e) => onToggle(e.target.checked)}
-          />
-          <span className="absolute inset-0 rounded-full bg-gray-300 transition peer-checked:bg-[#1D6BF3]" />
-          <span className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition peer-checked:translate-x-5" />
-        </span>
-        <span className="text-sm text-gray-800">
-          {enabled ? "Aplikacija aktivna" : "Aplikacija neaktivna"}
-        </span>
-      </label>
-      <p className="mt-3 text-xs text-gray-500">
-        Kada je neaktivna, korisnici vide samo "Uskoro dostupno" badge.
-      </p>
-    </div>
+      <textarea
+        value={value}
+        maxLength={max}
+        onChange={(e) => onChange(e.target.value)}
+        className="min-h-[60px] w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#1D6BF3]"
+      />
+    </label>
   );
 }
 
