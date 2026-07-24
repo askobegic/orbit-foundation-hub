@@ -1,11 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { LayoutGrid, Users } from "lucide-react";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import { getMyIsAdmin } from "@/lib/admin.functions";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -25,13 +25,22 @@ export const Route = createFileRoute("/admin")({
 
 function AdminGate() {
   const navigate = useNavigate();
-  const isAdminFn = useServerFn(getMyIsAdmin);
+  const { user } = useAuth();
   const q = useQuery({
-    queryKey: ["is-admin"],
+    queryKey: ["is-admin", user?.id],
+    enabled: !!user?.id,
     queryFn: async () => {
-      const res = await isAdminFn();
-      console.log("[admin] getMyIsAdmin result:", res);
-      return res;
+      console.log("[admin] checking role for user:", user?.id);
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user!.id)
+        .maybeSingle();
+      console.log("[admin] user_roles row:", data, "error:", error);
+      if (error) throw new Error(error.message);
+      const role = (data?.role ?? null) as string | null;
+      const isAdmin = role === "admin" || role === "super_admin";
+      return { isAdmin, role };
     },
     retry: 1,
   });
