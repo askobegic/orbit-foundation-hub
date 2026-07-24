@@ -4,7 +4,8 @@
 export type N8nEventType =
   | "new_user_registered"
   | "premium_activated"
-  | "payment_received";
+  | "payment_received"
+  | "support_request";
 
 export async function sendN8nEvent(
   event: N8nEventType,
