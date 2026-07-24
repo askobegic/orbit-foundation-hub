@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect as useEffectR } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -13,6 +13,7 @@ import {
   adminDeletePlan,
   getMyIsAdmin,
   adminSetAppEnabled,
+  adminUpdateAppSettings,
 } from "@/lib/admin.functions";
 import type { ApplicationRow, SubscriptionPlanRow } from "@/types/database";
 
@@ -78,12 +79,23 @@ function AdminApps() {
   const upsert = useServerFn(adminUpsertPlan);
   const del = useServerFn(adminDeletePlan);
   const setEnabled = useServerFn(adminSetAppEnabled);
+  const updateSettings = useServerFn(adminUpdateAppSettings);
 
   const toggleEnabled = useMutation({
     mutationFn: (v: { app_id: string; is_enabled: boolean }) =>
       setEnabled({ data: v }),
     onSuccess: () => {
       toast.success("Updated");
+      qc.invalidateQueries({ queryKey: ["admin-apps"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const saveSettings = useMutation({
+    mutationFn: (v: Parameters<typeof updateSettings>[0]["data"]) =>
+      updateSettings({ data: v }),
+    onSuccess: () => {
+      toast.success("Postavke sačuvane");
       qc.invalidateQueries({ queryKey: ["admin-apps"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -158,10 +170,8 @@ function AdminApps() {
           <div className="space-y-4">
             <AppSettings
               app={activeApp}
-              onToggle={(v) =>
-                toggleEnabled.mutate({ app_id: activeApp.id, is_enabled: v })
-              }
-              busy={toggleEnabled.isPending}
+              onSave={(v) => saveSettings.mutate({ ...v, app_id: activeApp.id })}
+              busy={saveSettings.isPending}
             />
             {(plansQ.data ?? []).map((plan) => (
               <PlanForm
