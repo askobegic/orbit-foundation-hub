@@ -335,7 +335,7 @@ export const adminListVerificationRequests = createServerFn({ method: "GET" })
       .select("user_id")
       .eq("status", "active");
     const ids = Array.from(new Set(((subs ?? []) as { user_id: string }[]).map((r) => r.user_id)));
-    if (ids.length === 0) return [] as unknown[];
+    if (ids.length === 0) return [] as VerificationRow[];
     const { data, error } = await supabaseAdmin
       .from("profiles")
       .select("id, email, first_name, last_name, username, avatar_url, city, country, is_verified, created_at")
@@ -343,7 +343,7 @@ export const adminListVerificationRequests = createServerFn({ method: "GET" })
       .order("is_verified", { ascending: true })
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
-    return data ?? [];
+    return (data ?? []) as VerificationRow[];
   });
 
 export const adminSetVerified = createServerFn({ method: "POST" })
