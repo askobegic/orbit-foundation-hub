@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import i18n, { SUPPORTED_LANGUAGES, type SupportedLanguage } from "@/lib/i18n";
@@ -24,13 +24,28 @@ function normalize(lang: string | undefined | null): SupportedLanguage {
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const { i18n: i18nInstance } = useTranslation();
   const { user, profile } = useAuth();
+  const [, force] = useState(0);
+  const syncedFromProfile = useRef(false);
 
-  // Sync signed-in user's preferred language from their profile on load.
+  // Re-render this provider (and its consumers of `language`) whenever i18n
+  // changes language, so the memoized value below reflects the new lang.
   useEffect(() => {
-    if (profile?.language) {
-      const lang = normalize(profile.language);
-      if (lang !== i18nInstance.language) void i18nInstance.changeLanguage(lang);
-    }
+    const handler = () => force((n) => n + 1);
+    i18nInstance.on("languageChanged", handler);
+    return () => i18nInstance.off("languageChanged", handler);
+  }, [i18nInstance]);
+
+  // Sync signed-in user's preferred language from their profile ONCE per session,
+  // and only if the user hasn't already made an explicit choice (localStorage).
+  useEffect(() => {
+    if (syncedFromProfile.current) return;
+    if (!profile?.language) return;
+    syncedFromProfile.current = true;
+    const hasLocalChoice =
+      typeof window !== "undefined" && !!window.localStorage.getItem("app.language");
+    if (hasLocalChoice) return;
+    const lang = normalize(profile.language);
+    if (lang !== i18nInstance.language) void i18nInstance.changeLanguage(lang);
   }, [profile?.language, i18nInstance]);
 
   const setLanguage = useCallback(
