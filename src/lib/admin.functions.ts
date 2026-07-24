@@ -425,3 +425,39 @@ export const adminSetAppEnabled = createServerFn({ method: "POST" })
     });
     return row;
   });
+
+// ---------- App settings (logo, favicon, descriptions, enabled) ----------
+
+const appSettingsSchema = z.object({
+  app_id: z.string().uuid(),
+  logo_url: z.string().url().nullable().optional(),
+  favicon_url: z.string().url().nullable().optional(),
+  short_description_bs: z.string().max(160).nullable().optional(),
+  short_description_en: z.string().max(160).nullable().optional(),
+  short_description_de: z.string().max(160).nullable().optional(),
+  is_enabled: z.boolean(),
+});
+
+export const adminUpdateAppSettings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => appSettingsSchema.parse(raw))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { app_id, ...patch } = data;
+    const { data: row, error } = await supabaseAdmin
+      .from("applications")
+      .update(patch as never)
+      .eq("id", app_id)
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    await writeAuditLog({
+      userId: context.userId,
+      action: "app.settings_update",
+      entityType: "application",
+      entityId: app_id,
+      newData: patch,
+    });
+    return row;
+  });
