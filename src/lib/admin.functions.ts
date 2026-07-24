@@ -4,6 +4,19 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertAdmin, writeAuditLog, addMonthsIso } from "@/lib/admin.server";
 
+export type VerificationRow = {
+  id: string;
+  email: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  username: string | null;
+  avatar_url: string | null;
+  city: string | null;
+  country: string | null;
+  is_verified: boolean | null;
+  created_at: string | null;
+};
+
 // ---------- Plans ----------
 
 const planInputSchema = z.object({
