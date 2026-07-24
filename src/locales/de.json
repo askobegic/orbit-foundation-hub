@@ -29,7 +29,11 @@
     "photoRequired": "Profilfoto ist erforderlich.",
     "continue": "Weiter",
     "completeRegistration": "Registrierung abschließen",
-    "profileSaved": "Profil gespeichert."
+    "profileSaved": "Profil erfolgreich gespeichert.",
+    "photoImportedGoogle": "Von Google importiert",
+    "photoImportedApple": "Von Apple importiert",
+    "photoImported": "Foto aus deinem Konto importiert",
+    "backToDashboard": "Zurück zum Dashboard"
   },
   "profile": {
     "title": "Mein Profil",
@@ -71,7 +75,25 @@
     "whatsapp": "WhatsApp",
     "contactEmail": "Kontakt-E-Mail",
     "notFound": "Profil nicht gefunden",
-    "registerFree": "Kostenlos registrieren"
+    "registerFree": "Kostenlos registrieren",
+    "notEntered": "Nicht angegeben",
+    "basicInfo": "Grunddaten",
+    "cityPlaceholder": "z. B. Sarajevo",
+    "selectCountry": "Land auswählen"
+  },
+  "countries": {
+    "BA": "Bosnien und Herzegowina",
+    "HR": "Kroatien",
+    "RS": "Serbien",
+    "SI": "Slowenien",
+    "MK": "Nordmazedonien",
+    "ME": "Montenegro",
+    "DE": "Deutschland",
+    "AT": "Österreich",
+    "CH": "Schweiz",
+    "US": "USA",
+    "AU": "Australien",
+    "other": "Andere"
   },
   "dashboard": {
     "welcome": "Willkommen",
