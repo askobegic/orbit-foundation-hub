@@ -614,3 +614,81 @@ function Sidebar({ onSignOut }: { onSignOut: () => void }) {
     </aside>
   );
 }
+
+function ShareProfile({ username }: { username: string }) {
+  const { t } = useTranslation();
+  const url =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/u/${username}`
+      : `/u/${username}`;
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success(t("profile.linkCopied"));
+    } catch {
+      toast.error(t("common.errorGeneric"));
+    }
+  };
+
+  const share = async () => {
+    if (typeof navigator !== "undefined" && "share" in navigator) {
+      try {
+        await navigator.share({ url, title: t("profile.title") });
+        return;
+      } catch {
+        // fall through to copy
+      }
+    }
+    void copy();
+  };
+
+  const enc = encodeURIComponent(url);
+  const socials = [
+    { icon: Facebook, href: `https://www.facebook.com/sharer/sharer.php?u=${enc}`, label: "Facebook" },
+    { icon: Linkedin, href: `https://www.linkedin.com/sharing/share-offsite/?url=${enc}`, label: "LinkedIn" },
+    { icon: MessageCircle, href: `https://wa.me/?text=${enc}`, label: "WhatsApp" },
+    { icon: Mail, href: `mailto:?body=${enc}`, label: "Email" },
+  ];
+
+  return (
+    <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-3">
+      <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-500">
+          <Link2 className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+          <span className="truncate">{url}</span>
+        </div>
+        <button
+          type="button"
+          onClick={copy}
+          className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-600 transition hover:bg-gray-100"
+        >
+          <Link2 className="h-3.5 w-3.5" />
+          {t("profile.shareProfile") /* Copy label reuses share key group */}
+        </button>
+        <button
+          type="button"
+          onClick={share}
+          className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-600 transition hover:bg-gray-100"
+        >
+          <Share2 className="h-3.5 w-3.5" />
+          Share
+        </button>
+      </div>
+      <div className="mt-2 flex items-center gap-1.5">
+        {socials.map((s) => (
+          <a
+            key={s.label}
+            href={s.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={s.label}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
+          >
+            <s.icon className="h-3.5 w-3.5" />
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
