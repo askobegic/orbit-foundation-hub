@@ -60,7 +60,6 @@ function EditProfilePage() {
   const [bio, setBio] = useState("");
   const [language, setLanguage] = useState<UserLanguage>("bs");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [username, setUsername] = useState("");
   const [savingStd, setSavingStd] = useState(false);
 
   const [premium, setPremium] = useState<PremiumProfileRow | null>(null);
@@ -87,7 +86,6 @@ function EditProfilePage() {
     setBio(profile.bio ?? "");
     setLanguage(profile.language);
     setAvatarUrl(profile.avatar_url);
-    setUsername(profile.username ?? "");
   }, [profile]);
 
   useEffect(() => {
@@ -140,7 +138,7 @@ function EditProfilePage() {
     }
     setSavingStd(true);
     try {
-      let finalUsername = username.trim();
+      let finalUsername = profile?.username ?? "";
       if (!finalUsername) {
         finalUsername = await generateUniqueUsername(firstName, lastName, user.id);
       }
@@ -149,7 +147,6 @@ function EditProfilePage() {
         last_name: lastName.trim(),
         city: city.trim(),
         country: country.trim(),
-        bio: bio.trim() || null,
         language,
         avatar_url: avatarUrl,
         username: finalUsername,
@@ -157,7 +154,6 @@ function EditProfilePage() {
       });
       await setAppLanguage(language);
       await refreshProfile();
-      setUsername(finalUsername);
       toast.success(t("auth.profileSaved"));
     } catch {
       toast.error(t("auth.saveError"));
