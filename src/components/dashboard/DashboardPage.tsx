@@ -476,9 +476,9 @@ function Sidebar({ onSignOut }: { onSignOut: () => void }) {
     { to: "/dashboard/subscriptions", icon: CreditCard, label: t("nav.subscriptions") },
     { to: "/dashboard", icon: Receipt, label: t("nav.payments") },
     { to: "/dashboard/settings", icon: Settings, label: t("nav.settings") },
-    { to: "/dashboard", icon: Shield, label: t("nav.security") },
+    { to: "/dashboard/security", icon: Shield, label: t("nav.security") },
     { to: "/dashboard/notifications", icon: Bell, label: t("nav.notifications") },
-    { to: "/dashboard", icon: HelpCircle, label: t("nav.help") },
+    { to: "/dashboard/help", icon: HelpCircle, label: t("nav.help") },
   ] as const;
 
   return (
