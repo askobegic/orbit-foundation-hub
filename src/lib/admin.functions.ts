@@ -196,7 +196,7 @@ export const getMyIsAdmin = createServerFn({ method: "GET" })
       .from("user_roles")
       .select("role")
       .eq("user_id", context.userId)
-      .in("role", ["admin", "super_admin"])
+      .eq("role", "admin")
       .maybeSingle();
     console.log("[getMyIsAdmin]", { userId: context.userId, role: data?.role ?? null });
     return { isAdmin: !!data, role: data?.role ?? null };
