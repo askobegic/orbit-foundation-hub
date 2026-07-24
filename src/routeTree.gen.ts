@@ -21,6 +21,7 @@ import { Route as PaymentSuccessRouteImport } from './routes/payment.success'
 import { Route as DashboardSubscriptionsRouteImport } from './routes/dashboard.subscriptions'
 import { Route as DashboardProfileRouteImport } from './routes/dashboard.profile'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
+import { Route as AdminPaymentsRouteImport } from './routes/admin.payments'
 import { Route as AdminCommunicationRouteImport } from './routes/admin.communication'
 import { Route as AdminApplicationsRouteImport } from './routes/admin.applications'
 import { Route as UUsernameShareRouteImport } from './routes/u.$username.share'
@@ -87,6 +88,11 @@ const AdminUsersRoute = AdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminPaymentsRoute = AdminPaymentsRouteImport.update({
+  id: '/payments',
+  path: '/payments',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminCommunicationRoute = AdminCommunicationRouteImport.update({
   id: '/communication',
   path: '/communication',
@@ -121,6 +127,7 @@ export interface FileRoutesByFullPath {
   '/pricing': typeof PricingRoute
   '/admin/applications': typeof AdminApplicationsRoute
   '/admin/communication': typeof AdminCommunicationRoute
+  '/admin/payments': typeof AdminPaymentsRoute
   '/admin/users': typeof AdminUsersRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/subscriptions': typeof DashboardSubscriptionsRoute
@@ -140,6 +147,7 @@ export interface FileRoutesByTo {
   '/pricing': typeof PricingRoute
   '/admin/applications': typeof AdminApplicationsRoute
   '/admin/communication': typeof AdminCommunicationRoute
+  '/admin/payments': typeof AdminPaymentsRoute
   '/admin/users': typeof AdminUsersRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/subscriptions': typeof DashboardSubscriptionsRoute
@@ -160,6 +168,7 @@ export interface FileRoutesById {
   '/pricing': typeof PricingRoute
   '/admin/applications': typeof AdminApplicationsRoute
   '/admin/communication': typeof AdminCommunicationRoute
+  '/admin/payments': typeof AdminPaymentsRoute
   '/admin/users': typeof AdminUsersRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/subscriptions': typeof DashboardSubscriptionsRoute
@@ -181,6 +190,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/admin/applications'
     | '/admin/communication'
+    | '/admin/payments'
     | '/admin/users'
     | '/dashboard/profile'
     | '/dashboard/subscriptions'
@@ -200,6 +210,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/admin/applications'
     | '/admin/communication'
+    | '/admin/payments'
     | '/admin/users'
     | '/dashboard/profile'
     | '/dashboard/subscriptions'
@@ -219,6 +230,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/admin/applications'
     | '/admin/communication'
+    | '/admin/payments'
     | '/admin/users'
     | '/dashboard/profile'
     | '/dashboard/subscriptions'
@@ -333,6 +345,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminUsersRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/payments': {
+      id: '/admin/payments'
+      path: '/payments'
+      fullPath: '/admin/payments'
+      preLoaderRoute: typeof AdminPaymentsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/communication': {
       id: '/admin/communication'
       path: '/communication'
@@ -374,12 +393,14 @@ declare module '@tanstack/react-router' {
 interface AdminRouteChildren {
   AdminApplicationsRoute: typeof AdminApplicationsRoute
   AdminCommunicationRoute: typeof AdminCommunicationRoute
+  AdminPaymentsRoute: typeof AdminPaymentsRoute
   AdminUsersRoute: typeof AdminUsersRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminApplicationsRoute: AdminApplicationsRoute,
   AdminCommunicationRoute: AdminCommunicationRoute,
+  AdminPaymentsRoute: AdminPaymentsRoute,
   AdminUsersRoute: AdminUsersRoute,
 }
 
