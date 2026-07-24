@@ -17,7 +17,11 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UUsernameRouteImport } from './routes/u.$username'
 import { Route as ProfileUsernameRouteImport } from './routes/profile.$username'
+import { Route as PaymentSuccessRouteImport } from './routes/payment.success'
+import { Route as DashboardSubscriptionsRouteImport } from './routes/dashboard.subscriptions'
 import { Route as DashboardProfileRouteImport } from './routes/dashboard.profile'
+import { Route as AdminUsersRouteImport } from './routes/admin.users'
+import { Route as AdminApplicationsRouteImport } from './routes/admin.applications'
 import { Route as UUsernameShareRouteImport } from './routes/u.$username.share'
 import { Route as ApiPublicWebhooksStripeRouteImport } from './routes/api/public/webhooks/stripe'
 import { Route as ApiPublicWebhooksPaypalRouteImport } from './routes/api/public/webhooks/paypal'
@@ -62,10 +66,30 @@ const ProfileUsernameRoute = ProfileUsernameRouteImport.update({
   path: '/profile/$username',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PaymentSuccessRoute = PaymentSuccessRouteImport.update({
+  id: '/payment/success',
+  path: '/payment/success',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardSubscriptionsRoute = DashboardSubscriptionsRouteImport.update({
+  id: '/subscriptions',
+  path: '/subscriptions',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardProfileRoute = DashboardProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
   getParentRoute: () => DashboardRoute,
+} as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminApplicationsRoute = AdminApplicationsRouteImport.update({
+  id: '/applications',
+  path: '/applications',
+  getParentRoute: () => AdminRoute,
 } as any)
 const UUsernameShareRoute = UUsernameShareRouteImport.update({
   id: '/share',
@@ -85,12 +109,16 @@ const ApiPublicWebhooksPaypalRoute = ApiPublicWebhooksPaypalRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/pricing': typeof PricingRoute
+  '/admin/applications': typeof AdminApplicationsRoute
+  '/admin/users': typeof AdminUsersRoute
   '/dashboard/profile': typeof DashboardProfileRoute
+  '/dashboard/subscriptions': typeof DashboardSubscriptionsRoute
+  '/payment/success': typeof PaymentSuccessRoute
   '/profile/$username': typeof ProfileUsernameRoute
   '/u/$username': typeof UUsernameRouteWithChildren
   '/u/$username/share': typeof UUsernameShareRoute
@@ -99,12 +127,16 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/pricing': typeof PricingRoute
+  '/admin/applications': typeof AdminApplicationsRoute
+  '/admin/users': typeof AdminUsersRoute
   '/dashboard/profile': typeof DashboardProfileRoute
+  '/dashboard/subscriptions': typeof DashboardSubscriptionsRoute
+  '/payment/success': typeof PaymentSuccessRoute
   '/profile/$username': typeof ProfileUsernameRoute
   '/u/$username': typeof UUsernameRouteWithChildren
   '/u/$username/share': typeof UUsernameShareRoute
@@ -114,12 +146,16 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/pricing': typeof PricingRoute
+  '/admin/applications': typeof AdminApplicationsRoute
+  '/admin/users': typeof AdminUsersRoute
   '/dashboard/profile': typeof DashboardProfileRoute
+  '/dashboard/subscriptions': typeof DashboardSubscriptionsRoute
+  '/payment/success': typeof PaymentSuccessRoute
   '/profile/$username': typeof ProfileUsernameRoute
   '/u/$username': typeof UUsernameRouteWithChildren
   '/u/$username/share': typeof UUsernameShareRoute
@@ -135,7 +171,11 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/pricing'
+    | '/admin/applications'
+    | '/admin/users'
     | '/dashboard/profile'
+    | '/dashboard/subscriptions'
+    | '/payment/success'
     | '/profile/$username'
     | '/u/$username'
     | '/u/$username/share'
@@ -149,7 +189,11 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/pricing'
+    | '/admin/applications'
+    | '/admin/users'
     | '/dashboard/profile'
+    | '/dashboard/subscriptions'
+    | '/payment/success'
     | '/profile/$username'
     | '/u/$username'
     | '/u/$username/share'
@@ -163,7 +207,11 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/pricing'
+    | '/admin/applications'
+    | '/admin/users'
     | '/dashboard/profile'
+    | '/dashboard/subscriptions'
+    | '/payment/success'
     | '/profile/$username'
     | '/u/$username'
     | '/u/$username/share'
@@ -173,11 +221,12 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRoute
+  AdminRoute: typeof AdminRouteWithChildren
   DashboardRoute: typeof DashboardRouteWithChildren
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
   PricingRoute: typeof PricingRoute
+  PaymentSuccessRoute: typeof PaymentSuccessRoute
   ProfileUsernameRoute: typeof ProfileUsernameRoute
   UUsernameRoute: typeof UUsernameRouteWithChildren
   ApiPublicWebhooksPaypalRoute: typeof ApiPublicWebhooksPaypalRoute
@@ -242,12 +291,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfileUsernameRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/payment/success': {
+      id: '/payment/success'
+      path: '/payment/success'
+      fullPath: '/payment/success'
+      preLoaderRoute: typeof PaymentSuccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/subscriptions': {
+      id: '/dashboard/subscriptions'
+      path: '/subscriptions'
+      fullPath: '/dashboard/subscriptions'
+      preLoaderRoute: typeof DashboardSubscriptionsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/profile': {
       id: '/dashboard/profile'
       path: '/profile'
       fullPath: '/dashboard/profile'
       preLoaderRoute: typeof DashboardProfileRouteImport
       parentRoute: typeof DashboardRoute
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/applications': {
+      id: '/admin/applications'
+      path: '/applications'
+      fullPath: '/admin/applications'
+      preLoaderRoute: typeof AdminApplicationsRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/u/$username/share': {
       id: '/u/$username/share'
@@ -273,12 +350,26 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AdminRouteChildren {
+  AdminApplicationsRoute: typeof AdminApplicationsRoute
+  AdminUsersRoute: typeof AdminUsersRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminApplicationsRoute: AdminApplicationsRoute,
+  AdminUsersRoute: AdminUsersRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 interface DashboardRouteChildren {
   DashboardProfileRoute: typeof DashboardProfileRoute
+  DashboardSubscriptionsRoute: typeof DashboardSubscriptionsRoute
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardProfileRoute: DashboardProfileRoute,
+  DashboardSubscriptionsRoute: DashboardSubscriptionsRoute,
 }
 
 const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
@@ -299,11 +390,12 @@ const UUsernameRouteWithChildren = UUsernameRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRoute: AdminRoute,
+  AdminRoute: AdminRouteWithChildren,
   DashboardRoute: DashboardRouteWithChildren,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
   PricingRoute: PricingRoute,
+  PaymentSuccessRoute: PaymentSuccessRoute,
   ProfileUsernameRoute: ProfileUsernameRoute,
   UUsernameRoute: UUsernameRouteWithChildren,
   ApiPublicWebhooksPaypalRoute: ApiPublicWebhooksPaypalRoute,
