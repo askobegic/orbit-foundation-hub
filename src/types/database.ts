@@ -24,47 +24,30 @@ export type PaymentStatus = "pending" | "success" | "failed" | "refunded";
 export type PaymentMethod = "stripe" | "paypal";
 export type NotificationType = "info" | "success" | "warning" | "error";
 
-// Table aliases
-// @ts-expect-error — resolves to real Row type after Supabase types regen
+// Table aliases. These resolve to real row shapes once the Supabase
+// generated types (src/integrations/supabase/types.ts) are regenerated.
 export type ProfileRow = TableRow<"profiles">;
-// @ts-expect-error
 export type ProfileInsert = TableInsert<"profiles">;
-// @ts-expect-error
 export type ProfileUpdate = TableUpdate<"profiles">;
 
-// @ts-expect-error
 export type PremiumProfileRow = TableRow<"premium_profiles">;
-// @ts-expect-error
 export type PremiumProfileInsert = TableInsert<"premium_profiles">;
-// @ts-expect-error
 export type PremiumProfileUpdate = TableUpdate<"premium_profiles">;
 
-// @ts-expect-error
 export type ApplicationRow = TableRow<"applications">;
-// @ts-expect-error
 export type ApplicationInsert = TableInsert<"applications">;
-// @ts-expect-error
 export type ApplicationUpdate = TableUpdate<"applications">;
 
-// @ts-expect-error
 export type SubscriptionPlanRow = TableRow<"subscription_plans">;
-// @ts-expect-error
 export type SubscriptionPlanInsert = TableInsert<"subscription_plans">;
 
-// @ts-expect-error
 export type SubscriptionRow = TableRow<"subscriptions">;
-// @ts-expect-error
 export type SubscriptionInsert = TableInsert<"subscriptions">;
 
-// @ts-expect-error
 export type PaymentRow = TableRow<"payments">;
-// @ts-expect-error
 export type PaymentInsert = TableInsert<"payments">;
 
-// @ts-expect-error
 export type NotificationRow = TableRow<"notifications">;
-// @ts-expect-error
 export type NotificationInsert = TableInsert<"notifications">;
 
-// @ts-expect-error
 export type AuditLogRow = TableRow<"audit_logs">;
