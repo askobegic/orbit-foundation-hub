@@ -57,7 +57,6 @@ function EditProfilePage() {
   const [lastName, setLastName] = useState("");
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("BA");
-  const [bio, setBio] = useState("");
   const [language, setLanguage] = useState<UserLanguage>("bs");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [savingStd, setSavingStd] = useState(false);
@@ -83,7 +82,6 @@ function EditProfilePage() {
     setLastName(profile.last_name ?? "");
     setCity(profile.city ?? "");
     setCountry(profile.country ?? "BA");
-    setBio(profile.bio ?? "");
     setLanguage(profile.language);
     setAvatarUrl(profile.avatar_url);
   }, [profile]);
