@@ -240,8 +240,11 @@ export const adminOverviewStats = createServerFn({ method: "GET" })
       supabaseAdmin.from("profiles").select("id", { count: "exact", head: true }),
       supabaseAdmin
         .from("subscriptions")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "active"),
+        .select("id, started_at, expires_at, amount_paid")
+        .eq("status", "active")
+        .gt("amount_paid", 0)
+        .gt("expires_at", new Date().toISOString())
+        .lte("started_at", new Date().toISOString()),
       supabaseAdmin
         .from("payments")
         .select("amount")
@@ -258,9 +261,14 @@ export const adminOverviewStats = createServerFn({ method: "GET" })
       0,
     );
 
+    const MIN_MS = 28 * 24 * 60 * 60 * 1000;
+    const activePremiumCount = ((active.data ?? []) as { started_at: string; expires_at: string }[])
+      .filter((r) => new Date(r.expires_at).getTime() - new Date(r.started_at).getTime() >= MIN_MS)
+      .length;
+
     return {
       totalUsers: users.count ?? 0,
-      activePremium: active.count ?? 0,
+      activePremium: activePremiumCount,
       revenueThisMonth: revenue,
       newUsersThisWeek: newUsers.count ?? 0,
     };
