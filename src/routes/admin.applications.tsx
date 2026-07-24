@@ -80,7 +80,8 @@ function AdminApps() {
   const setEnabled = useServerFn(adminSetAppEnabled);
 
   const toggleEnabled = useMutation({
-    mutationFn: (v: { app_id: string; is_enabled: boolean }) => setEnabled({ data: v }),
+    mutationFn: (v: { app_id: string; is_enabled: boolean }) =>
+      setEnabled({ data: v }),
     onSuccess: () => {
       toast.success("Updated");
       qc.invalidateQueries({ queryKey: ["admin-apps"] });
