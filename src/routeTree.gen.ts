@@ -72,14 +72,14 @@ const PaymentSuccessRoute = PaymentSuccessRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardSubscriptionsRoute = DashboardSubscriptionsRouteImport.update({
-  id: '/subscriptions',
-  path: '/subscriptions',
-  getParentRoute: () => DashboardRoute,
+  id: '/dashboard/subscriptions',
+  path: '/dashboard/subscriptions',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardProfileRoute = DashboardProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => DashboardRoute,
+  id: '/dashboard/profile',
+  path: '/dashboard/profile',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AdminUsersRoute = AdminUsersRouteImport.update({
   id: '/users',
@@ -225,6 +225,8 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
   PricingRoute: typeof PricingRoute
+  DashboardProfileRoute: typeof DashboardProfileRoute
+  DashboardSubscriptionsRoute: typeof DashboardSubscriptionsRoute
   PaymentSuccessRoute: typeof PaymentSuccessRoute
   ProfileUsernameRoute: typeof ProfileUsernameRoute
   UUsernameRoute: typeof UUsernameRouteWithChildren
@@ -300,17 +302,17 @@ declare module '@tanstack/react-router' {
     }
     '/dashboard/subscriptions': {
       id: '/dashboard/subscriptions'
-      path: '/subscriptions'
+      path: '/dashboard/subscriptions'
       fullPath: '/dashboard/subscriptions'
       preLoaderRoute: typeof DashboardSubscriptionsRouteImport
-      parentRoute: typeof DashboardRoute
+      parentRoute: typeof rootRouteImport
     }
     '/dashboard/profile': {
       id: '/dashboard/profile'
-      path: '/profile'
+      path: '/dashboard/profile'
       fullPath: '/dashboard/profile'
       preLoaderRoute: typeof DashboardProfileRouteImport
-      parentRoute: typeof DashboardRoute
+      parentRoute: typeof rootRouteImport
     }
     '/admin/users': {
       id: '/admin/users'
@@ -380,6 +382,8 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
   PricingRoute: PricingRoute,
+  DashboardProfileRoute: DashboardProfileRoute,
+  DashboardSubscriptionsRoute: DashboardSubscriptionsRoute,
   PaymentSuccessRoute: PaymentSuccessRoute,
   ProfileUsernameRoute: ProfileUsernameRoute,
   UUsernameRoute: UUsernameRouteWithChildren,
@@ -390,13 +394,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
