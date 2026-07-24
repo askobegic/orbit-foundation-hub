@@ -23,6 +23,7 @@ import { Route as DashboardSettingsRouteImport } from './routes/dashboard.settin
 import { Route as DashboardSecurityRouteImport } from './routes/dashboard.security'
 import { Route as DashboardProfileRouteImport } from './routes/dashboard.profile'
 import { Route as DashboardNotificationsRouteImport } from './routes/dashboard.notifications'
+import { Route as DashboardHelpRouteImport } from './routes/dashboard.help'
 import { Route as AdminVerificationRouteImport } from './routes/admin.verification'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminPaymentsRouteImport } from './routes/admin.payments'
@@ -102,6 +103,11 @@ const DashboardNotificationsRoute = DashboardNotificationsRouteImport.update({
   path: '/dashboard/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardHelpRoute = DashboardHelpRouteImport.update({
+  id: '/dashboard/help',
+  path: '/dashboard/help',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminVerificationRoute = AdminVerificationRouteImport.update({
   id: '/verification',
   path: '/verification',
@@ -154,6 +160,7 @@ export interface FileRoutesByFullPath {
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/verification': typeof AdminVerificationRoute
+  '/dashboard/help': typeof DashboardHelpRoute
   '/dashboard/notifications': typeof DashboardNotificationsRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/security': typeof DashboardSecurityRoute
@@ -178,6 +185,7 @@ export interface FileRoutesByTo {
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/verification': typeof AdminVerificationRoute
+  '/dashboard/help': typeof DashboardHelpRoute
   '/dashboard/notifications': typeof DashboardNotificationsRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/security': typeof DashboardSecurityRoute
@@ -203,6 +211,7 @@ export interface FileRoutesById {
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/verification': typeof AdminVerificationRoute
+  '/dashboard/help': typeof DashboardHelpRoute
   '/dashboard/notifications': typeof DashboardNotificationsRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/security': typeof DashboardSecurityRoute
@@ -229,6 +238,7 @@ export interface FileRouteTypes {
     | '/admin/payments'
     | '/admin/users'
     | '/admin/verification'
+    | '/dashboard/help'
     | '/dashboard/notifications'
     | '/dashboard/profile'
     | '/dashboard/security'
@@ -253,6 +263,7 @@ export interface FileRouteTypes {
     | '/admin/payments'
     | '/admin/users'
     | '/admin/verification'
+    | '/dashboard/help'
     | '/dashboard/notifications'
     | '/dashboard/profile'
     | '/dashboard/security'
@@ -277,6 +288,7 @@ export interface FileRouteTypes {
     | '/admin/payments'
     | '/admin/users'
     | '/admin/verification'
+    | '/dashboard/help'
     | '/dashboard/notifications'
     | '/dashboard/profile'
     | '/dashboard/security'
@@ -297,6 +309,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
   PricingRoute: typeof PricingRoute
+  DashboardHelpRoute: typeof DashboardHelpRoute
   DashboardNotificationsRoute: typeof DashboardNotificationsRoute
   DashboardProfileRoute: typeof DashboardProfileRoute
   DashboardSecurityRoute: typeof DashboardSecurityRoute
@@ -410,6 +423,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardNotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/help': {
+      id: '/dashboard/help'
+      path: '/dashboard/help'
+      fullPath: '/dashboard/help'
+      preLoaderRoute: typeof DashboardHelpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/verification': {
       id: '/admin/verification'
       path: '/verification'
@@ -505,6 +525,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
   PricingRoute: PricingRoute,
+  DashboardHelpRoute: DashboardHelpRoute,
   DashboardNotificationsRoute: DashboardNotificationsRoute,
   DashboardProfileRoute: DashboardProfileRoute,
   DashboardSecurityRoute: DashboardSecurityRoute,
