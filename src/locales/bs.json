@@ -17,7 +17,19 @@
     "loginWithGoogle": "Nastavi sa Google",
     "loginWithApple": "Nastavi sa Apple",
     "welcome": "Dobrodošli nazad",
-    "noAccount": "Nemate nalog?"
+    "noAccount": "Nemate nalog?",
+    "loginError": "Greška pri prijavi. Pokušajte ponovo.",
+    "uploadError": "Greška pri uploadu fotografije.",
+    "saveError": "Greška pri čuvanju profila.",
+    "completeProfile": "Kompletiraj profil",
+    "step1": "Fotografija profila",
+    "step2": "Osnovne informacije",
+    "uploadPhoto": "Dodaj fotografiju",
+    "changePhoto": "Promijeni fotografiju",
+    "photoRequired": "Fotografija profila je obavezna.",
+    "continue": "Nastavi",
+    "completeRegistration": "Završi registraciju",
+    "profileSaved": "Profil je sačuvan."
   },
   "profile": {
     "title": "Moj profil",

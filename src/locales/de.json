@@ -17,7 +17,19 @@
     "loginWithGoogle": "Mit Google fortfahren",
     "loginWithApple": "Mit Apple fortfahren",
     "welcome": "Willkommen zurück",
-    "noAccount": "Kein Konto?"
+    "noAccount": "Kein Konto?",
+    "loginError": "Anmeldefehler. Bitte versuchen Sie es erneut.",
+    "uploadError": "Fehler beim Hochladen des Fotos.",
+    "saveError": "Fehler beim Speichern des Profils.",
+    "completeProfile": "Profil vervollständigen",
+    "step1": "Profilfoto",
+    "step2": "Grundlegende Informationen",
+    "uploadPhoto": "Foto hochladen",
+    "changePhoto": "Foto ändern",
+    "photoRequired": "Profilfoto ist erforderlich.",
+    "continue": "Weiter",
+    "completeRegistration": "Registrierung abschließen",
+    "profileSaved": "Profil gespeichert."
   },
   "profile": {
     "title": "Mein Profil",

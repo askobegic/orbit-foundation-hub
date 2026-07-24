@@ -1,24 +1,32 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
+import { useAuth } from "@/context/AuthContext";
+
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Core Platform — Prijava" },
+      { name: "description", content: "Jedinstvena platforma za sve naše aplikacije." },
+      { property: "og:title", content: "Core Platform" },
+      { property: "og:description", content: "Jedinstvena platforma za sve naše aplikacije." },
+    ],
+  }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
 function Index() {
+  const navigate = useNavigate();
+  const { user, profile, loading } = useAuth();
+  useEffect(() => {
+    if (loading) return;
+    if (!user) void navigate({ to: "/login", replace: true });
+    else if (profile && !profile.profile_complete) void navigate({ to: "/onboarding", replace: true });
+    else if (profile?.profile_complete) void navigate({ to: "/dashboard", replace: true });
+  }, [loading, user, profile, navigate]);
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#1D6BF3] border-t-transparent" />
     </div>
   );
 }
