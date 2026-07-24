@@ -43,7 +43,7 @@ function AdminGate() {
       console.log("[admin] user_roles row:", data, "error:", error);
       if (error) throw new Error(error.message);
       const role = (data?.role ?? null) as string | null;
-      const isAdmin = role === "admin" || role === "super_admin";
+      const isAdmin = role === "admin";
       return { isAdmin, role };
     },
     retry: 1,
