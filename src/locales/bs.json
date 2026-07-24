@@ -147,7 +147,9 @@
     "success": "Uspješno",
     "search": "Pretraži",
     "filter": "Filtriraj",
-    "language": "Jezik"
+    "language": "Jezik",
+    "errorGeneric": "Došlo je do greške",
+    "saving": "Spašavanje..."
   },
   "pricing": {
     "title": "Premium planovi",
@@ -168,5 +170,26 @@
     "successBody": "Vaša premium pretplata je sada aktivna.",
     "activating": "Aktiviramo vašu pretplatu…",
     "activatingBody": "Ovo obično traje nekoliko sekundi. Ne zatvarajte prozor."
+  },
+  "notifications": {
+    "title": "Obavještenja",
+    "subtitle": "Sva vaša obavještenja na jednom mjestu.",
+    "markAllRead": "Označi sva kao pročitana",
+    "allMarkedRead": "Sva označena kao pročitana.",
+    "empty": "Nema obavještenja.",
+    "viewAll": "Pogledaj sva"
+  },
+  "settings": {
+    "title": "Postavke",
+    "subtitle": "Upravljajte jezikom i preferencama obavještenja.",
+    "language": "Jezik",
+    "notificationPrefs": "Preferencije obavještenja",
+    "notifyInApp": "Obavještenja u aplikaciji",
+    "notifyInAppHint": "Prikaži obavještenja unutar platforme.",
+    "notifyEmail": "Email obavještenja",
+    "notifyEmailHint": "Šalji važna obavještenja na email.",
+    "notifyMarketing": "Marketing poruke",
+    "notifyMarketingHint": "Novosti, ponude i najave.",
+    "saved": "Postavke sačuvane."
   }
 }
