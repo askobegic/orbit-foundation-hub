@@ -95,7 +95,7 @@ export function DashboardPage() {
     if (triedTrialRef.current) return;
     if ((allSubsQuery.data ?? []).length > 0) return;
     triedTrialRef.current = true;
-    void activateTrial({ data: undefined as unknown as void })
+    void activateTrial()
       .then((res) => {
         if (res?.activated) {
           void queryClient.invalidateQueries({ queryKey: ["dashboard", "subscriptions", user.id] });
