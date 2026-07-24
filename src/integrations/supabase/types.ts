@@ -508,6 +508,48 @@ export type Database = {
           },
         ]
       }
+      user_app_settings: {
+        Row: {
+          app_id: string
+          id: string
+          is_contactable: boolean
+          is_visible: boolean
+          joined_at: string
+          user_id: string
+        }
+        Insert: {
+          app_id: string
+          id?: string
+          is_contactable?: boolean
+          is_visible?: boolean
+          joined_at?: string
+          user_id: string
+        }
+        Update: {
+          app_id?: string
+          id?: string
+          is_contactable?: boolean
+          is_visible?: boolean
+          joined_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_app_settings_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_app_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
