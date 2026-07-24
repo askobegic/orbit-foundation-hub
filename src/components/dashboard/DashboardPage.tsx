@@ -59,7 +59,8 @@ export function DashboardPage() {
         .from("subscriptions")
         .select("*, plan:subscription_plans(*)")
         .eq("user_id", user!.id)
-        .eq("status", "active");
+        .eq("status", "active")
+        .gt("expires_at", new Date().toISOString());
       if (error) throw error;
       return (data ?? []) as unknown as SubscriptionWithPlan[];
     },
@@ -437,7 +438,7 @@ function Sidebar({ onSignOut }: { onSignOut: () => void }) {
     { to: "/dashboard", icon: Home, label: t("nav.home") },
     { to: "/dashboard/profile", icon: User, label: t("nav.profile") },
     { to: "/dashboard", icon: LayoutGrid, label: t("nav.applications") },
-    { to: "/dashboard", icon: CreditCard, label: t("nav.subscriptions") },
+    { to: "/dashboard/subscriptions", icon: CreditCard, label: t("nav.subscriptions") },
     { to: "/dashboard", icon: Receipt, label: t("nav.payments") },
     { to: "/dashboard", icon: Settings, label: t("nav.settings") },
     { to: "/dashboard", icon: Shield, label: t("nav.security") },
