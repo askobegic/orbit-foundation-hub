@@ -8,7 +8,12 @@ import { toast } from "sonner";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { supabase } from "@/integrations/supabase/client";
-import { adminUpsertPlan, adminDeletePlan, getMyIsAdmin } from "@/lib/admin.functions";
+import {
+  adminUpsertPlan,
+  adminDeletePlan,
+  getMyIsAdmin,
+  adminSetAppEnabled,
+} from "@/lib/admin.functions";
 import type { ApplicationRow, SubscriptionPlanRow } from "@/types/database";
 
 export const Route = createFileRoute("/admin/applications")({
@@ -72,6 +77,16 @@ function AdminApps() {
 
   const upsert = useServerFn(adminUpsertPlan);
   const del = useServerFn(adminDeletePlan);
+  const setEnabled = useServerFn(adminSetAppEnabled);
+
+  const toggleEnabled = useMutation({
+    mutationFn: (v: { app_id: string; is_enabled: boolean }) => setEnabled({ data: v }),
+    onSuccess: () => {
+      toast.success("Updated");
+      qc.invalidateQueries({ queryKey: ["admin-apps"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const savePlan = useMutation({
     mutationFn: (plan: Partial<SubscriptionPlanRow>) =>
@@ -140,6 +155,13 @@ function AdminApps() {
 
         {activeApp && (
           <div className="space-y-4">
+            <AppSettings
+              app={activeApp}
+              onToggle={(v) =>
+                toggleEnabled.mutate({ app_id: activeApp.id, is_enabled: v })
+              }
+              busy={toggleEnabled.isPending}
+            />
             {(plansQ.data ?? []).map((plan) => (
               <PlanForm
                 key={plan.id}
