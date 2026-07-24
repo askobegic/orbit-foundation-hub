@@ -234,18 +234,7 @@ function EditProfilePage() {
                 {t("profile.country")} *
                 <CountrySelect value={country} onChange={setCountry} />
               </label>
-              <TextField label={t("profile.username")} value={username} onChange={setUsername} />
             </div>
-            <label className="text-sm font-medium text-gray-700">
-              {t("profile.bio")}
-              <textarea
-                value={bio}
-                onChange={(e) => setBio(e.target.value.slice(0, 300))}
-                rows={3}
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#1D6BF3]"
-              />
-              <span className="text-xs text-gray-400">{bio.length}/300</span>
-            </label>
             <div>
               <span className="text-sm font-medium text-gray-700">{t("common.language")}</span>
               <div className="mt-2 flex gap-3">
