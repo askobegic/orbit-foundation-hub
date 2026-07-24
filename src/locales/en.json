@@ -17,7 +17,19 @@
     "loginWithGoogle": "Continue with Google",
     "loginWithApple": "Continue with Apple",
     "welcome": "Welcome back",
-    "noAccount": "Don't have an account?"
+    "noAccount": "Don't have an account?",
+    "loginError": "Login error. Please try again.",
+    "uploadError": "Error uploading photo.",
+    "saveError": "Error saving profile.",
+    "completeProfile": "Complete Profile",
+    "step1": "Profile Photo",
+    "step2": "Basic Information",
+    "uploadPhoto": "Upload Photo",
+    "changePhoto": "Change Photo",
+    "photoRequired": "Profile photo is required.",
+    "continue": "Continue",
+    "completeRegistration": "Complete Registration",
+    "profileSaved": "Profile saved."
   },
   "profile": {
     "title": "My Profile",
