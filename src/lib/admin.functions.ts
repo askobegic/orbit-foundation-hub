@@ -221,7 +221,7 @@ export const getMyIsAdmin = createServerFn({ method: "GET" })
       .maybeSingle();
     console.log("[getMyIsAdmin]", { userId: context.userId, role: data?.role ?? null });
     const role = (data?.role ?? null) as string | null;
-    return { isAdmin: role === "admin" || role === "super_admin", role };
+    return { isAdmin: role === "admin", role };
   });
 
 // ---------- Overview stats ----------

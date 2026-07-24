@@ -3,7 +3,7 @@ export type { Database } from "@/integrations/supabase/types";
 
 // Domain enums (kept in sync with SQL CHECK constraints)
 export type UserLanguage = "bs" | "en" | "de";
-export type UserType = "standard" | "premium" | "admin" | "super_admin";
+export type UserType = "standard" | "premium" | "admin";
 export type ApplicationStatus = "active" | "coming_soon" | "archived";
 export type SubscriptionStatus = "active" | "expired" | "cancelled" | "pending";
 export type PaymentStatus = "pending" | "success" | "failed" | "refunded";
