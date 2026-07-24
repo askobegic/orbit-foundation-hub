@@ -77,6 +77,7 @@ export interface ApplicationRow {
   short_description_de: string | null;
   status: ApplicationStatus;
   sort_order: number;
+  is_enabled: boolean;
   created_at: string;
   updated_at: string;
 }
