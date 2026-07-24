@@ -278,7 +278,7 @@ export function DashboardPage() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   {(appsQuery.data ?? []).map((app) => {
                     const isPremium = premiumAppIds.has(app.id);
-                    const isActive = app.status === "active";
+                    const isActive = app.is_enabled !== false && app.status === "active";
                     const desc =
                       app[`short_description_${lang}` as const] ??
                       app.short_description_en ??
