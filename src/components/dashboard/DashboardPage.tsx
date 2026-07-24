@@ -314,22 +314,22 @@ export function DashboardPage() {
                     {t("dashboard.validUntil")}:{" "}
                     {new Date(activeSub.expires_at).toLocaleDateString(i18n.language)}
                   </p>
-                  <button
-                    type="button"
+                  <Link
+                    to="/dashboard/subscriptions"
                     className="mt-4 inline-flex items-center justify-center rounded-lg bg-white/15 px-3 py-1.5 text-xs font-medium backdrop-blur hover:bg-white/25"
                   >
                     {t("subscription.managePlan")}
-                  </button>
+                  </Link>
                 </div>
               ) : (
                 <div>
                   <p className="text-sm opacity-90">{t("dashboard.noSubscription")}</p>
-                  <button
-                    type="button"
+                  <Link
+                    to="/pricing"
                     className="mt-3 inline-flex items-center justify-center rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-[#1D6BF3] hover:bg-white/90"
                   >
                     {t("dashboard.upgrade")}
-                  </button>
+                  </Link>
                 </div>
               )}
             </section>
