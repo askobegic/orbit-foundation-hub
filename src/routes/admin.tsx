@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { LayoutGrid, Users } from "lucide-react";
@@ -25,16 +25,18 @@ export const Route = createFileRoute("/admin")({
 
 function AdminGate() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const q = useQuery({
     queryKey: ["is-admin", user?.id],
     enabled: !!user?.id,
     queryFn: async () => {
+      if (!user) throw new Error("Not authenticated");
       console.log("[admin] checking role for user:", user?.id);
       const { data, error } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", user!.id)
+        .eq("user_id", user.id)
         .maybeSingle();
       console.log("[admin] user_roles row:", data, "error:", error);
       if (error) throw new Error(error.message);
@@ -52,9 +54,12 @@ function AdminGate() {
     }
   }, [q.status, q.data, q.error, navigate]);
   useEffect(() => {
-    const t = setTimeout(() => setTimedOut(true), 3000);
+    const t = setTimeout(() => {
+      setTimedOut(true);
+      if (!q.data?.isAdmin) void navigate({ to: "/dashboard", replace: true });
+    }, 3000);
     return () => clearTimeout(t);
-  }, []);
+  }, [navigate, q.data?.isAdmin]);
 
   if (q.isLoading) {
     if (timedOut) {
@@ -107,6 +112,11 @@ function AdminGate() {
       </main>
     );
   }
+
+  if (location.pathname !== "/admin") {
+    return <Outlet />;
+  }
+
   const cards = [
     {
       to: "/admin/applications",
