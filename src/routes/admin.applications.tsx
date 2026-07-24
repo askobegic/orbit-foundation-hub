@@ -92,7 +92,7 @@ function AdminApps() {
   });
 
   const saveSettings = useMutation({
-    mutationFn: (v: Parameters<typeof updateSettings>[0]["data"]) =>
+    mutationFn: (v: AppSettingsPayload & { app_id: string }) =>
       updateSettings({ data: v }),
     onSuccess: () => {
       toast.success("Postavke sačuvane");
