@@ -161,7 +161,25 @@ function AdminApps() {
               }`}
               style={activeAppId === a.id ? { backgroundColor: a.primary_color } : undefined}
             >
-              {a.name}
+              <span className="inline-flex items-center gap-2">
+                {a.logo_url ? (
+                  <img
+                    src={a.logo_url}
+                    alt=""
+                    width={24}
+                    height={24}
+                    className="h-6 w-6 rounded object-cover"
+                  />
+                ) : (
+                  <span
+                    className="flex h-6 w-6 items-center justify-center rounded text-[10px] font-semibold text-white"
+                    style={{ backgroundColor: a.primary_color }}
+                  >
+                    {a.name.slice(0, 1)}
+                  </span>
+                )}
+                {a.name}
+              </span>
             </button>
           ))}
         </div>
