@@ -390,3 +390,30 @@ export const adminSetVerified = createServerFn({ method: "POST" })
     });
     return { ok: true };
   });
+
+// ---------- App enable/disable ----------
+
+export const adminSetAppEnabled = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) =>
+    z.object({ app_id: z.string().uuid(), is_enabled: z.boolean() }).parse(raw),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row, error } = await supabaseAdmin
+      .from("applications")
+      .update({ is_enabled: data.is_enabled } as never)
+      .eq("id", data.app_id)
+      .select("id, is_enabled")
+      .single();
+    if (error) throw new Error(error.message);
+    await writeAuditLog({
+      userId: context.userId,
+      action: data.is_enabled ? "app_enabled" : "app_disabled",
+      entityType: "application",
+      entityId: data.app_id,
+      newData: { is_enabled: data.is_enabled },
+    });
+    return row;
+  });
