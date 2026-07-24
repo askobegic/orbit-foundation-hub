@@ -87,7 +87,17 @@
     "validUntil": "Važi do",
     "comingSoon": "Uskoro",
     "active": "Aktivna",
-    "expired": "Istekla"
+    "expired": "Istekla",
+    "standard": "Standard",
+    "premium": "Premium",
+    "noSubscription": "Nemate aktivnu pretplatu",
+    "noPayments": "Nema uplata",
+    "editProfile": "Uredi profil",
+    "notifications": "Obavještenja",
+    "trustSecure": "Sigurno plaćanje",
+    "trustGDPR": "GDPR usklađeno",
+    "trustSupport": "24/7 podrška",
+    "footerRights": "Sva prava zadržana."
   },
   "subscription": {
     "title": "Premium pretplata",
