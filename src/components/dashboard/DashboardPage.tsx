@@ -1,3 +1,4 @@
+import { ShareAndInvite } from "@/components/dashboard/ShareAndInvite";
 import { useEffect, useMemo, useRef } from "react";
 import { Link } from "@tanstack/react-router";
 import { NotificationBell } from "@/components/dashboard/NotificationBell";
@@ -502,28 +503,33 @@ export function DashboardPage() {
               )}
             </section>
 
-            {/* Quick links */}
-            <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
-              <h3 className="mb-3 text-sm font-semibold">{t("dashboard.quickLinks")}</h3>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { to: "/dashboard/profile", icon: User, label: t("nav.profile") },
-                  { to: "/dashboard", icon: Settings, label: t("nav.settings") },
-                  { to: "/dashboard/security", icon: Shield, label: t("nav.security") },
-                  { to: "/dashboard/help", icon: HelpCircle, label: t("nav.help") },
-                ].map((q) => (
-                  <Link
-                    key={q.label}
-                    to={q.to}
-                    className="flex items-center gap-2 rounded-xl border border-gray-100 p-3 text-xs font-medium text-gray-700 transition hover:border-gray-200 hover:bg-gray-50"
-                  >
-                    <q.icon className="h-4 w-4 text-[#1D6BF3]" />
-                    {q.label}
-                    <ChevronRight className="ml-auto h-3 w-3 text-gray-400" />
-                  </Link>
-                ))}
-              </div>
-            </section>
+          {/* Quick links */}
+<section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
+  <h3 className="mb-3 text-sm font-semibold">{t("dashboard.quickLinks")}</h3>
+  <div className="grid grid-cols-2 gap-2">
+    {[
+      { to: "/dashboard/profile", icon: User, label: t("nav.profile") },
+      { to: "/dashboard", icon: Settings, label: t("nav.settings") },
+      { to: "/dashboard/security", icon: Shield, label: t("nav.security") },
+      { to: "/dashboard/help", icon: HelpCircle, label: t("nav.help") },
+    ].map((q) => (
+      <Link
+        key={q.label}
+        to={q.to}
+        className="flex items-center gap-2 rounded-xl border border-gray-100 p-3 text-xs font-medium text-gray-700 transition hover:border-gray-200 hover:bg-gray-50"
+      >
+        <q.icon className="h-4 w-4 text-[#1D6BF3]" />
+        {q.label}
+        <ChevronRight className="ml-auto h-3 w-3 text-gray-400" />
+      </Link>
+    ))}
+  </div>
+</section>
+
+<ShareAndInvite
+  username={profile?.username ?? null}
+  firstName={profile?.first_name ?? null}
+/>
           </div>
 
           {/* Footer */}
