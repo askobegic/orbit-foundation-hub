@@ -248,7 +248,7 @@ export const adminOverviewStats = createServerFn({ method: "GET" })
       supabaseAdmin
         .from("payments")
         .select("amount")
-        .eq("status", "completed")
+        .eq("status", "success")
         .gte("created_at", startOfMonth),
       supabaseAdmin
         .from("profiles")
