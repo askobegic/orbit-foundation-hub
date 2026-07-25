@@ -53,18 +53,62 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
 
         let planMonths = 12;
         let currency = (session.currency ?? "eur").toUpperCase();
+        let planPrice: number | null = null;
         if (ref.plan_id) {
           const { data: plan } = await supabaseAdmin
             .from("subscription_plans")
-            .select("duration_months, currency")
+            .select("duration_months, currency, price, app_id, is_active")
             .eq("id", ref.plan_id)
             .maybeSingle();
           if (plan) {
             planMonths = (plan as { duration_months: number }).duration_months;
             currency = (plan as { currency: string }).currency ?? currency;
+            planPrice = Number((plan as { price: number | string }).price);
+            const planAppId = (plan as { app_id: string }).app_id;
+            const planActive = (plan as { is_active: boolean }).is_active;
+            if (!planActive || planAppId !== ref.app_id) {
+              console.warn("Stripe webhook: plan/app mismatch or inactive plan", {
+                plan_id: ref.plan_id,
+                app_id: ref.app_id,
+              });
+              return Response.json({ received: true, ignored: "plan_mismatch" });
+            }
           }
         }
         const amount = (session.amount_total ?? 0) / 100;
+
+        // Verify the amount actually paid matches the referenced plan's price/currency.
+        // Prevents a user from paying via a cheap plan link while pointing the
+        // client_reference_id at a longer/more expensive plan.
+        if (planPrice !== null) {
+          const paidCurrency = (session.currency ?? "").toUpperCase();
+          const expectedCurrency = currency.toUpperCase();
+          const amountMatches = Math.abs(amount - planPrice) < 0.01;
+          const currencyMatches = paidCurrency === expectedCurrency;
+          if (!amountMatches || !currencyMatches) {
+            console.warn("Stripe webhook: paid amount/currency does not match plan", {
+              plan_id: ref.plan_id,
+              paid: amount,
+              paidCurrency,
+              expected: planPrice,
+              expectedCurrency,
+            });
+            await writeAuditLog({
+              userId: ref.user_id,
+              action: "payment.stripe.plan_mismatch",
+              entityType: "checkout_session",
+              entityId: session.id,
+              newData: {
+                plan_id: ref.plan_id,
+                paid: amount,
+                paidCurrency,
+                expected: planPrice,
+                expectedCurrency,
+              },
+            });
+            return Response.json({ received: true, ignored: "amount_mismatch" });
+          }
+        }
 
         const { data: sub, error: subErr } = await supabaseAdmin
           .from("subscriptions")
