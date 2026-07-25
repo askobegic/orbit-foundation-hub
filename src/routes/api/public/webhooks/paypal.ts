@@ -80,18 +80,61 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         let months = 12;
         let currency = resource.amount?.currency_code ?? "EUR";
+        let planPrice: number | null = null;
         if (ref.plan_id) {
           const { data: plan } = await supabaseAdmin
             .from("subscription_plans")
-            .select("duration_months, currency")
+            .select("duration_months, currency, price, app_id, is_active")
             .eq("id", ref.plan_id)
             .maybeSingle();
           if (plan) {
             months = (plan as { duration_months: number }).duration_months;
             currency = (plan as { currency: string }).currency ?? currency;
+            planPrice = Number((plan as { price: number | string }).price);
+            const planAppId = (plan as { app_id: string }).app_id;
+            const planActive = (plan as { is_active: boolean }).is_active;
+            if (!planActive || planAppId !== ref.app_id) {
+              console.warn("PayPal webhook: plan/app mismatch or inactive plan", {
+                plan_id: ref.plan_id,
+                app_id: ref.app_id,
+              });
+              return Response.json({ received: true, ignored: "plan_mismatch" });
+            }
           }
         }
         const amount = Number(resource.amount?.value ?? 0);
+
+        // Verify the actual captured amount/currency matches the referenced plan.
+        // Blocks paying for a cheap plan while pointing custom_id at a pricier one.
+        if (planPrice !== null) {
+          const paidCurrency = (resource.amount?.currency_code ?? "").toUpperCase();
+          const expectedCurrency = currency.toUpperCase();
+          const amountMatches = Math.abs(amount - planPrice) < 0.01;
+          const currencyMatches = paidCurrency === expectedCurrency;
+          if (!amountMatches || !currencyMatches) {
+            console.warn("PayPal webhook: paid amount/currency does not match plan", {
+              plan_id: ref.plan_id,
+              paid: amount,
+              paidCurrency,
+              expected: planPrice,
+              expectedCurrency,
+            });
+            await writeAuditLog({
+              userId: ref.user_id,
+              action: "payment.paypal.plan_mismatch",
+              entityType: "capture",
+              entityId: resource.id,
+              newData: {
+                plan_id: ref.plan_id,
+                paid: amount,
+                paidCurrency,
+                expected: planPrice,
+                expectedCurrency,
+              },
+            });
+            return Response.json({ received: true, ignored: "amount_mismatch" });
+          }
+        }
 
         const { data: sub, error } = await supabaseAdmin
           .from("subscriptions")
