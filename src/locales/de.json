@@ -35,6 +35,23 @@
     "photoImported": "Foto aus deinem Konto importiert",
     "backToDashboard": "Zurück zum Dashboard"
   },
+  "share": {
+  "shareProfile": "Profil teilen",
+  "share": "Teilen",
+  "copyLink": "Link kopieren",
+  "linkCopied": "Link kopiert!",
+  "profileText": "Schau dir mein Profil auf Core Platform an:",
+  "instagramCopied": "Link kopiert! In Instagram-Bio einfügen.",
+  "tiktokCopied": "Link kopiert! In TikTok-Bio einfügen.",
+  "emailSubject": "Mein Profil auf Core Platform",
+  "inviteFriend": "Freund einladen",
+  "inviteSubtitle": "Teile deine Einladung mit Freunden",
+  "invite": "Einladen",
+  "inviteText": "Tritt Core Platform bei:",
+  "inviteDescription": "Teile diesen Link mit einem Freund und lade ihn zu Core Platform ein.",
+  "yourInviteLink": "Dein Einladungslink",
+  "referralComingSoon": "Referral-Programm kommt bald"
+}
   "profile": {
     "title": "Mein Profil",
     "firstName": "Vorname",
@@ -59,7 +76,6 @@
     "socialLinks": "Soziale Medien",
     "profileCompletion": "Profilvollständigkeit",
     "completeProfile": "Profil vervollständigen",
-    "shareProfile": "Profil teilen",
     "linkCopied": "Link kopiert!",
     "memberSince": "Mitglied seit",
     "registerToSee": "Registriere dich kostenlos, um Kontaktdaten zu sehen",
