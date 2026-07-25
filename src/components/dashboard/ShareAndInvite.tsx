@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Copy, Check, Share2, UserPlus, X, Facebook, Mail } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
-// Social icons as SVG components
 function InstagramIcon() {
   return (
     <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
@@ -33,6 +33,7 @@ interface ShareAndInviteProps {
 }
 
 export function ShareAndInvite({ username, firstName }: ShareAndInviteProps) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteCopied, setInviteCopied] = useState(false);
@@ -42,21 +43,21 @@ export function ShareAndInvite({ username, firstName }: ShareAndInviteProps) {
     : window.location.origin;
 
   const inviteUrl = `${window.location.origin}?ref=${username ?? "friend"}`;
-
-  const shareText = `Pogledaj moj profil na Core Platform: ${profileUrl}`;
-  const inviteText = `Pridruži se Core Platformi: ${inviteUrl}`;
+  const shareText = `${t("share.profileText")} ${profileUrl}`;
+  const inviteText = `${t("share.inviteText")} ${inviteUrl}`;
 
   async function copyProfile() {
     await navigator.clipboard.writeText(profileUrl);
     setCopied(true);
+    toast.success(t("share.linkCopied"));
     setTimeout(() => setCopied(false), 2000);
   }
 
   async function copyInvite() {
     await navigator.clipboard.writeText(inviteUrl);
     setInviteCopied(true);
+    toast.success(t("share.linkCopied"));
     setTimeout(() => setInviteCopied(false), 2000);
-    toast.success("Link kopiran!");
   }
 
   async function nativeShare(text: string, url: string) {
@@ -64,11 +65,11 @@ export function ShareAndInvite({ username, firstName }: ShareAndInviteProps) {
       try {
         await navigator.share({ title: "Core Platform", text, url });
       } catch {
-        // User cancelled
+        // cancelled
       }
     } else {
       await navigator.clipboard.writeText(url);
-      toast.success("Link kopiran!");
+      toast.success(t("share.linkCopied"));
     }
   }
 
@@ -83,20 +84,18 @@ export function ShareAndInvite({ username, firstName }: ShareAndInviteProps) {
       name: "Instagram",
       icon: <InstagramIcon />,
       color: "#E1306C",
-      href: `https://www.instagram.com/`,
       onClick: () => {
         navigator.clipboard.writeText(profileUrl);
-        toast.success("Link kopiran! Zalijepi u Instagram bio.");
+        toast.success(t("share.instagramCopied"));
       },
     },
     {
       name: "TikTok",
       icon: <TikTokIcon />,
       color: "#000000",
-      href: `https://www.tiktok.com/`,
       onClick: () => {
         navigator.clipboard.writeText(profileUrl);
-        toast.success("Link kopiran! Zalijepi u TikTok bio.");
+        toast.success(t("share.tiktokCopied"));
       },
     },
     {
@@ -109,7 +108,7 @@ export function ShareAndInvite({ username, firstName }: ShareAndInviteProps) {
       name: "Email",
       icon: <Mail size={15} />,
       color: "#6B7280",
-      href: `mailto:?subject=Moj%20profil%20na%20Core%20Platform&body=${encodeURIComponent(shareText)}`,
+      href: `mailto:?subject=${encodeURIComponent(t("share.emailSubject"))}&body=${encodeURIComponent(shareText)}`,
     },
   ];
 
@@ -118,29 +117,23 @@ export function ShareAndInvite({ username, firstName }: ShareAndInviteProps) {
       {/* Share To */}
       <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-800">Podijeli profil</h3>
+          <h3 className="text-sm font-semibold text-gray-800">{t("share.shareProfile")}</h3>
           <button
             onClick={() => nativeShare(shareText, profileUrl)}
             className="flex items-center gap-1.5 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#1558D6]"
           >
             <Share2 size={12} />
-            Podijeli
+            {t("share.share")}
           </button>
         </div>
 
-        {/* Profile URL */}
         <div className="mb-4 flex items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
           <span className="flex-1 truncate text-xs text-gray-500">{profileUrl}</span>
-          <button
-            onClick={copyProfile}
-            className="flex-shrink-0 text-gray-400 hover:text-[#1D6BF3]"
-            aria-label="Kopiraj link"
-          >
+          <button onClick={copyProfile} className="flex-shrink-0 text-gray-400 hover:text-[#1D6BF3]">
             {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
           </button>
         </div>
 
-        {/* Social Icons */}
         <div className="flex items-center gap-2">
           {socialLinks.map((s) => (
             <a
@@ -149,17 +142,18 @@ export function ShareAndInvite({ username, firstName }: ShareAndInviteProps) {
               target={s.onClick ? undefined : "_blank"}
               rel="noopener noreferrer"
               onClick={s.onClick ? (e) => { e.preventDefault(); s.onClick?.(); } : undefined}
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:border-transparent hover:text-white"
-              style={{ ["--hover-bg" as string]: s.color }}
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-all duration-200 hover:border-transparent hover:text-white"
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.backgroundColor = s.color;
-                (e.currentTarget as HTMLElement).style.borderColor = s.color;
-                (e.currentTarget as HTMLElement).style.color = "white";
+                const el = e.currentTarget as HTMLElement;
+                el.style.backgroundColor = s.color;
+                el.style.borderColor = s.color;
+                el.style.color = "white";
               }}
               onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.backgroundColor = "";
-                (e.currentTarget as HTMLElement).style.borderColor = "";
-                (e.currentTarget as HTMLElement).style.color = "";
+                const el = e.currentTarget as HTMLElement;
+                el.style.backgroundColor = "";
+                el.style.borderColor = "";
+                el.style.color = "";
               }}
               title={s.name}
               aria-label={s.name}
@@ -174,24 +168,21 @@ export function ShareAndInvite({ username, firstName }: ShareAndInviteProps) {
       <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
         <div className="mb-3 flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-gray-800">Pozovi prijatelja</h3>
-            <p className="text-xs text-gray-400">Podijeli pozivnicu sa prijateljima</p>
+            <h3 className="text-sm font-semibold text-gray-800">{t("share.inviteFriend")}</h3>
+            <p className="text-xs text-gray-400">{t("share.inviteSubtitle")}</p>
           </div>
           <button
             onClick={() => setInviteOpen(true)}
             className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:border-[#1D6BF3] hover:text-[#1D6BF3]"
           >
             <UserPlus size={12} />
-            Pozovi
+            {t("share.invite")}
           </button>
         </div>
 
         <div className="flex items-center gap-2 rounded-lg border border-dashed border-gray-200 px-3 py-2">
           <span className="flex-1 truncate text-xs text-gray-400">{inviteUrl}</span>
-          <button
-            onClick={copyInvite}
-            className="flex-shrink-0 text-gray-400 hover:text-[#1D6BF3]"
-          >
+          <button onClick={copyInvite} className="flex-shrink-0 text-gray-400 hover:text-[#1D6BF3]">
             {inviteCopied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
           </button>
         </div>
@@ -205,21 +196,16 @@ export function ShareAndInvite({ username, firstName }: ShareAndInviteProps) {
         >
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-base font-semibold text-gray-900">Pozovi prijatelja</h2>
-              <button
-                onClick={() => setInviteOpen(false)}
-                className="rounded-full p-1 text-gray-400 hover:bg-gray-100"
-              >
+              <h2 className="text-base font-semibold text-gray-900">{t("share.inviteFriend")}</h2>
+              <button onClick={() => setInviteOpen(false)} className="rounded-full p-1 text-gray-400 hover:bg-gray-100">
                 <X size={16} />
               </button>
             </div>
 
-            <p className="mb-4 text-sm text-gray-500">
-              Podijeli ovaj link sa prijateljem i pozovi ga na Core Platform.
-            </p>
+            <p className="mb-4 text-sm text-gray-500">{t("share.inviteDescription")}</p>
 
             <div className="mb-4 rounded-xl bg-gray-50 p-3">
-              <p className="mb-1 text-xs text-gray-400">Tvoj pozivni link</p>
+              <p className="mb-1 text-xs text-gray-400">{t("share.yourInviteLink")}</p>
               <p className="break-all text-xs font-medium text-gray-700">{inviteUrl}</p>
             </div>
 
@@ -229,19 +215,19 @@ export function ShareAndInvite({ username, firstName }: ShareAndInviteProps) {
                 className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
                 {inviteCopied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
-                Kopiraj link
+                {t("share.copyLink")}
               </button>
               <button
                 onClick={() => nativeShare(inviteText, inviteUrl)}
                 className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#1D6BF3] py-2.5 text-sm font-medium text-white hover:bg-[#1558D6]"
               >
                 <Share2 size={14} />
-                Podijeli
+                {t("share.share")}
               </button>
             </div>
 
             <p className="mt-3 text-center text-xs text-gray-400">
-              💡 Referral program dolazi uskoro
+              💡 {t("share.referralComingSoon")}
             </p>
           </div>
         </div>
