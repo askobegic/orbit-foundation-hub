@@ -8,16 +8,27 @@ export const Route = createFileRoute("/auth/callback")({
 
 function AuthCallback() {
   useEffect(() => {
-    supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session) {
-        window.location.href = "/dashboard";
+    const exchangeCode = async () => {
+      const url = new URL(window.location.href);
+      const code = url.searchParams.get("code");
+      
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (!error) {
+          window.location.href = "/dashboard";
+          return;
+        }
       }
-    });
-    supabase.auth.getSession().then(({ data }) => {
+
+      const { data } = await supabase.auth.getSession();
       if (data.session) {
         window.location.href = "/dashboard";
+      } else {
+        window.location.href = "/login";
       }
-    });
+    };
+
+    void exchangeCode();
   }, []);
 
   return (
