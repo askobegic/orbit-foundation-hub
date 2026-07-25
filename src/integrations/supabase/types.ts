@@ -116,6 +116,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "audit_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       notifications: {
@@ -174,6 +181,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
             referencedColumns: ["id"]
           },
         ]
@@ -241,6 +255,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
             referencedColumns: ["id"]
           },
         ]
@@ -318,6 +339,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: true
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "premium_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles_public"
             referencedColumns: ["id"]
           },
         ]
@@ -509,6 +537,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_app_settings: {
@@ -551,6 +586,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_app_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_roles: {
@@ -576,16 +618,144 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      premium_profiles_public: {
+        Row: {
+          contact_email: string | null
+          contact_email_public: boolean | null
+          created_at: string | null
+          facebook_url: string | null
+          id: string | null
+          instagram_url: string | null
+          linkedin_url: string | null
+          phone: string | null
+          phone_public: boolean | null
+          primary_profession: string | null
+          secondary_professions: string[] | null
+          tiktok_url: string | null
+          updated_at: string | null
+          user_id: string | null
+          website: string | null
+          website_public: boolean | null
+          whatsapp: string | null
+          whatsapp_public: boolean | null
+          x_url: string | null
+          youtube_url: string | null
+        }
+        Insert: {
+          contact_email?: never
+          contact_email_public?: boolean | null
+          created_at?: string | null
+          facebook_url?: string | null
+          id?: string | null
+          instagram_url?: string | null
+          linkedin_url?: string | null
+          phone?: never
+          phone_public?: boolean | null
+          primary_profession?: string | null
+          secondary_professions?: string[] | null
+          tiktok_url?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          website?: never
+          website_public?: boolean | null
+          whatsapp?: never
+          whatsapp_public?: boolean | null
+          x_url?: string | null
+          youtube_url?: string | null
+        }
+        Update: {
+          contact_email?: never
+          contact_email_public?: boolean | null
+          created_at?: string | null
+          facebook_url?: string | null
+          id?: string | null
+          instagram_url?: string | null
+          linkedin_url?: string | null
+          phone?: never
+          phone_public?: boolean | null
+          primary_profession?: string | null
+          secondary_professions?: string[] | null
+          tiktok_url?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          website?: never
+          website_public?: boolean | null
+          whatsapp?: never
+          whatsapp_public?: boolean | null
+          x_url?: string | null
+          youtube_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "premium_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "premium_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles_public: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          city: string | null
+          country: string | null
+          created_at: string | null
+          first_name: string | null
+          id: string | null
+          is_active: boolean | null
+          is_verified: boolean | null
+          language: string | null
+          last_name: string | null
+          updated_at: string | null
+          user_type: string | null
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          first_name?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          is_verified?: boolean | null
+          language?: string | null
+          last_name?: string | null
+          updated_at?: string | null
+          user_type?: string | null
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          first_name?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          is_verified?: boolean | null
+          language?: string | null
+          last_name?: string | null
+          updated_at?: string | null
+          user_type?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
+      is_user_premium: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"

@@ -42,7 +42,7 @@ function PublicBioCard() {
       setLoading(true);
       setNotFound(false);
       const { data } = await supabase
-        .from("profiles")
+        .from("profiles_public" as never)
         .select("*")
         .eq("username", username)
         .eq("is_active", true)
@@ -54,13 +54,17 @@ function PublicBioCard() {
         return;
       }
       setProfile(p);
-      const [{ data: prem }, { data: subs }, { data: allApps }] = await Promise.all([
-        supabase.from("premium_profiles").select("*").eq("user_id", p.id).maybeSingle(),
-        supabase.from("subscriptions").select("id").eq("user_id", p.id).eq("status", "active").limit(1),
+      const [{ data: prem }, { data: isPrem }, { data: allApps }] = await Promise.all([
+        supabase
+          .from("premium_profiles_public" as never)
+          .select("*")
+          .eq("user_id", p.id)
+          .maybeSingle(),
+        supabase.rpc("is_user_premium" as never, { _user_id: p.id } as never),
         supabase.from("applications").select("*").eq("status", "active").order("sort_order"),
       ]);
       setPremium((prem as PremiumProfileRow | null) ?? null);
-      setIsPremiumActive(!!subs && subs.length > 0);
+      setIsPremiumActive(!!isPrem);
       const appsList = (allApps as ApplicationRow[] | null) ?? [];
       const { data: visSettings } = await supabase
         .from("user_app_settings")

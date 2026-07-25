@@ -24,7 +24,7 @@ export async function generateUniqueUsername(
   // Try up to 50 iterations
   while (n < 50) {
     const { data } = await supabase
-      .from("profiles")
+      .from("profiles_public" as never)
       .select("id")
       .eq("username", candidate)
       .neq("id", currentUserId)
