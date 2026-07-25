@@ -98,14 +98,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const result = await lovable.auth.signInWithOAuth("google", {
           redirect_uri: window.location.origin,
         });
-        if (result.error) return { error: result.error instanceof Error ? result.error : new Error(String(result.error)) };
+        if (result.redirected) return {};
+        if (result.error) {
+          console.error("[auth] Google sign-in failed", result.error);
+          return { error: result.error instanceof Error ? result.error : new Error(String(result.error)) };
+        }
         return {};
       },
       signInWithApple: async () => {
         const result = await lovable.auth.signInWithOAuth("apple", {
           redirect_uri: window.location.origin,
         });
-        if (result.error) return { error: result.error instanceof Error ? result.error : new Error(String(result.error)) };
+        if (result.redirected) return {};
+        if (result.error) {
+          console.error("[auth] Apple sign-in failed", result.error);
+          return { error: result.error instanceof Error ? result.error : new Error(String(result.error)) };
+        }
         return {};
       },
       signOut: async () => {
