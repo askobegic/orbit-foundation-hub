@@ -96,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithGoogle: async () => {
         const { error } = await supabase.auth.signInWithOAuth({
           provider: "google",
-          options: { redirectTo: `${window.location.origin}/` },
+          options: { redirectTo: 'https://orbit-foundation-hub.lovable.app/' },
         });
         if (error) {
           console.error("[auth] Google sign-in failed", error);
@@ -107,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithApple: async () => {
         const { error } = await supabase.auth.signInWithOAuth({
           provider: "apple",
-          options: { redirectTo: `${window.location.origin}/` },
+          options: { redirectTo: 'https://orbit-foundation-hub.lovable.app/' },
         });
         if (error) {
           console.error("[auth] Apple sign-in failed", error);
