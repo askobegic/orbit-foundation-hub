@@ -93,11 +93,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user: session?.user ?? null,
       profile,
       loading,
-      signInWithGoogle: async () => {
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: "google",
-          options: { redirectTo: 'https://orbit-foundation-hub.vercel.app/auth/callback' },
-        });
+signInWithGoogle: async () => {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: 'https://orbit-foundation-hub.vercel.app/auth/callback',
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'consent',
+      },
+    },
+  });
         if (error) {
           console.error("[auth] Google sign-in failed", error);
           return { error };
