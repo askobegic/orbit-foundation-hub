@@ -96,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       signInWithGoogle: async () => {
         const result = await lovable.auth.signInWithOAuth("google", {
-          redirect_uri: window.location.origin,
+          redirect_uri: "https://2f1a1090-70f5-4e23-b47c-16ab61a9375d.lovable.app",
         });
         if (result.redirected) return {};
         if (result.error) {
@@ -107,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       signInWithApple: async () => {
         const result = await lovable.auth.signInWithOAuth("apple", {
-          redirect_uri: window.location.origin,
+          redirect_uri: "https://2f1a1090-70f5-4e23-b47c-16ab61a9375d.lovable.app",
         });
         if (result.redirected) return {};
         if (result.error) {
