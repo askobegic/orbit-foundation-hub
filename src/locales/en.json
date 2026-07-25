@@ -36,22 +36,22 @@
     "backToDashboard": "Back to Dashboard"
   },
   "share": {
-  "shareProfile": "Share profile",
-  "share": "Share",
-  "copyLink": "Copy link",
-  "linkCopied": "Link copied!",
-  "profileText": "Check out my profile on Core Platform:",
-  "instagramCopied": "Link copied! Paste it in your Instagram bio.",
-  "tiktokCopied": "Link copied! Paste it in your TikTok bio.",
-  "emailSubject": "My profile on Core Platform",
-  "inviteFriend": "Invite a friend",
-  "inviteSubtitle": "Share your invitation with friends",
-  "invite": "Invite",
-  "inviteText": "Join Core Platform:",
-  "inviteDescription": "Share this link with a friend and invite them to Core Platform.",
-  "yourInviteLink": "Your invite link",
-  "referralComingSoon": "Referral program coming soon"
-}
+    "shareProfile": "Share profile",
+    "share": "Share",
+    "copyLink": "Copy link",
+    "linkCopied": "Link copied!",
+    "profileText": "Check out my profile on Core Platform:",
+    "instagramCopied": "Link copied! Paste it in your Instagram bio.",
+    "tiktokCopied": "Link copied! Paste it in your TikTok bio.",
+    "emailSubject": "My profile on Core Platform",
+    "inviteFriend": "Invite a friend",
+    "inviteSubtitle": "Share your invitation with friends",
+    "invite": "Invite",
+    "inviteText": "Join Core Platform:",
+    "inviteDescription": "Share this link with a friend and invite them to Core Platform.",
+    "yourInviteLink": "Your invite link",
+    "referralComingSoon": "Referral program coming soon"
+  },
   "profile": {
     "title": "My Profile",
     "firstName": "First Name",
@@ -235,12 +235,30 @@
     "subtitle": "Answers to common questions and contact.",
     "faq": "Frequently asked questions",
     "faqs": [
-      { "q": "How do I upgrade to Premium?", "a": "Open Pricing, pick an app and a plan, then complete checkout with Stripe or PayPal." },
-      { "q": "How can I change my language?", "a": "In Settings pick your language (BS/EN/DE). It is saved to your profile." },
-      { "q": "How do I cancel a subscription?", "a": "Go to My subscriptions to manage or cancel any active plan." },
-      { "q": "How do I edit my profile?", "a": "Open My profile in the sidebar to update details, avatar and contacts." },
-      { "q": "I'm not receiving email notifications.", "a": "Check Settings to ensure email notifications are on and look in your spam folder." },
-      { "q": "How do I contact support?", "a": "Use the form below — your message is sent to our team directly." }
+      {
+        "q": "How do I upgrade to Premium?",
+        "a": "Open Pricing, pick an app and a plan, then complete checkout with Stripe or PayPal."
+      },
+      {
+        "q": "How can I change my language?",
+        "a": "In Settings pick your language (BS/EN/DE). It is saved to your profile."
+      },
+      {
+        "q": "How do I cancel a subscription?",
+        "a": "Go to My subscriptions to manage or cancel any active plan."
+      },
+      {
+        "q": "How do I edit my profile?",
+        "a": "Open My profile in the sidebar to update details, avatar and contacts."
+      },
+      {
+        "q": "I'm not receiving email notifications.",
+        "a": "Check Settings to ensure email notifications are on and look in your spam folder."
+      },
+      {
+        "q": "How do I contact support?",
+        "a": "Use the form below — your message is sent to our team directly."
+      }
     ],
     "docsTitle": "Documentation",
     "docsPricing": "Plans and billing guide",
@@ -259,8 +277,7 @@
     "send": "Send message",
     "sent": "Your message has been sent.",
     "formInvalid": "Please fill in subject and message."
-  }
-  ,
+  },
   "install": {
     "title": "Install Core Platform",
     "hint": "Add the app to your home screen for faster access.",
