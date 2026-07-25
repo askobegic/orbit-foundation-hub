@@ -12,22 +12,22 @@
     "logout": "Odjavi se"
   },
   "share": {
-  "shareProfile": "Podijeli profil",
-  "share": "Podijeli",
-  "copyLink": "Kopiraj link",
-  "linkCopied": "Link kopiran!",
-  "profileText": "Pogledaj moj profil na Core Platform:",
-  "instagramCopied": "Link kopiran! Zalijepi u Instagram bio.",
-  "tiktokCopied": "Link kopiran! Zalijepi u TikTok bio.",
-  "emailSubject": "Moj profil na Core Platform",
-  "inviteFriend": "Pozovi prijatelja",
-  "inviteSubtitle": "Podijeli pozivnicu sa prijateljima",
-  "invite": "Pozovi",
-  "inviteText": "Pridruži se Core Platformi:",
-  "inviteDescription": "Podijeli ovaj link sa prijateljem i pozovi ga na Core Platform.",
-  "yourInviteLink": "Tvoj pozivni link",
-  "referralComingSoon": "Referral program dolazi uskoro"
-},
+    "shareProfile": "Podijeli profil",
+    "share": "Podijeli",
+    "copyLink": "Kopiraj link",
+    "linkCopied": "Link kopiran!",
+    "profileText": "Pogledaj moj profil na Core Platform:",
+    "instagramCopied": "Link kopiran! Zalijepi u Instagram bio.",
+    "tiktokCopied": "Link kopiran! Zalijepi u TikTok bio.",
+    "emailSubject": "Moj profil na Core Platform",
+    "inviteFriend": "Pozovi prijatelja",
+    "inviteSubtitle": "Podijeli pozivnicu sa prijateljima",
+    "invite": "Pozovi",
+    "inviteText": "Pridruži se Core Platformi:",
+    "inviteDescription": "Podijeli ovaj link sa prijateljem i pozovi ga na Core Platform.",
+    "yourInviteLink": "Tvoj pozivni link",
+    "referralComingSoon": "Referral program dolazi uskoro"
+  },
   "auth": {
     "login": "Prijava",
     "register": "Registracija",
@@ -235,12 +235,30 @@
     "subtitle": "Odgovori na česta pitanja i kontakt sa timom.",
     "faq": "Česta pitanja",
     "faqs": [
-      { "q": "Kako da nadogradim na Premium?", "a": "Otvorite stranicu Cijene, odaberite aplikaciju i plan koji vam odgovara, i završite plaćanje putem Stripe ili PayPal." },
-      { "q": "Kako mogu promijeniti jezik?", "a": "U Postavkama odaberite željeni jezik (BS/EN/DE). Postavka se čuva na vašem profilu." },
-      { "q": "Kako da otkažem pretplatu?", "a": "Na stranici Moje pretplate možete upravljati ili otkazati aktivne pretplate." },
-      { "q": "Kako da uredim profil?", "a": "Otvorite Moj profil u sidebaru i uredite osnovne podatke, avatar i kontakte." },
-      { "q": "Ne primam email obavještenja.", "a": "Provjerite u Postavkama da su email obavještenja uključena i pogledajte spam folder." },
-      { "q": "Kako da kontaktiram podršku?", "a": "Koristite formu ispod. Vaša poruka se šalje direktno našem timu." }
+      {
+        "q": "Kako da nadogradim na Premium?",
+        "a": "Otvorite stranicu Cijene, odaberite aplikaciju i plan koji vam odgovara, i završite plaćanje putem Stripe ili PayPal."
+      },
+      {
+        "q": "Kako mogu promijeniti jezik?",
+        "a": "U Postavkama odaberite željeni jezik (BS/EN/DE). Postavka se čuva na vašem profilu."
+      },
+      {
+        "q": "Kako da otkažem pretplatu?",
+        "a": "Na stranici Moje pretplate možete upravljati ili otkazati aktivne pretplate."
+      },
+      {
+        "q": "Kako da uredim profil?",
+        "a": "Otvorite Moj profil u sidebaru i uredite osnovne podatke, avatar i kontakte."
+      },
+      {
+        "q": "Ne primam email obavještenja.",
+        "a": "Provjerite u Postavkama da su email obavještenja uključena i pogledajte spam folder."
+      },
+      {
+        "q": "Kako da kontaktiram podršku?",
+        "a": "Koristite formu ispod. Vaša poruka se šalje direktno našem timu."
+      }
     ],
     "docsTitle": "Dokumentacija",
     "docsPricing": "Vodič za planove i plaćanje",
@@ -259,8 +277,7 @@
     "send": "Pošalji poruku",
     "sent": "Vaša poruka je poslana.",
     "formInvalid": "Molimo popunite naslov i poruku."
-  }
-  ,
+  },
   "install": {
     "title": "Instalirajte Core Platform",
     "hint": "Dodajte aplikaciju na početni ekran za brži pristup.",
