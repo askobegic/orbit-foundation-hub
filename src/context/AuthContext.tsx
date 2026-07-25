@@ -1,149 +1,103 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import type { Session, User } from "@supabase/supabase-js";
-
+import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import type { ProfileRow, ProfileUpdate } from "@/types/database";
 
-interface AuthContextValue {
-  session: Session | null;
-  user: User | null;
-  profile: ProfileRow | null;
-  loading: boolean;
-  signInWithGoogle: () => Promise<{ error?: Error }>;
-  signInWithApple: () => Promise<{ error?: Error }>;
-  signOut: () => Promise<void>;
-  refreshProfile: () => Promise<void>;
-  updateProfile: (data: ProfileUpdate) => Promise<ProfileRow>;
-}
+export const Route = createFileRoute("/auth/callback")({
+  component: AuthCallback,
+});
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
-
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<ProfileRow | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const loadProfile = async (u: User) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", u.id)
-      .maybeSingle();
-    let row = (data as ProfileRow | null) ?? null;
-
-    // Auto-import OAuth metadata (Google/Apple) into profile if fields are empty.
-    // Apple only sends name on very first login — must capture immediately.
-    if (row) {
-      const meta = (u.user_metadata ?? {}) as Record<string, unknown>;
-      const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : "");
-      const fullName = str(meta.full_name) || str(meta.name);
-      const [splitFirst, ...splitRest] = fullName.split(" ");
-      const metaFirst = str(meta.given_name) || str(meta.first_name) || splitFirst || "";
-      const metaLast = str(meta.family_name) || str(meta.last_name) || splitRest.join(" ") || "";
-      const metaAvatar = str(meta.avatar_url) || str(meta.picture);
-      const patch: ProfileUpdate = {};
-      if (!row.first_name && metaFirst) patch.first_name = metaFirst;
-      if (!row.last_name && metaLast) patch.last_name = metaLast;
-      if (!row.avatar_url && metaAvatar) patch.avatar_url = metaAvatar;
-      if (!row.email && u.email) patch.email = u.email;
-      if (Object.keys(patch).length > 0) {
-        const { data: updated } = await supabase
-          .from("profiles")
-          .update(patch)
-          .eq("id", u.id)
-          .select("*")
-          .single();
-        if (updated) row = updated as ProfileRow;
-      }
-    }
-    setProfile(row);
-  };
+function AuthCallback() {
+  const [status, setStatus] = useState("Prijava u toku...");
 
   useEffect(() => {
-    // Subscribe synchronously; defer any Supabase calls to avoid deadlocks.
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      if (nextSession?.user) {
-        setLoading(true);
+    const handle = async () => {
+      // Check for error in URL
+      const params = new URLSearchParams(window.location.search);
+      const error = params.get("error");
+      const errorDesc = params.get("error_description");
+
+      if (error) {
+        console.error("[auth/callback] Error:", error, errorDesc);
+        setStatus("Greška pri prijavi...");
         setTimeout(() => {
-          void loadProfile(nextSession.user).finally(() => setLoading(false));
-        }, 0);
-      } else {
-        setProfile(null);
-        setLoading(false);
+          window.location.href = "/login";
+        }, 2000);
+        return;
       }
-    });
 
-    void supabase.auth.getSession().then(async ({ data }) => {
-      setSession(data.session);
-      if (data.session?.user) {
-        await loadProfile(data.session.user);
-      } else {
-        setProfile(null);
+      // Check for code (PKCE flow)
+      const code = params.get("code");
+      if (code) {
+        setStatus("Potvrđivanje...");
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        if (exchangeError) {
+          console.error("[auth/callback] Exchange error:", exchangeError);
+          setStatus("Greška pri potvrdi...");
+          setTimeout(() => {
+            window.location.href = "/login";
+          }, 2000);
+          return;
+        }
       }
-      setLoading(false);
-    });
 
-    return () => sub.subscription.unsubscribe();
+      // Check for hash (implicit flow)
+      const hash = window.location.hash;
+      if (hash && hash.includes("access_token")) {
+        setStatus("Učitavanje sesije...");
+        await new Promise(r => setTimeout(r, 500));
+      }
+
+      // Get session
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        // Check profile
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("profile_complete")
+          .eq("id", data.session.user.id)
+          .maybeSingle();
+
+        if (profile?.profile_complete) {
+          window.location.href = "/dashboard";
+        } else {
+          window.location.href = "/onboarding";
+        }
+      } else {
+        // Wait for auth state change
+        setStatus("Čekanje...");
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            if (event === "SIGNED_IN" && session) {
+              subscription.unsubscribe();
+              const { data: profile } = await supabase
+                .from("profiles")
+                .select("profile_complete")
+                .eq("id", session.user.id)
+                .maybeSingle();
+              window.location.href = profile?.profile_complete ? "/dashboard" : "/onboarding";
+            }
+          }
+        );
+
+        // Timeout fallback
+        setTimeout(() => {
+          subscription.unsubscribe();
+          window.location.href = "/login";
+        }, 5000);
+      }
+    };
+
+    void handle();
   }, []);
 
-  const value = useMemo<AuthContextValue>(
-    () => ({
-      session,
-      user: session?.user ?? null,
-      profile,
-      loading,
-signInWithGoogle: async () => {
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: 'https://orbit-foundation-hub.vercel.app/auth/callback',
-    },
-  });
-  if (error) {
-    console.error("[auth] Google sign-in failed", error);
-    return { error };
-  }
-  return {};
-},
-      signInWithApple: async () => {
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: "apple",
-          options: { redirectTo: 'https://orbit-foundation-hub.vercel.app/auth/callback' },
-        });
-        if (error) {
-          console.error("[auth] Apple sign-in failed", error);
-          return { error };
-        }
-        return {};
-      },
-      signOut: async () => {
-        await supabase.auth.signOut();
-      },
-      refreshProfile: async () => {
-        if (session?.user) await loadProfile(session.user);
-      },
-      updateProfile: async (data) => {
-        if (!session?.user) throw new Error("Not authenticated");
-        const { data: updated, error } = await supabase
-          .from("profiles")
-          .update(data)
-          .eq("id", session.user.id)
-          .select("*")
-          .single();
-        if (error) throw error;
-        setProfile(updated as ProfileRow);
-        return updated as ProfileRow;
-      },
-    }),
-    [session, profile, loading],
+  return (
+    <div className="flex min-h-screen items-center justify-center"
+      style={{ background: "linear-gradient(135deg, #EEF2FF 0%, #F0F9FF 50%, #F0FDF4 100%)" }}
+    >
+      <div className="text-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-500 border-t-transparent mx-auto mb-4" />
+        <p className="text-gray-600 text-sm font-medium">{status}</p>
+      </div>
+    </div>
   );
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth(): AuthContextValue {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used inside <AuthProvider>");
-  return ctx;
 }
