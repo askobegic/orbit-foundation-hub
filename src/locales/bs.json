@@ -11,6 +11,23 @@
     "help": "Pomoć i podrška",
     "logout": "Odjavi se"
   },
+  "share": {
+  "shareProfile": "Podijeli profil",
+  "share": "Podijeli",
+  "copyLink": "Kopiraj link",
+  "linkCopied": "Link kopiran!",
+  "profileText": "Pogledaj moj profil na Core Platform:",
+  "instagramCopied": "Link kopiran! Zalijepi u Instagram bio.",
+  "tiktokCopied": "Link kopiran! Zalijepi u TikTok bio.",
+  "emailSubject": "Moj profil na Core Platform",
+  "inviteFriend": "Pozovi prijatelja",
+  "inviteSubtitle": "Podijeli pozivnicu sa prijateljima",
+  "invite": "Pozovi",
+  "inviteText": "Pridruži se Core Platformi:",
+  "inviteDescription": "Podijeli ovaj link sa prijateljem i pozovi ga na Core Platform.",
+  "yourInviteLink": "Tvoj pozivni link",
+  "referralComingSoon": "Referral program dolazi uskoro"
+}
   "auth": {
     "login": "Prijava",
     "register": "Registracija",
@@ -59,7 +76,6 @@
     "socialLinks": "Društvene mreže",
     "profileCompletion": "Kompletnost profila",
     "completeProfile": "Kompletiraj profil",
-    "shareProfile": "Podijeli profil",
     "linkCopied": "Link kopiran!",
     "memberSince": "Član od",
     "registerToSee": "Registruj se besplatno da vidiš kontakt podatke",
