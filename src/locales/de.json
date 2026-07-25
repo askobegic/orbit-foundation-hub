@@ -36,22 +36,22 @@
     "backToDashboard": "Zurück zum Dashboard"
   },
   "share": {
-  "shareProfile": "Profil teilen",
-  "share": "Teilen",
-  "copyLink": "Link kopieren",
-  "linkCopied": "Link kopiert!",
-  "profileText": "Schau dir mein Profil auf Core Platform an:",
-  "instagramCopied": "Link kopiert! In Instagram-Bio einfügen.",
-  "tiktokCopied": "Link kopiert! In TikTok-Bio einfügen.",
-  "emailSubject": "Mein Profil auf Core Platform",
-  "inviteFriend": "Freund einladen",
-  "inviteSubtitle": "Teile deine Einladung mit Freunden",
-  "invite": "Einladen",
-  "inviteText": "Tritt Core Platform bei:",
-  "inviteDescription": "Teile diesen Link mit einem Freund und lade ihn zu Core Platform ein.",
-  "yourInviteLink": "Dein Einladungslink",
-  "referralComingSoon": "Referral-Programm kommt bald"
-}
+    "shareProfile": "Profil teilen",
+    "share": "Teilen",
+    "copyLink": "Link kopieren",
+    "linkCopied": "Link kopiert!",
+    "profileText": "Schau dir mein Profil auf Core Platform an:",
+    "instagramCopied": "Link kopiert! In Instagram-Bio einfügen.",
+    "tiktokCopied": "Link kopiert! In TikTok-Bio einfügen.",
+    "emailSubject": "Mein Profil auf Core Platform",
+    "inviteFriend": "Freund einladen",
+    "inviteSubtitle": "Teile deine Einladung mit Freunden",
+    "invite": "Einladen",
+    "inviteText": "Tritt Core Platform bei:",
+    "inviteDescription": "Teile diesen Link mit einem Freund und lade ihn zu Core Platform ein.",
+    "yourInviteLink": "Dein Einladungslink",
+    "referralComingSoon": "Referral-Programm kommt bald"
+  },
   "profile": {
     "title": "Mein Profil",
     "firstName": "Vorname",
@@ -235,12 +235,30 @@
     "subtitle": "Antworten auf häufige Fragen und Kontakt.",
     "faq": "Häufig gestellte Fragen",
     "faqs": [
-      { "q": "Wie führe ich ein Upgrade auf Premium durch?", "a": "Öffnen Sie Preise, wählen Sie eine App und einen Plan und schließen Sie die Zahlung per Stripe oder PayPal ab." },
-      { "q": "Wie ändere ich die Sprache?", "a": "In den Einstellungen können Sie die Sprache (BS/EN/DE) wählen. Sie wird in Ihrem Profil gespeichert." },
-      { "q": "Wie kündige ich ein Abonnement?", "a": "Unter Meine Abonnements können Sie aktive Pläne verwalten oder kündigen." },
-      { "q": "Wie bearbeite ich mein Profil?", "a": "Öffnen Sie Mein Profil in der Seitenleiste, um Daten, Avatar und Kontakte zu ändern." },
-      { "q": "Ich erhalte keine E-Mail-Benachrichtigungen.", "a": "Prüfen Sie die Einstellungen und Ihren Spam-Ordner." },
-      { "q": "Wie kontaktiere ich den Support?", "a": "Verwenden Sie das Formular unten – Ihre Nachricht geht direkt an unser Team." }
+      {
+        "q": "Wie führe ich ein Upgrade auf Premium durch?",
+        "a": "Öffnen Sie Preise, wählen Sie eine App und einen Plan und schließen Sie die Zahlung per Stripe oder PayPal ab."
+      },
+      {
+        "q": "Wie ändere ich die Sprache?",
+        "a": "In den Einstellungen können Sie die Sprache (BS/EN/DE) wählen. Sie wird in Ihrem Profil gespeichert."
+      },
+      {
+        "q": "Wie kündige ich ein Abonnement?",
+        "a": "Unter Meine Abonnements können Sie aktive Pläne verwalten oder kündigen."
+      },
+      {
+        "q": "Wie bearbeite ich mein Profil?",
+        "a": "Öffnen Sie Mein Profil in der Seitenleiste, um Daten, Avatar und Kontakte zu ändern."
+      },
+      {
+        "q": "Ich erhalte keine E-Mail-Benachrichtigungen.",
+        "a": "Prüfen Sie die Einstellungen und Ihren Spam-Ordner."
+      },
+      {
+        "q": "Wie kontaktiere ich den Support?",
+        "a": "Verwenden Sie das Formular unten – Ihre Nachricht geht direkt an unser Team."
+      }
     ],
     "docsTitle": "Dokumentation",
     "docsPricing": "Pläne und Abrechnung",
@@ -259,8 +277,7 @@
     "send": "Nachricht senden",
     "sent": "Ihre Nachricht wurde gesendet.",
     "formInvalid": "Bitte Betreff und Nachricht ausfüllen."
-  }
-  ,
+  },
   "install": {
     "title": "Core Platform installieren",
     "hint": "Fügen Sie die App zum Startbildschirm hinzu für schnelleren Zugriff.",
