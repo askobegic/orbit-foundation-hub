@@ -1,103 +1,190 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import type { ProfileRow, ProfileUpdate } from "@/types/database";
 
-export const Route = createFileRoute("/auth/callback")({
-  component: AuthCallback,
-});
+interface AuthContextValue {
+  session: Session | null;
+  user: User | null;
+  profile: ProfileRow | null;
+  loading: boolean;
+  signInWithGoogle: () => Promise<{ error?: Error }>;
+  signInWithPhone: (phone: string) => Promise<{ error?: Error }>;
+  verifyOtp: (phone: string, token: string) => Promise<{ error?: Error }>;
+  signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
+  updateProfile: (data: ProfileUpdate) => Promise<ProfileRow>;
+}
 
-function AuthCallback() {
-  const [status, setStatus] = useState("Prijava u toku...");
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+async function loadOrCreateProfile(u: User): Promise<ProfileRow | null> {
+  // Try to load existing profile
+  const { data: existing } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", u.id)
+    .maybeSingle();
+
+  if (existing) {
+    // Auto-import missing fields from OAuth metadata
+    const meta = (u.user_metadata ?? {}) as Record<string, unknown>;
+    const str = (v: unknown) =>
+      typeof v === "string" && v.trim() ? v.trim() : "";
+    const fullName = str(meta.full_name) || str(meta.name);
+    const [first, ...rest] = fullName.split(" ");
+    const patch: ProfileUpdate = {};
+    if (!existing.first_name) patch.first_name = str(meta.given_name) || str(meta.first_name) || first || "";
+    if (!existing.last_name) patch.last_name = str(meta.family_name) || str(meta.last_name) || rest.join(" ") || "";
+    if (!existing.avatar_url) patch.avatar_url = str(meta.avatar_url) || str(meta.picture);
+    if (!existing.email && u.email) patch.email = u.email;
+
+    if (Object.keys(patch).length > 0) {
+      const { data: updated } = await supabase
+        .from("profiles")
+        .update(patch)
+        .eq("id", u.id)
+        .select("*")
+        .single();
+      return (updated as ProfileRow) ?? (existing as ProfileRow);
+    }
+    return existing as ProfileRow;
+  }
+
+  // Create new profile for first-time users
+  const meta = (u.user_metadata ?? {}) as Record<string, unknown>;
+  const str = (v: unknown) =>
+    typeof v === "string" && v.trim() ? v.trim() : "";
+  const fullName = str(meta.full_name) || str(meta.name);
+  const [first, ...rest] = fullName.split(" ");
+
+  const { data: created } = await supabase
+    .from("profiles")
+    .insert({
+      id: u.id,
+      email: u.email ?? "",
+      first_name: str(meta.given_name) || str(meta.first_name) || first || "",
+      last_name: str(meta.family_name) || str(meta.last_name) || rest.join(" ") || "",
+      avatar_url: str(meta.avatar_url) || str(meta.picture) || "",
+      profile_complete: false,
+      language: "bs",
+    })
+    .select("*")
+    .single();
+
+  return (created as ProfileRow) ?? null;
+}
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<ProfileRow | null>(null);
+  const [loading, setLoading] = useState(true);
+  const initialized = useRef(false);
 
   useEffect(() => {
-    const handle = async () => {
-      // Check for error in URL
-      const params = new URLSearchParams(window.location.search);
-      const error = params.get("error");
-      const errorDesc = params.get("error_description");
+    if (initialized.current) return;
+    initialized.current = true;
 
-      if (error) {
-        console.error("[auth/callback] Error:", error, errorDesc);
-        setStatus("Greška pri prijavi...");
-        setTimeout(() => {
-          window.location.href = "/login";
-        }, 2000);
-        return;
+    // Get initial session
+    supabase.auth.getSession().then(async ({ data }) => {
+      setSession(data.session);
+      if (data.session?.user) {
+        const p = await loadOrCreateProfile(data.session.user);
+        setProfile(p);
       }
+      setLoading(false);
+    });
 
-      // Check for code (PKCE flow)
-      const code = params.get("code");
-      if (code) {
-        setStatus("Potvrđivanje...");
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-        if (exchangeError) {
-          console.error("[auth/callback] Exchange error:", exchangeError);
-          setStatus("Greška pri potvrdi...");
-          setTimeout(() => {
-            window.location.href = "/login";
-          }, 2000);
-          return;
-        }
-      }
-
-      // Check for hash (implicit flow)
-      const hash = window.location.hash;
-      if (hash && hash.includes("access_token")) {
-        setStatus("Učitavanje sesije...");
-        await new Promise(r => setTimeout(r, 500));
-      }
-
-      // Get session
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        // Check profile
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("profile_complete")
-          .eq("id", data.session.user.id)
-          .maybeSingle();
-
-        if (profile?.profile_complete) {
-          window.location.href = "/dashboard";
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, newSession) => {
+        setSession(newSession);
+        if (newSession?.user) {
+          const p = await loadOrCreateProfile(newSession.user);
+          setProfile(p);
         } else {
-          window.location.href = "/onboarding";
+          setProfile(null);
         }
-      } else {
-        // Wait for auth state change
-        setStatus("Čekanje...");
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (event, session) => {
-            if (event === "SIGNED_IN" && session) {
-              subscription.unsubscribe();
-              const { data: profile } = await supabase
-                .from("profiles")
-                .select("profile_complete")
-                .eq("id", session.user.id)
-                .maybeSingle();
-              window.location.href = profile?.profile_complete ? "/dashboard" : "/onboarding";
-            }
-          }
-        );
-
-        // Timeout fallback
-        setTimeout(() => {
-          subscription.unsubscribe();
-          window.location.href = "/login";
-        }, 5000);
+        setLoading(false);
       }
-    };
+    );
 
-    void handle();
+    return () => subscription.unsubscribe();
   }, []);
 
+  const value: AuthContextValue = {
+    session,
+    user: session?.user ?? null,
+    profile,
+    loading,
+
+    signInWithGoogle: async () => {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      return error ? { error } : {};
+    },
+
+    signInWithPhone: async (phone: string) => {
+      const { error } = await supabase.auth.signInWithOtp({
+        phone,
+      });
+      return error ? { error } : {};
+    },
+
+    verifyOtp: async (phone: string, token: string) => {
+      const { error } = await supabase.auth.verifyOtp({
+        phone,
+        token,
+        type: "sms",
+      });
+      return error ? { error } : {};
+    },
+
+    signOut: async () => {
+      await supabase.auth.signOut();
+      setSession(null);
+      setProfile(null);
+    },
+
+    refreshProfile: async () => {
+      if (session?.user) {
+        const p = await loadOrCreateProfile(session.user);
+        setProfile(p);
+      }
+    },
+
+    updateProfile: async (data: ProfileUpdate) => {
+      if (!session?.user) throw new Error("Not authenticated");
+      const { data: updated, error } = await supabase
+        .from("profiles")
+        .update(data)
+        .eq("id", session.user.id)
+        .select("*")
+        .single();
+      if (error) throw error;
+      setProfile(updated as ProfileRow);
+      return updated as ProfileRow;
+    },
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center"
-      style={{ background: "linear-gradient(135deg, #EEF2FF 0%, #F0F9FF 50%, #F0FDF4 100%)" }}
-    >
-      <div className="text-center">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-500 border-t-transparent mx-auto mb-4" />
-        <p className="text-gray-600 text-sm font-medium">{status}</p>
-      </div>
-    </div>
+    <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
   );
+}
+
+export function useAuth(): AuthContextValue {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used inside <AuthProvider>");
+  return ctx;
 }
