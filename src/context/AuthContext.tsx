@@ -2,7 +2,6 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import type { Session, User } from "@supabase/supabase-js";
 
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 import type { ProfileRow, ProfileUpdate } from "@/types/database";
 
 interface AuthContextValue {
@@ -95,24 +94,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profile,
       loading,
       signInWithGoogle: async () => {
-        const result = await lovable.auth.signInWithOAuth("google", {
-          redirect_uri: "https://2f1a1090-70f5-4e23-b47c-16ab61a9375d.lovable.app",
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: "google",
+          options: { redirectTo: `${window.location.origin}/` },
         });
-        if (result.redirected) return {};
-        if (result.error) {
-          console.error("[auth] Google sign-in failed", result.error);
-          return { error: result.error instanceof Error ? result.error : new Error(String(result.error)) };
+        if (error) {
+          console.error("[auth] Google sign-in failed", error);
+          return { error };
         }
         return {};
       },
       signInWithApple: async () => {
-        const result = await lovable.auth.signInWithOAuth("apple", {
-          redirect_uri: "https://2f1a1090-70f5-4e23-b47c-16ab61a9375d.lovable.app",
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: "apple",
+          options: { redirectTo: `${window.location.origin}/` },
         });
-        if (result.redirected) return {};
-        if (result.error) {
-          console.error("[auth] Apple sign-in failed", result.error);
-          return { error: result.error instanceof Error ? result.error : new Error(String(result.error)) };
+        if (error) {
+          console.error("[auth] Apple sign-in failed", error);
+          return { error };
         }
         return {};
       },
