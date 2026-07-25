@@ -6,10 +6,10 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
-    storage: typeof window !== 'undefined' ? localStorage : undefined,
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    flowType: 'implicit',
-  }
+    flowType: 'pkce',
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+  },
 });
