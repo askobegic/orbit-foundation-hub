@@ -98,18 +98,14 @@ signInWithGoogle: async () => {
     provider: "google",
     options: {
       redirectTo: 'https://orbit-foundation-hub.vercel.app/auth/callback',
-      queryParams: {
-        access_type: 'offline',
-        prompt: 'consent',
-      },
     },
   });
-        if (error) {
-          console.error("[auth] Google sign-in failed", error);
-          return { error };
-        }
-        return {};
-      },
+  if (error) {
+    console.error("[auth] Google sign-in failed", error);
+    return { error };
+  }
+  return {};
+},
       signInWithApple: async () => {
         const { error } = await supabase.auth.signInWithOAuth({
           provider: "apple",
