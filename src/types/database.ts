@@ -35,7 +35,28 @@ export interface ProfileRow {
   updated_at: string;
 }
 export type ProfileInsert = Partial<ProfileRow> & { id: string };
-export type ProfileUpdate = Partial<ProfileRow>;
+
+// Client-editable subset of ProfileRow. Deliberately excludes id,
+// user_type, is_verified, is_active, created_at, and updated_at -- those
+// are service-role-only, enforced at the database via column-level
+// UPDATE grants (see supabase/migrations -> protect_profile_privileged_columns).
+// This type is a compile-time safety net only; the database grant is the
+// real enforcement boundary. See PROJECT_AUDIT.md -> AU-1 / DB-1.
+export type ProfileUpdate = Partial<
+  Pick<
+    ProfileRow,
+    | "first_name"
+    | "last_name"
+    | "avatar_url"
+    | "city"
+    | "country"
+    | "username"
+    | "bio"
+    | "language"
+    | "email"
+    | "profile_complete"
+  >
+>;
 
 export interface PremiumProfileRow {
   id: string;

@@ -104,14 +104,14 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 ### Critical
 
 **AU-1 — Any authenticated user can self-grant `premium`/`admin` status and a fake "Verified" badge**
-- **Status:** Open
-- **Files:** `src/context/AuthContext.tsx:167-178` (`updateProfile`); root cause in `supabase/migrations/20260724110804_f95931a7-2e9e-417c-8a33-e9aedac500de.sql:31` (see **DB-1**)
+- **Status:** ✅ Resolved (2026-07-26)
+- **Files:** `src/context/AuthContext.tsx:167-178` (`updateProfile`); `src/types/database.ts` (`ProfileUpdate`); root cause in `supabase/migrations/20260724110804_f95931a7-2e9e-417c-8a33-e9aedac500de.sql:31` (see **DB-1**)
 - **Description:** `updateProfile(data: ProfileUpdate)` forwards the caller-supplied object unfiltered to `supabase.from("profiles").update(data).eq("id", session.user.id)`. `ProfileUpdate = Partial<ProfileRow>` includes every column, including `user_type` and `is_verified`. Because the RLS policy on `profiles` only checks row ownership and has no `WITH CHECK`/column restriction, a call like `updateProfile({ user_type: "premium", is_verified: true })` from the browser console succeeds.
 - **Risk:** Confirmed real consumers: `src/components/dashboard/DashboardPage.tsx:239,244` gates premium UI on `profile.user_type === "premium"`, and `src/routes/u.$username.tsx:168` renders a public "verified" checkmark straight off `profile.is_verified` — a user can bypass the paid-subscription flow and the admin verification workflow entirely, and spoof a public trust signal.
 - **Recommendation:** Restrict `ProfileUpdate` to a client-editable allowlist (name, bio, avatar, city, country, language, contact prefs) enforced both in the TS type and via a Postgres `WITH CHECK`/trigger that only `service_role` can alter `user_type`/`is_verified`/`is_active`.
-- **Resolution:** —
+- **Resolution:** `ProfileUpdate` (`src/types/database.ts`) narrowed from `Partial<ProfileRow>` to an explicit `Pick` allowlist (`first_name`, `last_name`, `avatar_url`, `city`, `country`, `username`, `bio`, `language`, `email`, `profile_complete`) — a compile-time safety net. The real enforcement boundary is database-level; see **DB-1**'s resolution for the column-level-grant mechanism, which is what actually stops this exploit regardless of what the TS layer allows. No changes were needed to `AuthContext.tsx` itself — all existing call sites already only used fields inside the new allowlist.
 - **Commit:** —
-- **Date:** 2026-07-26
+- **Date:** Logged 2026-07-26, resolved 2026-07-26
 
 ### High
 
@@ -421,14 +421,14 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 ### Critical
 
 **DB-1 — `profiles` UPDATE policy has no `WITH CHECK`, letting any user rewrite their own trust-sensitive columns**
-- **Status:** Open
-- **Files:** `supabase/migrations/20260724110804_f95931a7-2e9e-417c-8a33-e9aedac500de.sql:31`
+- **Status:** ✅ Resolved (2026-07-26)
+- **Files:** `supabase/migrations/20260724110804_f95931a7-2e9e-417c-8a33-e9aedac500de.sql:31`; `supabase/migrations/20260726120000_protect_profile_privileged_columns.sql` (fix)
 - **Description:** `CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);` — Postgres RLS uses the `USING` clause as the implicit `WITH CHECK` for `UPDATE` when none is given. Since `id` can't change, the check always passes, and `GRANT UPDATE ON public.profiles TO authenticated` covers every column, including `user_type`, `is_verified`, `is_active`. No later migration adds a restrictive check or column-level grant.
 - **Risk:** This is the database-level root cause of **AU-1** (client-side exploit path) and feeds directly into the public "verified" badge shown at `src/routes/u.$username.tsx:168` and the `profiles_public` view, which republishes `user_type`/`is_verified` to anonymous visitors.
 - **Recommendation:** Add a `WITH CHECK`/`BEFORE UPDATE` trigger that reverts `user_type`/`is_verified`/`is_active` unless the caller is `service_role`, or move those columns to a separate table only `service_role` can write.
-- **Resolution:** —
+- **Resolution:** Implemented via **column-level privileges** rather than the originally-recommended trigger (a trigger, a separate-table split, and a `SECURITY DEFINER` RPC were all evaluated and compared on security/maintainability/PostgREST-compatibility/future-development-impact before deciding — see commit history for the full comparison). `REVOKE UPDATE ON public.profiles FROM authenticated` followed by `GRANT UPDATE (first_name, last_name, avatar_url, city, country, username, bio, language, email, profile_complete) ON public.profiles TO authenticated` — `id`, `user_type`, `is_verified`, and `is_active` are deliberately not granted, so only `service_role` (unaffected — it holds a separate table-level `GRANT ALL`) can write them. Chosen over a trigger specifically because it's enforced by Postgres before RLS/triggers even run, needs no custom logic, and is **fail-closed for future columns** (a new column is unwritable by `authenticated` until explicitly granted, vs. a trigger which is fail-open until someone remembers to extend it). The RLS policy's `WITH CHECK (auth.uid() = id)` was also made explicit (behaviorally unchanged) in the same migration.
 - **Commit:** —
-- **Date:** 2026-07-26
+- **Date:** Logged 2026-07-26, resolved 2026-07-26
 
 **DB-2 — `subscriptions.UNIQUE(user_id, app_id)` combined with insert-only webhook/trial logic breaks renewals and trial→paid conversion**
 - **Status:** Open
