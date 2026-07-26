@@ -520,7 +520,7 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 - **Risk:** Any user who reaches premium status (a normal paid feature, not a privileged one) can store a `javascript:` URI as their public website or social link; any visitor to their public profile who clicks it executes attacker-controlled script in their own browser session. See also **SE-6**.
 - **Recommendation:** Validate/normalize on save (require `http://`/`https://` via `new URL()` + protocol allowlist, reject `javascript:`/`data:`/`vbscript:`), and defensively re-check protocol at the render sink before using a stored value as an `href`.
 - **Resolution:** Fixed at all three layers. **(1) Frontend:** `src/lib/url.ts` adds `isSafeProfileUrl()` (native `URL` parser, allows only `http:`/`https:` protocols); `dashboard.profile.tsx`'s `handleSavePremium` now rejects the save (before any network call) if `website` or any social link fails this check. **(2) Backend/database:** new migration `20260726130000_restrict_premium_profile_url_schemes.sql` adds a `NOT VALID` `CHECK` constraint on all 7 URL columns in `premium_profiles`, enforced for every future write regardless of caller, while leaving any pre-existing row untouched (so existing data stays compatible). **(3) Render sink:** `u.$username.tsx` now also gates both the website link and `SocialRow`'s social links on `isSafeProfileUrl`, so even a value that predates the fix can never be rendered as a clickable `href`. Known limitation: rows already containing an unsafe URL are not retroactively cleaned up (`NOT VALID` intentionally skips existing rows) — they're simply never rendered as links; a follow-up data-cleanup migration would be needed to fully validate the constraint and null out any bad legacy values.
-- **Commit:** —
+- **Commit:** 4f3867c
 - **Date:** Logged 2026-07-26, resolved 2026-07-26
 
 ### Medium
@@ -654,7 +654,7 @@ This section aggregates the highest-impact, trust-boundary-crossing issues found
 - **Risk:** See CO-1.
 - **Recommendation:** See CO-1.
 - **Resolution:** See **CO-1** — fixed at input, database, and render layers.
-- **Commit:** —
+- **Commit:** 4f3867c
 - **Date:** Logged 2026-07-26, resolved 2026-07-26
 
 ### Medium
