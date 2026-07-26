@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { isSafeProfileUrl } from "@/lib/url";
 import type {
   ApplicationRow,
   PremiumProfileRow,
@@ -213,7 +214,7 @@ function PublicBioCard() {
                     ✉ {premium.contact_email}
                   </a>
                 )}
-                {premium?.website && premium.website_public && (
+                {premium?.website && premium.website_public && isSafeProfileUrl(premium.website) && (
                   <a href={premium.website} target="_blank" rel="noreferrer" className="rounded-lg bg-green-600 px-4 py-2.5 text-center text-sm font-semibold text-white hover:bg-green-700">
                     🌐 {t("profile.website")}
                   </a>
@@ -292,7 +293,7 @@ function SocialRow({ premium }: { premium: PremiumProfileRow }) {
     ["LinkedIn", premium.linkedin_url],
     ["X", premium.x_url],
   ];
-  const active = links.filter(([, url]) => !!url);
+  const active = links.filter((entry): entry is [string, string] => !!entry[1] && isSafeProfileUrl(entry[1]));
   if (active.length === 0) return null;
   return (
     <div className="mt-4 flex flex-wrap gap-2">

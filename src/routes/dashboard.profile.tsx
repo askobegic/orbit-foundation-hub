@@ -18,6 +18,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { generateUniqueUsername } from "@/lib/username";
+import { isSafeProfileUrl } from "@/lib/url";
 import type {
   PremiumProfileRow,
   UserLanguage,
@@ -163,6 +164,19 @@ function EditProfilePage() {
   async function handleSavePremium() {
     if (!user) return;
     if (!primaryProfession.trim()) {
+      toast.error(t("common.error"));
+      return;
+    }
+    const urlFields = [
+      website,
+      social.facebook_url,
+      social.instagram_url,
+      social.tiktok_url,
+      social.youtube_url,
+      social.linkedin_url,
+      social.x_url,
+    ];
+    if (urlFields.some((v) => v.trim() && !isSafeProfileUrl(v.trim()))) {
       toast.error(t("common.error"));
       return;
     }

@@ -514,14 +514,14 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 ### High
 
 **CO-1 — Stored XSS via `javascript:`/`data:` URI in profile website & social links**
-- **Status:** Open
+- **Status:** ✅ Resolved (2026-07-26)
 - **Files:** Input (unvalidated): `src/components/profile/SocialLinksSection.tsx:36-43`, `src/components/profile/ToggleField.tsx:43`; save path (no server validation): `src/routes/dashboard.profile.tsx:171-192`; sink (unsanitized render): `src/routes/u.$username.tsx:217,297-304`
 - **Description:** HTML5 `type="url"` inputs accept `javascript:alert(1)` as a syntactically valid URL — it does not restrict scheme to http/https — and nothing in the save path or the render path checks the scheme.
 - **Risk:** Any user who reaches premium status (a normal paid feature, not a privileged one) can store a `javascript:` URI as their public website or social link; any visitor to their public profile who clicks it executes attacker-controlled script in their own browser session. See also **SE-6**.
 - **Recommendation:** Validate/normalize on save (require `http://`/`https://` via `new URL()` + protocol allowlist, reject `javascript:`/`data:`/`vbscript:`), and defensively re-check protocol at the render sink before using a stored value as an `href`.
-- **Resolution:** —
+- **Resolution:** Fixed at all three layers. **(1) Frontend:** `src/lib/url.ts` adds `isSafeProfileUrl()` (native `URL` parser, allows only `http:`/`https:` protocols); `dashboard.profile.tsx`'s `handleSavePremium` now rejects the save (before any network call) if `website` or any social link fails this check. **(2) Backend/database:** new migration `20260726130000_restrict_premium_profile_url_schemes.sql` adds a `NOT VALID` `CHECK` constraint on all 7 URL columns in `premium_profiles`, enforced for every future write regardless of caller, while leaving any pre-existing row untouched (so existing data stays compatible). **(3) Render sink:** `u.$username.tsx` now also gates both the website link and `SocialRow`'s social links on `isSafeProfileUrl`, so even a value that predates the fix can never be rendered as a clickable `href`. Known limitation: rows already containing an unsafe URL are not retroactively cleaned up (`NOT VALID` intentionally skips existing rows) — they're simply never rendered as links; a follow-up data-cleanup migration would be needed to fully validate the constraint and null out any bad legacy values.
 - **Commit:** —
-- **Date:** 2026-07-26
+- **Date:** Logged 2026-07-26, resolved 2026-07-26
 
 ### Medium
 
@@ -648,14 +648,14 @@ This section aggregates the highest-impact, trust-boundary-crossing issues found
 - **Date:** 2026-07-26
 
 **SE-6 — Stored XSS via `javascript:` profile links**
-- **Status:** Open
+- **Status:** ✅ Resolved (2026-07-26)
 - **Files:** see **CO-1** (same finding, full detail there)
 - **Description:** Cross-reference.
 - **Risk:** See CO-1.
 - **Recommendation:** See CO-1.
-- **Resolution:** —
+- **Resolution:** See **CO-1** — fixed at input, database, and render layers.
 - **Commit:** —
-- **Date:** 2026-07-26
+- **Date:** Logged 2026-07-26, resolved 2026-07-26
 
 ### Medium
 
