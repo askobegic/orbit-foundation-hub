@@ -93,16 +93,19 @@ export const adminGrantPremium = createServerFn({ method: "POST" })
     const expires_at = addMonthsIso(data.duration_months);
     const { data: sub, error } = await supabaseAdmin
       .from("subscriptions")
-      .insert({
-        user_id: data.user_id,
-        app_id: data.app_id,
-        plan_id: data.plan_id ?? null,
-        status: "active",
-        started_at: new Date().toISOString(),
-        expires_at,
-        amount_paid: 0,
-        currency: "EUR",
-      } as never)
+      .upsert(
+        {
+          user_id: data.user_id,
+          app_id: data.app_id,
+          plan_id: data.plan_id ?? null,
+          status: "active",
+          started_at: new Date().toISOString(),
+          expires_at,
+          amount_paid: 0,
+          currency: "EUR",
+        } as never,
+        { onConflict: "user_id,app_id" },
+      )
       .select("*")
       .single();
     if (error) throw new Error(error.message);

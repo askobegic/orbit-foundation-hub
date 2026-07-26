@@ -78,6 +78,20 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
         if (!ref.user_id || !ref.app_id) return Response.json({ received: true });
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+        // Idempotency: a redelivered webhook event must not create a second
+        // payment record for the same capture. (paypal_payment_id has no
+        // unique DB constraint, unlike Stripe's stripe_payment_id, so this
+        // is an existence check rather than a DB-enforced guarantee.)
+        const { data: existingPayment } = await supabaseAdmin
+          .from("payments")
+          .select("id")
+          .eq("paypal_payment_id", resource.id)
+          .maybeSingle();
+        if (existingPayment) {
+          return Response.json({ received: true, duplicate: true });
+        }
+
         let months = 12;
         let currency = resource.amount?.currency_code ?? "EUR";
         let planPrice: number | null = null;
@@ -138,17 +152,20 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
 
         const { data: sub, error } = await supabaseAdmin
           .from("subscriptions")
-          .insert({
-            user_id: ref.user_id,
-            app_id: ref.app_id,
-            plan_id: ref.plan_id,
-            status: "active",
-            paypal_payment_id: resource.id,
-            amount_paid: amount,
-            currency,
-            started_at: new Date().toISOString(),
-            expires_at: addMonthsIso(months),
-          } as never)
+          .upsert(
+            {
+              user_id: ref.user_id,
+              app_id: ref.app_id,
+              plan_id: ref.plan_id,
+              status: "active",
+              paypal_payment_id: resource.id,
+              amount_paid: amount,
+              currency,
+              started_at: new Date().toISOString(),
+              expires_at: addMonthsIso(months),
+            } as never,
+            { onConflict: "user_id,app_id" },
+          )
           .select("id")
           .single();
         if (error) return new Response("DB error", { status: 500 });

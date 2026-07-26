@@ -51,6 +51,17 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+        // Idempotency: a redelivered webhook event must not create a second
+        // payment record for the same checkout session.
+        const { data: existingPayment } = await supabaseAdmin
+          .from("payments")
+          .select("id")
+          .eq("stripe_payment_id", session.id)
+          .maybeSingle();
+        if (existingPayment) {
+          return Response.json({ received: true, duplicate: true });
+        }
+
         let planMonths = 12;
         let currency = (session.currency ?? "eur").toUpperCase();
         let planPrice: number | null = null;
@@ -112,17 +123,20 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
 
         const { data: sub, error: subErr } = await supabaseAdmin
           .from("subscriptions")
-          .insert({
-            user_id: ref.user_id,
-            app_id: ref.app_id,
-            plan_id: ref.plan_id,
-            status: "active",
-            stripe_payment_id: session.id,
-            amount_paid: amount,
-            currency,
-            started_at: new Date().toISOString(),
-            expires_at: addMonthsIso(planMonths),
-          } as never)
+          .upsert(
+            {
+              user_id: ref.user_id,
+              app_id: ref.app_id,
+              plan_id: ref.plan_id,
+              status: "active",
+              stripe_payment_id: session.id,
+              amount_paid: amount,
+              currency,
+              started_at: new Date().toISOString(),
+              expires_at: addMonthsIso(planMonths),
+            } as never,
+            { onConflict: "user_id,app_id" },
+          )
           .select("id")
           .single();
         if (subErr) {
