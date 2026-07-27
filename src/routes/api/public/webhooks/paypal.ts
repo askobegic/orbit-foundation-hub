@@ -76,6 +76,10 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
         };
         const ref = parseCustom(resource.custom_id);
         if (!ref.user_id || !ref.app_id) return Response.json({ received: true });
+        if (!ref.plan_id) {
+          console.warn("PayPal webhook missing plan_id in custom_id", { capture_id: resource.id });
+          return Response.json({ received: true, ignored: "missing_plan_id" });
+        }
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -101,7 +105,11 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
             .select("duration_months, currency, price, app_id, is_active")
             .eq("id", ref.plan_id)
             .maybeSingle();
-          if (plan) {
+          if (!plan) {
+            console.warn("PayPal webhook: referenced plan not found", { plan_id: ref.plan_id });
+            return Response.json({ received: true, ignored: "plan_not_found" });
+          }
+          {
             months = (plan as { duration_months: number }).duration_months;
             currency = (plan as { currency: string }).currency ?? currency;
             planPrice = Number((plan as { price: number | string }).price);
@@ -170,7 +178,11 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
           .single();
         if (error) return new Response("DB error", { status: 500 });
 
-        await supabaseAdmin.from("payments").insert({
+        // If this request lost a race against a concurrent redelivery of the
+        // same capture, the payments.paypal_payment_id UNIQUE constraint
+        // rejects this insert. Stop here rather than proceeding to send a
+        // duplicate notification/audit-log/n8n event for the same payment.
+        const { error: paymentErr } = await supabaseAdmin.from("payments").insert({
           user_id: ref.user_id,
           app_id: ref.app_id,
           subscription_id: (sub as { id: string }).id,
@@ -180,6 +192,10 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
           status: "success",
           payment_method: "paypal",
         } as never);
+        if (paymentErr) {
+          console.error("PayPal webhook: payments insert failed", paymentErr);
+          return Response.json({ received: true, duplicate: true });
+        }
 
         await supabaseAdmin
           .from("profiles")

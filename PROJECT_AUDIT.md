@@ -36,7 +36,7 @@ A separate, non-severity tag, **Architecture Deviation**, marks findings where t
 | Database | 2 | 0 | 1 | 2 |
 | Routing | 0 | 0 | 0 | 2 |
 | Components | 0 | 1 | 3 | 2 |
-| Security (cross-cutting + payments) | 3 | 2 | 4 | 3 |
+| Security (cross-cutting + payments) | 4 | 2 | 5 | 3 |
 | Performance | 0 | 0 | 2 | 5 |
 | Billing / Subscription Lifecycle | 0 | 1 | 0 | 0 |
 
@@ -627,6 +627,16 @@ This section aggregates the highest-impact, trust-boundary-crossing issues found
 - **Commit:** `b0b07a3`
 - **Date:** Logged 2026-07-26, resolved 2026-07-26
 
+**SE-14 — PayPal amount/plan validation is skipped when `plan_id` is omitted or unresolvable — the same bypass as `SE-2`, unpatched**
+- **Status:** ✅ Resolved (2026-07-27)
+- **Files:** `src/routes/api/public/webhooks/paypal.ts:77-115`
+- **Description:** Identical pattern to `SE-2`, confirmed by direct re-read during the PayPal Integrity Audit — not fixed when `stripe.ts` was patched. The plan lookup and its `is_active`/app-match check only run `if (ref.plan_id)`; if `plan_id` is absent *or* doesn't resolve to a real row in `subscription_plans`, `planPrice` stays `null`, the amount check (`if (planPrice !== null)`) is skipped entirely, and `months` defaults to `12` with zero validation of what was actually captured.
+- **Risk:** A user can hand-edit `custom`'s third segment (drop it, or corrupt it) to receive 12 months of premium for whatever amount was actually paid, with no cross-check against any specific plan's price — same direct revenue-integrity bypass as `SE-2`.
+- **Recommendation:** Apply the same fix already implemented for `SE-2`: reject if `ref.plan_id` is missing (`ignored: "missing_plan_id"`), and reject if it doesn't resolve to a real, active, app-matching plan (`ignored: "plan_not_found"`) — mirroring the two rejections added to `stripe.ts`.
+- **Resolution:** Same two additions as `SE-2`, mirrored exactly: reject immediately if `ref.plan_id` is missing (`ignored: "missing_plan_id"`), and reject if it doesn't resolve to a real row in `subscription_plans` (`ignored: "plan_not_found"`) instead of silently falling through to the unvalidated 12-month default. Pure additions, same bare-block minimal-diff style used for the Stripe fix.
+- **Commit:** —
+- **Date:** Logged 2026-07-27, resolved 2026-07-27
+
 ### High
 
 **SE-4 — Stripe webhook grants entitlement without checking `session.payment_status`**
@@ -701,6 +711,16 @@ This section aggregates the highest-impact, trust-boundary-crossing issues found
 - **Resolution:** —
 - **Commit:** —
 - **Date:** 2026-07-26
+
+**SE-15 — PayPal idempotency guard has a TOCTOU race: `payments.paypal_payment_id` has no database-level `UNIQUE` constraint**
+- **Status:** ✅ Resolved (2026-07-27)
+- **Files:** `src/routes/api/public/webhooks/paypal.ts:181-196`; `supabase/migrations/20260727090000_unique_paypal_payment_id.sql`
+- **Description:** The idempotency guard added alongside the `DB-2` fix checks for an existing `payments` row by `paypal_payment_id` before inserting — an application-level check-then-insert, not database-enforced. Verified directly against every migration file (not assumed): `payments.stripe_payment_id` has `UNIQUE` (`...110804_...sql:153`), giving Stripe's equivalent guard an atomic, database-level backstop even under a race; `payments.paypal_payment_id` (`...110804_...sql:154`) does not, and no later migration adds one.
+- **Risk:** Two near-simultaneous redeliveries of the same PayPal webhook event could both pass the existence check before either has inserted, producing two `payments` rows for the same capture. `subscriptions.UNIQUE(user_id, app_id)` still prevents a duplicate subscription row or double-granting access, so the blast radius is a duplicate ledger entry (inflates `adminOverviewStats`'s revenue sum), not an entitlement bypass.
+- **Recommendation:** Add a `UNIQUE` constraint on `payments.paypal_payment_id`, mirroring `stripe_payment_id`, so the existing guard gets the same atomic, database-enforced backstop Stripe already has.
+- **Resolution:** Added `payments_paypal_payment_id_key UNIQUE (paypal_payment_id)` (migration `20260727090000_...sql`) — NULLs are unaffected by design (every Stripe payment row has `paypal_payment_id = NULL`), so this only constrains actual PayPal capture IDs against each other. Paired with the required minimal code adjustment: the `payments` insert in `paypal.ts` now checks its own error and short-circuits (`duplicate: true`) if the constraint rejects it, instead of silently continuing on to flip `profiles.user_type`, send a notification, write an audit log entry, and fire n8n events for a payment that was never actually recorded a second time. **Known limitation, disclosed rather than silently assumed away:** Postgres doesn't support `NOT VALID` for `UNIQUE` constraints (only `CHECK`/`FOREIGN KEY`), so this migration scans the existing table and will fail to apply if any duplicate non-null `paypal_payment_id` already exists in production — this could not be verified against the live database from this environment.
+- **Commit:** —
+- **Date:** Logged 2026-07-27, resolved 2026-07-27
 
 ### Low
 
