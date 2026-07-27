@@ -148,6 +148,7 @@ export interface PaymentRow {
   app_id: string | null;
   subscription_id: string | null;
   stripe_payment_id: string | null;
+  stripe_payment_intent_id: string | null;
   paypal_payment_id: string | null;
   amount: number;
   currency: string;

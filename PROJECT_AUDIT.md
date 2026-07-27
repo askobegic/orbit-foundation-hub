@@ -6,7 +6,7 @@
 
 ## How to read a finding
 
-Every finding has a stable **ID** (e.g. `AU-1`) that never changes once assigned, even if the finding is resolved or reclassified. Each entry carries: **Status** (Open / Resolved / Deferred), **Files** affected, **Description** (what's wrong, mechanically), **Risk** (why it matters), **Recommendation**, **Resolution** (filled in once fixed), **Commit** (the commit that resolved it), and **Date** (logged / resolved). Findings are grouped by topic area, then by severity within each area. Severity levels are never changed without explicit approval — a finding's risk framing can be sharpened in prose, but its Critical/High/Medium/Low bucket is only moved on request. **Deferred** means the finding is confirmed real and intentionally not fixed yet — it carries a **Deferral rationale** explaining why, and stays Open-equivalent for planning purposes (not resolved, not abandoned).
+Every finding has a stable **ID** (e.g. `AU-1`) that never changes once assigned, even if the finding is resolved or reclassified. Each entry carries: **Status** (Open / Resolved / Deferred / Partially Resolved), **Files** affected, **Description** (what's wrong, mechanically), **Risk** (why it matters), **Recommendation**, **Resolution** (filled in once fixed), **Commit** (the commit that resolved it), and **Date** (logged / resolved). Findings are grouped by topic area, then by severity within each area. Severity levels are never changed without explicit approval — a finding's risk framing can be sharpened in prose, but its Critical/High/Medium/Low bucket is only moved on request. **Deferred** means the finding is confirmed real and intentionally not fixed yet — it carries a **Deferral rationale** explaining why, and stays Open-equivalent for planning purposes (not resolved, not abandoned). **Partially Resolved** means the finding covered more than one code path and only some of them have been fixed — the Resolution notes state exactly what's done and what remains, so it's never ambiguous which part is still open.
 
 ## Remediation log
 
@@ -650,11 +650,12 @@ This section aggregates the highest-impact, trust-boundary-crossing issues found
 - **Date:** Logged 2026-07-26, resolved 2026-07-27
 
 **SE-5 — PayPal integration field-name mismatch: the client sends `custom`, the webhook reads `custom_id`**
-- **Status:** Open
+- **Status:** Open — blocked on empirical verification, not deferred by choice
 - **Files:** `src/routes/pricing.tsx:90` vs. `src/routes/api/public/webhooks/paypal.ts:71-77`
 - **Description:** The frontend tags the outgoing PayPal link with a `custom` query parameter; the webhook handler reads `resource.custom_id` from the `PAYMENT.CAPTURE.COMPLETED` payload.
 - **Risk:** If these fields don't actually match for the configured PayPal product, `resource.custom_id` is always `undefined` and the handler silently no-ops for every real PayPal payment — money taken, nothing activated, no error surfaced anywhere.
 - **Recommendation:** Confirm the exact field PayPal echoes back for the configured product; make the query-param name and the webhook-read field match.
+- **Verification note (2026-07-27):** Whether this is even a real mismatch (vs. two representations of the same thing) can't be determined from source code alone — it depends on which PayPal product `paypal_payment_link` actually is and what that product echoes back. Requires a real PayPal Sandbox transaction and inspection of the actual webhook payload before any code change is justified. No further code changes to this file until that empirical evidence exists.
 - **Resolution:** —
 - **Commit:** —
 - **Date:** 2026-07-26
@@ -841,14 +842,15 @@ This section aggregates the highest-impact, trust-boundary-crossing issues found
 ### High
 
 **BL-1 — No refund or chargeback handling anywhere in the codebase**
-- **Status:** Open
-- **Files:** `src/routes/api/public/webhooks/stripe.ts:41-43`; `src/routes/api/public/webhooks/paypal.ts:67-69`; `payments.status` CHECK constraint (`supabase/migrations/20260724110804_...sql`)
+- **Status:** 🟡 Partially Resolved (2026-07-27) — Stripe refund phase done; Stripe disputes and the entire PayPal side remain open
+- **Files:** `src/routes/api/public/webhooks/stripe.ts:41-123`; `src/routes/api/public/webhooks/paypal.ts:67-69`; `payments.status` CHECK constraint (`supabase/migrations/20260724110804_...sql`); `supabase/migrations/20260727100000_add_stripe_payment_intent_id.sql`
 - **Description:** Both webhook handlers only process one event type each (`checkout.session.completed` / `PAYMENT.CAPTURE.COMPLETED`) and return early for anything else. Neither Stripe's `charge.refunded`/`charge.dispute.created` nor PayPal's `PAYMENT.CAPTURE.REFUNDED`/`REVERSED` is handled anywhere. `payments.status` supports a `'refunded'` value in its schema `CHECK` constraint, but no code path in the repository ever writes it — confirmed via a full-codebase search, not assumed.
 - **Risk:** A refunded or charged-back customer keeps full, permanent premium access with no record anywhere that a refund occurred, and no automatic revocation of entitlement.
 - **Recommendation:** Subscribe to and handle refund/dispute event types in both webhook handlers; on refund, mark the corresponding `payments` row `status='refunded'` and revoke/expire the associated subscription. See also `SE-2`/`SE-4`/`SE-13` for related Stripe-specific integrity gaps in the same webhook.
-- **Resolution:** —
+- **Resolution:** Split into phases rather than fixed in one pass. **Phase 1 (done, this commit): Stripe refunds only.** `stripe.ts` now handles `charge.refunded` — matches the refund back to its `payments` row via a newly-added `stripe_payment_intent_id` column (populated at fulfillment time; refund events carry `payment_intent`, not the Checkout Session id already stored in `stripe_payment_id`, so the existing identifier couldn't be reused for matching), marks that row `status='refunded'`, cancels the associated subscription (`status='cancelled'`, `expires_at=now()`, mirroring the existing `adminRevokePremium` pattern), and reverts `profiles.user_type` to `'standard'` — but only after checking the user has no *other* currently-active subscription, respecting the existing global (not per-app) premium flag rather than trying to fix that separately. **Explicitly not done, by deliberate scope decision:** `charge.dispute.created` is not handled — `payments.status` has no `'disputed'` value, and mapping a dispute to `'refunded'` would conflate two different outcomes (a dispute can still be won) with no path back to restored access; left for a later phase that introduces a proper disputed state. **The entire PayPal side is untouched** — held pending `SE-5`'s empirical sandbox verification, so the PayPal refund-matching logic isn't built on unverified field-mapping assumptions. No backfill: only payments fulfilled after this migration can be automatically matched to a future refund.
+  **Deployment requirement:** the Stripe Dashboard's webhook endpoint must be configured to send the `charge.refunded` event for this to take effect — this cannot be verified or configured from this environment. (The full list of required webhook events across both providers belongs in future deployment documentation, e.g. `DEPLOYMENT.md`/`WEBHOOK_SETUP.md` — not duplicated here.)
 - **Commit:** —
-- **Date:** 2026-07-26
+- **Date:** Logged 2026-07-26, resolved (Phase 1 / Stripe) 2026-07-27
 
 ---
 

@@ -38,6 +38,90 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
           return new Response("Invalid signature", { status: 401 });
         }
 
+        // Refund: revoke the entitlement granted by the original payment.
+        // Matched via payment_intent, since that's what this event carries --
+        // not the Checkout Session id stored in stripe_payment_id, which is
+        // why fulfillment now also stores stripe_payment_intent_id (see the
+        // payments insert below).
+        //
+        // Disputes/chargebacks (charge.dispute.created) are deliberately not
+        // handled here -- a dispute is not the same outcome as a refund (the
+        // merchant can still win it), and payments.status has no 'disputed'
+        // value. Mapping a dispute to status='refunded' would conflate two
+        // different states and leave no path back to restored access if the
+        // dispute is won. Left for a later phase that introduces a proper
+        // disputed state.
+        if (event.type === "charge.refunded") {
+          const object = event.data.object as { payment_intent: string | { id: string } | null };
+          const paymentIntentId =
+            typeof object.payment_intent === "string"
+              ? object.payment_intent
+              : (object.payment_intent?.id ?? null);
+          if (!paymentIntentId) {
+            return Response.json({ received: true });
+          }
+
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+          const { data: payment } = await supabaseAdmin
+            .from("payments")
+            .select("id, user_id, subscription_id, status")
+            .eq("stripe_payment_intent_id", paymentIntentId)
+            .maybeSingle();
+          if (!payment) {
+            console.warn("Stripe webhook: refund for unmatched payment_intent", { paymentIntentId });
+            return Response.json({ received: true, ignored: "payment_not_found" });
+          }
+
+          const paymentRow = payment as {
+            id: string;
+            user_id: string | null;
+            subscription_id: string | null;
+            status: string;
+          };
+          if (paymentRow.status === "refunded") {
+            return Response.json({ received: true, duplicate: true });
+          }
+
+          await supabaseAdmin
+            .from("payments")
+            .update({ status: "refunded" } as never)
+            .eq("id", paymentRow.id);
+
+          if (paymentRow.subscription_id) {
+            await supabaseAdmin
+              .from("subscriptions")
+              .update({ status: "cancelled", expires_at: new Date().toISOString() } as never)
+              .eq("id", paymentRow.subscription_id);
+          }
+
+          if (paymentRow.user_id) {
+            const { data: stillActive } = await supabaseAdmin
+              .from("subscriptions")
+              .select("id")
+              .eq("user_id", paymentRow.user_id)
+              .eq("status", "active")
+              .gt("expires_at", new Date().toISOString())
+              .limit(1);
+            if (!stillActive || stillActive.length === 0) {
+              await supabaseAdmin
+                .from("profiles")
+                .update({ user_type: "standard" } as never)
+                .eq("id", paymentRow.user_id);
+            }
+          }
+
+          await writeAuditLog({
+            userId: paymentRow.user_id,
+            action: "payment.stripe.refunded",
+            entityType: "payment",
+            entityId: paymentRow.id,
+            newData: { payment_intent: paymentIntentId },
+          });
+
+          return Response.json({ received: true });
+        }
+
         if (event.type !== "checkout.session.completed") {
           return Response.json({ received: true });
         }
@@ -172,6 +256,10 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
           app_id: ref.app_id,
           subscription_id: (sub as { id: string }).id,
           stripe_payment_id: session.id,
+          stripe_payment_intent_id:
+            typeof session.payment_intent === "string"
+              ? session.payment_intent
+              : (session.payment_intent?.id ?? null),
           amount,
           currency,
           status: "success",
