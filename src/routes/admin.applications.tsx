@@ -12,6 +12,7 @@ import {
   adminUpsertPlan,
   adminDeletePlan,
   getMyIsAdmin,
+  adminCreateApplication,
   adminSetAppEnabled,
   adminUpdateAppSettings,
 } from "@/lib/admin.functions";
@@ -78,8 +79,19 @@ function AdminApps() {
 
   const upsert = useServerFn(adminUpsertPlan);
   const del = useServerFn(adminDeletePlan);
+  const createApp = useServerFn(adminCreateApplication);
   const setEnabled = useServerFn(adminSetAppEnabled);
   const updateSettings = useServerFn(adminUpdateAppSettings);
+
+  const createAppMutation = useMutation({
+    mutationFn: (v: NewAppPayload) => createApp({ data: v }),
+    onSuccess: (row) => {
+      toast.success("Application created");
+      void qc.invalidateQueries({ queryKey: ["admin-apps"] });
+      setAppId((row as { id: string }).id);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const toggleEnabled = useMutation({
     mutationFn: (v: { app_id: string; is_enabled: boolean }) =>
@@ -182,6 +194,13 @@ function AdminApps() {
               </span>
             </button>
           ))}
+        </div>
+
+        <div className="mb-6">
+          <NewAppForm
+            onCreate={(v) => createAppMutation.mutate(v)}
+            busy={createAppMutation.isPending}
+          />
         </div>
 
         {activeApp && (
@@ -352,7 +371,114 @@ function PlanForm({
   );
 }
 
+type NewAppPayload = {
+  name: string;
+  slug: string;
+  domain: string | null;
+  primary_color: string;
+  secondary_color: string;
+};
+
+function NewAppForm({
+  onCreate,
+  busy,
+}: {
+  onCreate: (v: NewAppPayload) => void;
+  busy?: boolean;
+}) {
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [domain, setDomain] = useState("");
+  const [primaryColor, setPrimaryColor] = useState("#1D6BF3");
+  const [secondaryColor, setSecondaryColor] = useState("#6366F1");
+
+  function submit() {
+    if (!name.trim() || !slug.trim()) return;
+    onCreate({
+      name: name.trim(),
+      slug: slug.trim(),
+      domain: domain.trim() || null,
+      primary_color: primaryColor,
+      secondary_color: secondaryColor,
+    });
+    setName("");
+    setSlug("");
+    setDomain("");
+  }
+
+  return (
+    <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
+      <h2 className="mb-4 text-sm font-semibold text-gray-900">New Application</h2>
+      <p className="mb-3 text-xs text-gray-500">
+        Registers a new application. It automatically gets every Core capability (auth, profiles,
+        billing, notifications, permissions, audit log) with no further setup. It's created
+        disabled — add plans and branding below, then switch it on in App Settings once it's ready.
+      </p>
+      <div className="grid gap-3 md:grid-cols-3">
+        <Field label="Name">
+          <input
+            className="input"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Muzika.ba"
+          />
+        </Field>
+        <Field label="Slug">
+          <input
+            className="input"
+            value={slug}
+            onChange={(e) => setSlug(e.target.value)}
+            placeholder="muzika-ba"
+          />
+        </Field>
+        <Field label="Domain">
+          <input
+            className="input"
+            value={domain}
+            onChange={(e) => setDomain(e.target.value)}
+            placeholder="muzika.ba"
+          />
+        </Field>
+        <Field label="Primary color">
+          <input
+            type="color"
+            className="input h-9 p-1"
+            value={primaryColor}
+            onChange={(e) => setPrimaryColor(e.target.value)}
+          />
+        </Field>
+        <Field label="Secondary color">
+          <input
+            type="color"
+            className="input h-9 p-1"
+            value={secondaryColor}
+            onChange={(e) => setSecondaryColor(e.target.value)}
+          />
+        </Field>
+      </div>
+      <div className="mt-4 flex justify-end">
+        <button
+          onClick={submit}
+          disabled={busy}
+          className="inline-flex items-center gap-2 rounded-lg bg-[#1D6BF3] px-4 py-2 text-sm font-medium text-white hover:bg-[#1858cf] disabled:opacity-60"
+        >
+          <Plus className="h-4 w-4" />
+          {busy ? "Creating…" : "Create application"}
+        </button>
+      </div>
+      <style>{`.input{width:100%;border:1px solid #e5e7eb;border-radius:8px;padding:6px 10px;font-size:14px;background:#fff}`}</style>
+    </div>
+  );
+}
+
 type AppSettingsPayload = {
+  name: string;
+  slug: string;
+  domain: string | null;
+  primary_color: string;
+  secondary_color: string;
+  cover_image_url: string | null;
+  sort_order: number;
   logo_url: string | null;
   favicon_url: string | null;
   short_description_bs: string | null;
@@ -370,6 +496,13 @@ function AppSettings({
   onSave: (v: AppSettingsPayload) => void;
   busy?: boolean;
 }) {
+  const [name, setName] = useState(app.name);
+  const [slug, setSlug] = useState(app.slug);
+  const [domain, setDomain] = useState(app.domain ?? "");
+  const [primaryColor, setPrimaryColor] = useState(app.primary_color);
+  const [secondaryColor, setSecondaryColor] = useState(app.secondary_color);
+  const [coverImageUrl, setCoverImageUrl] = useState(app.cover_image_url ?? "");
+  const [sortOrder, setSortOrder] = useState(app.sort_order);
   const [logoUrl, setLogoUrl] = useState<string | null>(app.logo_url);
   const [faviconUrl, setFaviconUrl] = useState<string | null>(app.favicon_url);
   const [dBs, setDBs] = useState(app.short_description_bs ?? "");
@@ -381,13 +514,35 @@ function AppSettings({
   const favRef = useRef<HTMLInputElement>(null);
 
   useEffectR(() => {
+    setName(app.name);
+    setSlug(app.slug);
+    setDomain(app.domain ?? "");
+    setPrimaryColor(app.primary_color);
+    setSecondaryColor(app.secondary_color);
+    setCoverImageUrl(app.cover_image_url ?? "");
+    setSortOrder(app.sort_order);
     setLogoUrl(app.logo_url);
     setFaviconUrl(app.favicon_url);
     setDBs(app.short_description_bs ?? "");
     setDEn(app.short_description_en ?? "");
     setDDe(app.short_description_de ?? "");
     setEnabled(app.is_enabled !== false);
-  }, [app.id, app.logo_url, app.favicon_url, app.short_description_bs, app.short_description_en, app.short_description_de, app.is_enabled]);
+  }, [
+    app.id,
+    app.name,
+    app.slug,
+    app.domain,
+    app.primary_color,
+    app.secondary_color,
+    app.cover_image_url,
+    app.sort_order,
+    app.logo_url,
+    app.favicon_url,
+    app.short_description_bs,
+    app.short_description_en,
+    app.short_description_de,
+    app.is_enabled,
+  ]);
 
   async function upload(kind: "logo" | "favicon", file: File) {
     if (file.size > 2 * 1024 * 1024) {
@@ -420,7 +575,18 @@ function AppSettings({
   }
 
   function submit() {
+    if (!name.trim() || !slug.trim()) {
+      toast.error("Name and slug are required");
+      return;
+    }
     onSave({
+      name: name.trim(),
+      slug: slug.trim(),
+      domain: domain.trim() || null,
+      primary_color: primaryColor,
+      secondary_color: secondaryColor,
+      cover_image_url: coverImageUrl.trim() || null,
+      sort_order: sortOrder,
       logo_url: logoUrl,
       favicon_url: faviconUrl,
       short_description_bs: dBs.trim() || null,
@@ -433,6 +599,54 @@ function AppSettings({
   return (
     <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
       <h2 className="mb-4 text-sm font-semibold text-gray-900">App Settings</h2>
+
+      <div className="mb-4 grid gap-3 md:grid-cols-3">
+        <Field label="Name">
+          <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
+        </Field>
+        <Field label="Slug">
+          <input className="input" value={slug} onChange={(e) => setSlug(e.target.value)} />
+        </Field>
+        <Field label="Domain">
+          <input
+            className="input"
+            value={domain}
+            onChange={(e) => setDomain(e.target.value)}
+          />
+        </Field>
+        <Field label="Primary color">
+          <input
+            type="color"
+            className="input h-9 p-1"
+            value={primaryColor}
+            onChange={(e) => setPrimaryColor(e.target.value)}
+          />
+        </Field>
+        <Field label="Secondary color">
+          <input
+            type="color"
+            className="input h-9 p-1"
+            value={secondaryColor}
+            onChange={(e) => setSecondaryColor(e.target.value)}
+          />
+        </Field>
+        <Field label="Sort order">
+          <input
+            type="number"
+            className="input"
+            value={sortOrder}
+            onChange={(e) => setSortOrder(Number(e.target.value))}
+          />
+        </Field>
+        <Field label="Cover image URL" wide>
+          <input
+            className="input"
+            placeholder="https://..."
+            value={coverImageUrl}
+            onChange={(e) => setCoverImageUrl(e.target.value)}
+          />
+        </Field>
+      </div>
 
       <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-8">
         <div>

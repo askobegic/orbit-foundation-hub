@@ -247,7 +247,7 @@ The database schema is defined in `/supabase/migrations`.
 - `subscriptions`
   - user subscriptions: `user_id`, `app_id`, `plan_id`, status, payment identifiers, amount, expiry; `UNIQUE(user_id, app_id)`
 - `payments`
-  - payment records for Stripe and PayPal, linked to `user_id`, `app_id`, `subscription_id`
+  - payment records for Stripe and PayPal, linked to `user_id`, `app_id`, `subscription_id`; `stripe_payment_id` and `paypal_payment_id` are both unique; `stripe_payment_intent_id` (nullable) is captured at fulfillment time so a later Stripe refund event can be matched back to this row
 - `notifications`
   - localized notifications per user and app (`app_id` nullable)
 - `audit_logs`
@@ -272,7 +272,8 @@ Row-level security is enabled for tables and storage policies.
 
 ### Profiles
 
-- `authenticated` users may `SELECT` their own profile and `UPDATE`/`INSERT` their own profile row.
+- `authenticated` users may `SELECT` their own profile and `INSERT` their own profile row.
+- `UPDATE` is column-restricted: `authenticated` only has column-level `UPDATE` privilege on `first_name`, `last_name`, `avatar_url`, `city`, `country`, `username`, `bio`, `language`, `email`, `profile_complete` — `id`, `user_type`, `is_verified`, and `is_active` are writable only by `service_role`.
 - Admins (`private.has_role(..., 'admin')`) may `SELECT` all profiles.
 - Public, unauthenticated access goes through the `profiles_public` view (masked columns only), not the base table.
 - Profiles are auto-created on auth user creation via a trigger.
@@ -280,6 +281,7 @@ Row-level security is enabled for tables and storage policies.
 ### Premium profiles
 
 - Authenticated users may manage only their own premium profile.
+- `website`, `facebook_url`, `instagram_url`, `tiktok_url`, `youtube_url`, `linkedin_url`, and `x_url` each have a `CHECK` constraint requiring `NULL` or an `http(s)://` prefix, rejecting other URL schemes at the database level.
 - Public access goes through the `premium_profiles_public` view, which masks each contact field behind its own `_public` boolean flag.
 
 ### Applications
@@ -347,8 +349,9 @@ Defined in `src/lib/admin.functions.ts`:
 - `adminListPayments`
 - `adminListVerificationRequests`
 - `adminSetVerified`
+- `adminCreateApplication`
 - `adminSetAppEnabled`
-- `adminUpdateAppSettings`
+- `adminUpdateAppSettings` (covers identity/branding fields — `name`, `slug`, `domain`, `primary_color`, `secondary_color`, `cover_image_url`, `sort_order` — in addition to logo/favicon/descriptions/enabled)
 
 These functions use `requireSupabaseAuth` middleware, validate inputs with Zod, then either enforce admin status or execute service-role operations.
 
@@ -481,8 +484,8 @@ The dashboard loads:
 
 ### Subscription persistence
 
-- Successful payment webhooks insert records into `subscriptions`.
-- Admin grant/revoke operations also insert or update subscriptions.
+- Successful payment webhooks and admin grant operations `upsert` `subscriptions` on `(user_id, app_id)` — one row per user per app, refreshed in place on renewal, resubscribe-after-cancel, or repeat admin grant rather than inserted anew.
+- Admin revoke operations, and a Stripe refund, update the existing row's `status`/`expires_at`.
 - Subscriptions store expiry, payment ids, amount, currency, and status.
 
 ### Subscription UI
@@ -518,25 +521,38 @@ The dashboard loads:
 - Payment intent flow is implemented via Stripe Checkout links stored on plans.
 - Webhook endpoint at `/api/public/webhooks/stripe` validates `stripe-signature` with `STRIPE_WEBHOOK_SECRET`.
 - On `checkout.session.completed`, webhook:
-  - parses `client_reference_id`
+  - requires `session.payment_status === "paid"`, rejecting sessions with unconfirmed payment
+  - parses `client_reference_id`; requires a resolvable `plan_id` segment (rejects if missing or unresolvable)
   - verifies plan amount and currency
-  - inserts `subscriptions` and `payments`
+  - checks for an existing `payments` row by `stripe_payment_id` first (idempotency guard against redelivered events)
+  - upserts `subscriptions` on `(user_id, app_id)`
+  - inserts `payments`, capturing `stripe_payment_intent_id` for later refund matching
   - updates `profiles.user_type` to `premium`
   - inserts a notification
   - writes an audit log
   - emits n8n events
+- On `charge.refunded`, webhook:
+  - matches the refund to its `payments` row via `stripe_payment_intent_id`
+  - marks that row `status = 'refunded'`
+  - cancels the associated subscription (`status = 'cancelled'`, `expires_at = now()`)
+  - reverts `profiles.user_type` to `standard`, unless the user has another currently-active subscription to a different app
+  - writes an audit log
+  - `charge.dispute.created` is not handled (no `'disputed'` payment status exists yet)
 
 ### PayPal
 
 - Webhook endpoint at `/api/public/webhooks/paypal` verifies signature against PayPal.
 - On `PAYMENT.CAPTURE.COMPLETED`, webhook:
-  - parses `custom_id`
+  - parses `custom_id`; requires a resolvable `plan_id` segment (rejects if missing or unresolvable)
   - verifies plan amount and currency
-  - inserts `subscriptions` and `payments`
+  - checks for an existing `payments` row by `paypal_payment_id` first (idempotency guard against redelivered events)
+  - upserts `subscriptions` on `(user_id, app_id)`
+  - inserts `payments`
   - updates `profiles.user_type` to `premium`
   - inserts a notification
   - writes an audit log
   - emits n8n events
+- No refund/chargeback handling exists for PayPal yet.
 
 ### Admin payments
 

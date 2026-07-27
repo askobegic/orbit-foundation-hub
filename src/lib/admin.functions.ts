@@ -402,6 +402,54 @@ export const adminSetVerified = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// ---------- App creation ----------
+// New applications are registered here and nowhere else. Nothing about
+// fulfillment, auth, profiles, notifications, or permissions references a
+// specific application anywhere in the Core -- every one of those systems
+// already operates generically on whatever app_id exists, so a new row
+// here is immediately a fully-functional application with no further
+// wiring required.
+
+// Shared by appCreateSchema and appSettingsSchema below -- the slug format
+// rule is defined once here, not duplicated per schema.
+const appSlugSchema = z
+  .string()
+  .min(1)
+  .regex(/^[a-z0-9-]+$/, "Slug must be lowercase letters, numbers, and hyphens only");
+
+const appCreateSchema = z.object({
+  name: z.string().min(1),
+  slug: appSlugSchema,
+  domain: z.string().min(1).nullable().optional(),
+  primary_color: z.string().min(1).optional(),
+  secondary_color: z.string().min(1).optional(),
+});
+
+export const adminCreateApplication = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => appCreateSchema.parse(raw))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // New applications start disabled -- the admin explicitly enables them
+    // (via the existing is_enabled toggle) once branding/plans are set up,
+    // instead of a half-configured app appearing live immediately.
+    const { data: row, error } = await supabaseAdmin
+      .from("applications")
+      .insert({ ...data, is_enabled: false } as never)
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    await writeAuditLog({
+      userId: context.userId,
+      action: "application.create",
+      entityType: "application",
+      entityId: (row as { id: string }).id,
+      newData: row,
+    });
+    return row;
+  });
+
 // ---------- App enable/disable ----------
 
 export const adminSetAppEnabled = createServerFn({ method: "POST" })
@@ -429,10 +477,22 @@ export const adminSetAppEnabled = createServerFn({ method: "POST" })
     return row;
   });
 
-// ---------- App settings (logo, favicon, descriptions, enabled) ----------
+// ---------- App settings (identity, branding, logo, favicon, descriptions, enabled) ----------
+// Extensible by design: every field here is optional except app_id, so
+// adding another editable application setting in the future means adding
+// one more optional key to this schema and one more <Field>/<DescField>
+// in AppSettings (src/routes/admin.applications.tsx) -- not a new
+// function, route, or admin UI pattern.
 
 const appSettingsSchema = z.object({
   app_id: z.string().uuid(),
+  name: z.string().min(1).optional(),
+  slug: appSlugSchema.optional(),
+  domain: z.string().min(1).nullable().optional(),
+  primary_color: z.string().min(1).optional(),
+  secondary_color: z.string().min(1).optional(),
+  cover_image_url: z.string().url().nullable().optional(),
+  sort_order: z.number().int().optional(),
   logo_url: z.string().url().nullable().optional(),
   favicon_url: z.string().url().nullable().optional(),
   short_description_bs: z.string().max(160).nullable().optional(),

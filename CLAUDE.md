@@ -11,10 +11,11 @@ The single most important rule in this document: **never introduce new architect
 ## Development Workflow
 
 1. Read `PROJECT_KNOWLEDGE.md` and `PROJECT_AUDIT.md` before starting — don't rediscover architecture or known issues that are already documented.
-2. For anything beyond a small, obvious fix: propose the approach, explain the reasoning, and wait for explicit approval before writing code (see Approval Rules).
-3. Implement only what was approved — no bundled extras, no drive-by refactors.
-4. Verify the change (build/lint/manual check as appropriate — see Testing Rules).
-5. If the change resolves a tracked finding in `PROJECT_AUDIT.md`, update that finding's Status/Resolution/Commit/Date in the same piece of work.
+2. Check whether the requested functionality already exists, in full or in part (see Reuse Before Create). Extend it rather than starting a parallel implementation.
+3. For anything beyond a small, obvious fix: propose the approach, explain the reasoning, and wait for explicit approval before writing code (see Approval Rules).
+4. Implement only what was approved — no bundled extras, no drive-by refactors. Keep changes minimal and consistent with existing patterns. Preserve backward compatibility for all registered applications — a change that works for one application but silently breaks another's data or access is not done.
+5. Verify the change (build/lint/manual check as appropriate — see Testing Rules).
+6. If the change resolves a tracked finding in `PROJECT_AUDIT.md`, update that finding's Status/Resolution/Commit/Date in the same piece of work.
 
 ## Repository Standards
 
@@ -26,9 +27,31 @@ The single most important rule in this document: **never introduce new architect
 
 ## Architecture Principles
 
+- **Architecture First:** `CLAUDE.md`, `PROJECT_KNOWLEDGE.md`, and `PROJECT_AUDIT.md` together are the single source of truth for this project's architecture. Always follow what they establish. Do not redesign, replace, or bypass existing architecture unless explicitly instructed to.
 - The Core/Application boundary described in `PROJECT_KNOWLEDGE.md` is load-bearing, not aspirational. Any code that would let an application maintain its own copy of identity, billing, or permission data is a bug, not a feature.
 - Shared functionality belongs in the Core exactly once. If two places in this repository compute the same business answer differently (e.g. "is this subscription active"), that's a defect to flag, not a pattern to extend elsewhere.
 - Prefer the existing shape of the codebase over introducing a new one. A new abstraction, library, or pattern needs a reason stronger than convenience, and needs approval (see Approval Rules).
+
+## Reuse Before Create
+
+Before adding new code, check whether the need is already met or partially met:
+- Reuse existing modules, services, and database structures instead of adding parallel ones.
+- Reuse existing UI components instead of building new ones that do the same job.
+- Never duplicate logic that already exists elsewhere in the codebase.
+- If a feature already exists partially, complete it rather than starting a second implementation alongside it.
+
+This is a standing step in the Development Workflow below, not a one-time check — apply it at the start of every task, including "new feature" requests, since a request framed as new work often turns out to be completing something that already exists.
+
+## Core Development Priorities
+
+Core feature work follows this order unless explicitly redirected. Complete only the currently-approved priority, then stop, summarize what was done, and wait for approval before starting the next one — finishing a priority does not carry implicit authorization to continue into the next (see Approval Rules).
+
+1. ✅ **Applications Management** — *Completed.* The Applications registry is fully dynamic from the Admin panel (`adminCreateApplication`, extended `adminUpdateAppSettings`). Every application automatically inherits all existing Core capabilities with no hardcoded, application-specific logic anywhere in the Core (verified, not assumed). New applications are created disabled; the existing enable/disable toggle remains the only lifecycle mechanism — no hard delete.
+2. **Dashboard Consistency** — the Dashboard must present a single source of truth. "My Applications," "My Subscription," premium status, and subscription data must always be derived from the same underlying data, never from independently-computed copies.
+3. **Role Management** — complete the existing Roles & Permissions module with secure role assignment and revocation, built on the current security architecture (server-side re-verification, `service_role`-only writes) without redesigning the permission system.
+4. **Remaining Core Features** — only after priorities 1–3 are complete.
+
+This list reflects current sequencing, not a fixed history — update it here as priorities complete or are explicitly reordered. It doesn't belong in `PROJECT_KNOWLEDGE.md` (architecture, not a backlog) or `PROJECT_AUDIT.md` (defects, not planned feature work).
 
 ## Single Source of Truth
 
@@ -105,6 +128,7 @@ Restated as a binding rule (full rationale in `PROJECT_KNOWLEDGE.md`):
 - **Never introduce new architecture, business rules, technologies, abstractions, or implementation patterns unless they are explicitly approved. When uncertain, ask. Do not assume.**
 - Before modifying code or any of the three core documents: read what exists, explain what's wrong and why, explain what the fix is, explain what stays unchanged, and present the proposed approach — then wait for explicit approval before making changes.
 - An approval covers the scope it was given for, not more. If a fix reveals a related issue worth addressing too, surface it and ask, rather than folding it in silently.
+- When work is organized into priorities/phases (see Core Development Priorities), complete only the one currently approved, then stop and summarize before starting the next — even if the next one is already listed and its turn seems obvious.
 - Destructive or hard-to-reverse actions (force-push, `git reset --hard`, dropping/widening RLS policies, deleting tracked files, rewriting published history) always require explicit approval, every time — a prior approval for one instance does not carry forward to the next.
 
 ## Definition of Done
