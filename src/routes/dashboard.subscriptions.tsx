@@ -6,6 +6,7 @@ import { ArrowLeft, Crown } from "lucide-react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { effectiveSubscriptionStatus } from "@/lib/subscription";
 import type {
   ApplicationRow,
   SubscriptionPlanRow,
@@ -79,8 +80,7 @@ function SubsPage() {
         ) : (
           <ul className="space-y-3">
             {q.data!.map((s) => {
-              const expired = new Date(s.expires_at).getTime() < Date.now();
-              const status = expired ? "expired" : s.status;
+              const status = effectiveSubscriptionStatus(s);
               return (
                 <li
                   key={s.id}

@@ -139,6 +139,11 @@ export function DashboardPage() {
     () => new Set((subsQuery.data ?? []).map((s) => s.app_id).filter(Boolean) as string[]),
     [subsQuery.data],
   );
+  // Single source of truth for "is this user premium" on this page: derived
+  // from the same live, already-filtered subscription data "My Applications"
+  // below uses -- not from profiles.user_type, which is a stored flag that
+  // doesn't reflect real-time subscription state.
+  const hasPremium = premiumAppIds.size > 0;
   const premiumExpiryByApp = useMemo(() => {
     const map = new Map<string, string>();
     (subsQuery.data ?? []).forEach((s) => {
@@ -236,12 +241,12 @@ export function DashboardPage() {
                       )}
                       <span
                         className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${
-                          profile?.user_type === "premium"
+                          hasPremium
                             ? "bg-gradient-to-r from-[#F59E0B] to-[#EF4444] text-white"
                             : "bg-gray-100 text-gray-600"
                         }`}
                       >
-                        {profile?.user_type === "premium" ? (
+                        {hasPremium ? (
                           <>
                             <Crown className="h-3 w-3" /> {t("dashboard.premium")}
                           </>

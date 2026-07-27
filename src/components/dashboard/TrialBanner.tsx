@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Sparkles, AlertTriangle } from "lucide-react";
 
 import type { SubscriptionRow } from "@/types/database";
+import { isSubscriptionActiveNow } from "@/lib/subscription";
 
 /**
  * Shows either an active-trial banner or an expired-trial banner.
@@ -15,18 +16,12 @@ export function TrialBanner({ subscriptions }: { subscriptions: SubscriptionRow[
   const state = useMemo(() => {
     const trials = subscriptions.filter((s) => s.stripe_payment_id === "trial_7days");
     const paid = subscriptions.some(
-      (s) =>
-        s.stripe_payment_id !== "trial_7days" &&
-        s.status === "active" &&
-        new Date(s.expires_at).getTime() > Date.now(),
+      (s) => s.stripe_payment_id !== "trial_7days" && isSubscriptionActiveNow(s),
     );
     if (paid) return { kind: "hidden" as const };
     if (trials.length === 0) return { kind: "hidden" as const };
 
-    const now = Date.now();
-    const active = trials.find(
-      (s) => s.status === "active" && new Date(s.expires_at).getTime() > now,
-    );
+    const active = trials.find((s) => isSubscriptionActiveNow(s));
     if (active) return { kind: "active" as const, expires_at: active.expires_at };
     // most recent trial
     const latest = [...trials].sort(
