@@ -77,6 +77,8 @@ Premium contact details (phone, website, social links) live in a separate, still
 
 Platform-level roles (`admin`, `moderator`, `user`) are Core-owned and stored independently of the profile record, specifically so that a role can never be granted by editing profile data. A user can hold more than one role. Roles are platform-wide, not per-application — there is no such thing as "admin of one application only."
 
+Operationally, the platform runs with a single administrator. There is no in-app role assignment, grant, or revoke interface, and none is planned as a Core feature — if a second administrator is ever needed, that role is granted manually via direct database access by the project owner. See `CLAUDE.md` → Single Administrator Rule.
+
 ## Permissions
 
 Permission checks are enforced by the Core, on the server, every time — never inferred from client-supplied state and never trusted from a cached client value. A role grants a permission only when the server independently re-verifies it against the Core's role data at the moment of the privileged action.

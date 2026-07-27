@@ -47,11 +47,27 @@ This is a standing step in the Development Workflow below, not a one-time check 
 Core feature work follows this order unless explicitly redirected. Complete only the currently-approved priority, then stop, summarize what was done, and wait for approval before starting the next one — finishing a priority does not carry implicit authorization to continue into the next (see Approval Rules).
 
 1. ✅ **Applications Management** — *Completed.* The Applications registry is fully dynamic from the Admin panel (`adminCreateApplication`, extended `adminUpdateAppSettings`). Every application automatically inherits all existing Core capabilities with no hardcoded, application-specific logic anywhere in the Core (verified, not assumed). New applications are created disabled; the existing enable/disable toggle remains the only lifecycle mechanism — no hard delete.
-2. **Dashboard Consistency** — the Dashboard must present a single source of truth. "My Applications," "My Subscription," premium status, and subscription data must always be derived from the same underlying data, never from independently-computed copies.
-3. **Role Management** — complete the existing Roles & Permissions module with secure role assignment and revocation, built on the current security architecture (server-side re-verification, `service_role`-only writes) without redesigning the permission system.
-4. **Remaining Core Features** — only after priorities 1–3 are complete.
+2. ✅ **Dashboard Consistency** — *Completed.* Every dashboard section that answers "is this active" or "is this premium" now traces back to one shared source (`src/lib/subscription.ts`, and the header's premium badge derived from the same already-fetched `subsQuery` data "My Applications" uses) instead of independently-computed copies or the stale `profiles.user_type` flag.
+3. **Remaining Core Features** — only after priorities 1–2 are complete. Role Management is not part of this list — see Single Administrator Rule below.
 
 This list reflects current sequencing, not a fixed history — update it here as priorities complete or are explicitly reordered. It doesn't belong in `PROJECT_KNOWLEDGE.md` (architecture, not a backlog) or `PROJECT_AUDIT.md` (defects, not planned feature work).
+
+## Single Administrator Rule (Mandatory)
+
+This platform is designed to operate with one administrator only. This is a deliberate operational decision, not a missing feature.
+
+Do not propose, design, or implement any of the following unless explicitly requested by the project owner:
+- Role Management UI
+- Admin role assignment
+- Role grant/revoke interfaces
+- Multi-admin workflows
+- Permission management interfaces
+
+If an additional administrator is ever needed, that role is assigned manually via SQL/database access by the project owner — not through an in-app mechanism.
+
+Do not include Role Management (or any of the items above) in implementation proposals, future roadmaps, or Core Development Priorities unless explicitly instructed otherwise.
+
+This is a deliberate business decision, not a temporary limitation or a missing feature. Future implementation proposals, architecture reviews, audits, and roadmaps must respect this decision unless the project owner explicitly changes it.
 
 ## Single Source of Truth
 
