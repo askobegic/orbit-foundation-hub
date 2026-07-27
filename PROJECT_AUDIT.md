@@ -6,7 +6,7 @@
 
 ## How to read a finding
 
-Every finding has a stable **ID** (e.g. `AU-1`) that never changes once assigned, even if the finding is resolved or reclassified. Each entry carries: **Status** (Open / Resolved), **Files** affected, **Description** (what's wrong, mechanically), **Risk** (why it matters), **Recommendation**, **Resolution** (filled in once fixed), **Commit** (the commit that resolved it), and **Date** (logged / resolved). Findings are grouped by topic area, then by severity within each area. Severity levels are never changed without explicit approval — a finding's risk framing can be sharpened in prose, but its Critical/High/Medium/Low bucket is only moved on request.
+Every finding has a stable **ID** (e.g. `AU-1`) that never changes once assigned, even if the finding is resolved or reclassified. Each entry carries: **Status** (Open / Resolved / Deferred), **Files** affected, **Description** (what's wrong, mechanically), **Risk** (why it matters), **Recommendation**, **Resolution** (filled in once fixed), **Commit** (the commit that resolved it), and **Date** (logged / resolved). Findings are grouped by topic area, then by severity within each area. Severity levels are never changed without explicit approval — a finding's risk framing can be sharpened in prose, but its Critical/High/Medium/Low bucket is only moved on request. **Deferred** means the finding is confirmed real and intentionally not fixed yet — it carries a **Deferral rationale** explaining why, and stays Open-equivalent for planning purposes (not resolved, not abandoned).
 
 ## Remediation log
 
@@ -36,8 +36,9 @@ A separate, non-severity tag, **Architecture Deviation**, marks findings where t
 | Database | 2 | 0 | 1 | 2 |
 | Routing | 0 | 0 | 0 | 2 |
 | Components | 0 | 1 | 3 | 2 |
-| Security (cross-cutting + payments) | 3 | 2 | 3 | 3 |
+| Security (cross-cutting + payments) | 3 | 2 | 4 | 3 |
 | Performance | 0 | 0 | 2 | 5 |
+| Billing / Subscription Lifecycle | 0 | 1 | 0 | 0 |
 
 Several issues are cross-cutting (e.g. the profile self-escalation bug is a Database/RLS root cause with an Authentication code path and a Security consequence). Each is written up **once**, in the section that owns its root cause, with short cross-reference entries elsewhere.
 
@@ -351,11 +352,12 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 - **Date:** 2026-07-26
 
 **AD-4 — `payments.invoice_url` stores a raw Stripe object ID, not a browsable URL**
-- **Status:** Open
+- **Status:** 🚫 Deferred (2026-07-27)
 - **Files:** `src/routes/api/public/webhooks/stripe.ts:142`; rendered at `src/routes/admin.payments.tsx:73-74`
 - **Description:** An un-expanded Stripe Checkout `Session.invoice` field is just the Invoice object's ID (e.g. `in_1Nx...`), not a URL. Stored verbatim under a column named `invoice_url`.
 - **Risk:** Renders as a broken link in the admin payments list.
 - **Recommendation:** Expand the invoice (`expand: ["invoice"]`) and store `invoice.hosted_invoice_url`, or drop the field.
+- **Deferral rationale:** Purely cosmetic (admin-only broken link, no security/financial impact) — deliberately not fixed as part of the Stripe integrity pass. The audit's original recommendation would add an extra outbound Stripe API call inside the payment-fulfillment webhook, which is the wrong place to add new latency/failure surface for a cosmetic fix. If picked up later, prefer fetching the invoice URL lazily and on-demand from the admin payments page itself, not inside the webhook.
 - **Resolution:** —
 - **Commit:** —
 - **Date:** 2026-07-26
@@ -383,14 +385,14 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 - **Date:** 2026-07-26
 
 **AD-7 — `addMonthsIso` has a month-end rollover bug affecting every subscription's expiry date**
-- **Status:** Open
-- **Files:** `src/lib/admin.server.ts:36-39`; consumed at `stripe.ts:124`, `paypal.ts:150`, `admin.functions.ts:93`
+- **Status:** ✅ Resolved (2026-07-27)
+- **Files:** `src/lib/admin.server.ts:36-43`; consumed at `stripe.ts:159`, `paypal.ts:150`, `admin.functions.ts:93-108`
 - **Description:** Uses `Date.prototype.setMonth`, which overflows into the following month when the target month has fewer days than the current day-of-month (e.g. Jan 31 + 1 month → Mar 3, not Feb 28/29).
 - **Risk:** Every subscription's `expires_at` computed from a purchase near month-end can be inconsistent.
 - **Recommendation:** Clamp the day-of-month after `setMonth`, or use a date library with explicit end-of-month handling.
-- **Resolution:** —
+- **Resolution:** `addMonthsIso` now sets the date to the 1st before changing the month (avoiding overflow during the month change itself), computes the target month's actual last day via `new Date(year, month + 1, 0).getDate()`, and clamps the original day-of-month to that value before setting it. A day that fits in the target month (the common case) is unaffected; a day that doesn't (e.g. the 31st against a 28/29/30-day target month) is clamped to that month's last day instead of overflowing into the next one. Self-contained change to the one pure function — no callers needed to change.
 - **Commit:** —
-- **Date:** 2026-07-26
+- **Date:** Logged 2026-07-26, resolved 2026-07-27
 
 **AD-8 — Pervasive `as never` casts on admin write payloads defeat compile-time schema checking**
 - **Status:** Open
@@ -431,14 +433,14 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 - **Date:** Logged 2026-07-26, resolved 2026-07-26
 
 **DB-2 — `subscriptions.UNIQUE(user_id, app_id)` combined with insert-only webhook/trial logic breaks renewals and trial→paid conversion**
-- **Status:** Open
-- **Files:** `supabase/migrations/20260724110804_f95931a7-2e9e-417c-8a33-e9aedac500de.sql:140`; consumed via plain `.insert()` (never `upsert`) at `src/routes/api/public/webhooks/stripe.ts:113-131`, `src/routes/api/public/webhooks/paypal.ts:139-154`, `src/lib/trial.functions.ts:46-59`
+- **Status:** ✅ Resolved (2026-07-26)
+- **Files:** `supabase/migrations/20260724110804_f95931a7-2e9e-417c-8a33-e9aedac500de.sql:140`; consumed via plain `.insert()` (never `upsert`) at `src/routes/api/public/webhooks/stripe.ts:113-131`, `src/routes/api/public/webhooks/paypal.ts:139-154`, `src/lib/trial.functions.ts:46-59`, and `src/lib/admin.functions.ts` (`adminGrantPremium`, found during the fix — not in the original file list, same root cause)
 - **Description:** The constraint is unconditional on `(user_id, app_id)` regardless of `status`/expiry, and every code path that grants access does a plain `INSERT`.
-- **Risk:** **(a)** A user who activates the free trial occupies that unique slot; when they later actually pay, the webhook's `INSERT` violates the constraint, the error is caught but only surfaced as a `500`, and the customer is charged with no subscription/payment/notification/audit-log/n8n event ever created. **(b)** Any renewal or repeat purchase for an app the user has ever subscribed to (even one expired months ago) fails identically. **(c)** `trial.functions.ts`'s bulk multi-row insert across all active apps fails atomically if the user has so much as one leftover row for any single app, blocking trial activation for apps they've never touched.
+- **Risk:** **(a)** A user who activates the free trial occupies that unique slot; when they later actually pay, the webhook's `INSERT` violates the constraint, the error is caught but only surfaced as a `500`, and the customer is charged with no subscription/payment/notification/audit-log/n8n event ever created. **(b)** Any renewal or repeat purchase for an app the user has ever subscribed to (even one expired months ago) fails identically. **(c)** `trial.functions.ts`'s bulk multi-row insert across all active apps fails atomically if the user has so much as one leftover row for any single app, blocking trial activation for apps they've never touched. **(d)** `adminGrantPremium` failed identically when an admin tried to (re-)grant premium to a user who already had any row — including a cancelled one — for that app.
 - **Recommendation:** Replace `insert` with `upsert(..., { onConflict: "user_id,app_id" })` that extends/replaces the existing row, or drop the `(user_id, app_id)` uniqueness in favor of idempotency keyed on `stripe_payment_id`/`paypal_payment_id`.
-- **Resolution:** —
-- **Commit:** —
-- **Date:** 2026-07-26
+- **Resolution:** All four write paths switched from `.insert()` to `.upsert(..., { onConflict: "user_id,app_id" })`, preserving the "at most one row per (user, app)" invariant while allowing that row to be refreshed on renewal, resubscribe-after-cancel, or repeat admin grant. **Stripe and PayPal webhooks additionally gained an explicit idempotency guard** — a `payments` lookup by `stripe_payment_id`/`paypal_payment_id` before any write — added specifically because switching to `upsert` removed an accidental protection the old `UNIQUE` violation used to provide against duplicate webhook redelivery double-inserting into `payments`; without it, a redelivered event would have silently created a second payment record on every retry. `trial.functions.ts` needed no additional guard (its own pre-existing `pastTrial` check already provides idempotency). `adminGrantPremium` needed no idempotency guard either — it's a direct admin action, not a retrying external webhook, and it never writes to `payments` at all (`amount_paid: 0`, no provider payment id), so there is nothing for a duplicate-row check to key against. Known remaining gaps, intentionally out of scope for this fix and not yet tracked as separate findings: `payments.paypal_payment_id` still has no `UNIQUE` DB constraint (unlike `stripe_payment_id`), so PayPal's idempotency guard is an application-level existence check, not a database-enforced guarantee; a renewal's new `expires_at` is computed from "now," not from the existing period's remaining time, so renewing before expiry does not add to the remaining time.
+- **Commit:** `b0b07a3`
+- **Date:** Logged 2026-07-26, resolved 2026-07-26
 
 ### Medium
 
@@ -606,36 +608,36 @@ This section aggregates the highest-impact, trust-boundary-crossing issues found
 - **Date:** Logged 2026-07-26, resolved 2026-07-26
 
 **SE-2 — Stripe amount/plan validation is entirely skipped when `plan_id` is omitted from the payment reference**
-- **Status:** Open
-- **Files:** `src/routes/api/public/webhooks/stripe.ts:6-18,54-77,83-111`
+- **Status:** ✅ Resolved (2026-07-27)
+- **Files:** `src/routes/api/public/webhooks/stripe.ts:6-18,59-111`
 - **Description:** `parseRef` returns `plan_id: null` if the `client_reference_id` string (built client-side in `src/routes/pricing.tsx:80-92`) has fewer than 3 `__`-separated segments. The amount-match guard is entirely skipped when `plan_id` is absent, and `planMonths` silently defaults to `12`.
 - **Risk:** Any user can pay through the cheapest available plan's public link while manually editing the URL to submit a 2-segment reference (omitting `planId`), and receive 12 months of premium at the cheapest plan's price — a direct revenue-integrity bypass.
 - **Recommendation:** Require `plan_id` to be present and resolvable; reject (or fall back to validating against the minimum-duration/lowest-price plan) rather than defaulting to the most generous duration with no price check.
-- **Resolution:** —
+- **Resolution:** Closed more completely than originally scoped, after tracing the actual code rather than assuming the audit's title covered the full bug surface: the root cause wasn't just "`plan_id` omitted," it was "whenever `planPrice` stays `null`," which also happens when `plan_id` is present but doesn't resolve to a real row. Two additions: **(1)** reject immediately if `ref.plan_id` is missing (`ignored: "missing_plan_id"`); **(2)** reject if `ref.plan_id` doesn't match any row in `subscription_plans` (`ignored: "plan_not_found"`) — previously this silently fell through to the same unvalidated 12-month default as the omitted case. Both are pure additions; nothing existing was removed or restructured. Verified via `pricing.tsx` that every real checkout link already includes a resolvable `plan_id`, so only tampered/malformed references are affected.
 - **Commit:** —
-- **Date:** 2026-07-26
+- **Date:** Logged 2026-07-26, resolved 2026-07-27
 
 **SE-3 — `subscriptions` UNIQUE constraint breaks the payment fulfillment flow itself**
-- **Status:** Open
+- **Status:** ✅ Resolved (2026-07-26)
 - **Files:** see **DB-2** (same finding, full detail there)
 - **Description:** Cross-reference. Included here because the practical security/business consequence is that paying customers can be charged with no entitlement ever recorded, silently, with only a generic `500` in server logs.
 - **Risk:** See DB-2.
 - **Recommendation:** See DB-2.
-- **Resolution:** —
-- **Commit:** —
-- **Date:** 2026-07-26
+- **Resolution:** See **DB-2** — fixed via `upsert(..., { onConflict: "user_id,app_id" })` across all four write paths, with an idempotency guard added to both webhooks.
+- **Commit:** `b0b07a3`
+- **Date:** Logged 2026-07-26, resolved 2026-07-26
 
 ### High
 
 **SE-4 — Stripe webhook grants entitlement without checking `session.payment_status`**
-- **Status:** Open
-- **Files:** `src/routes/api/public/webhooks/stripe.ts:41-45`
+- **Status:** ✅ Resolved (2026-07-27)
+- **Files:** `src/routes/api/public/webhooks/stripe.ts:45-57`
 - **Description:** The handler only checks `event.type === "checkout.session.completed"` and never checks `session.payment_status === "paid"`. Per Stripe's documented behavior, `checkout.session.completed` fires even when `payment_status` is `"unpaid"` for delayed/asynchronous payment methods.
 - **Risk:** A session completing with unconfirmed payment still activates a subscription and flips `profiles.user_type` to `"premium"`.
 - **Recommendation:** Check `session.payment_status === "paid"` before fulfillment; also handle `checkout.session.async_payment_succeeded`/`async_payment_failed`.
-- **Resolution:** —
+- **Resolution:** Added a `session.payment_status !== "paid"` check immediately after obtaining the session, before any other processing; a non-`paid` session is rejected (`ignored: "not_paid"`). Scoped minimally to closing the described vulnerability — did **not** add handling for `checkout.session.async_payment_succeeded`/`async_payment_failed`, since that's a distinct, additive capability (fulfilling delayed-payment-method purchases once they do succeed later), not required to close this specific gap. **Known limitation, intentionally not addressed here:** if the connected Stripe account has any delayed/asynchronous payment method enabled, a customer using one will now correctly not be granted access immediately, but also won't be granted access later either, since the success event for that path isn't handled. Worth a follow-up if such payment methods are actually enabled on the account.
 - **Commit:** —
-- **Date:** 2026-07-26
+- **Date:** Logged 2026-07-26, resolved 2026-07-27
 
 **SE-5 — PayPal integration field-name mismatch: the client sends `custom`, the webhook reads `custom_id`**
 - **Status:** Open
@@ -685,6 +687,17 @@ This section aggregates the highest-impact, trust-boundary-crossing issues found
 - **Description:** Unlike the `subscriptions` insert (whose error is checked), every subsequent write in the same handler discards its `{ error }` result.
 - **Risk:** A failure in any of them leaves an active subscription with no matching payment record, no user notification, and no audit trail — with zero logging or alerting.
 - **Recommendation:** Check and log/alert on the result of each write; consider wrapping the post-payment side-effect sequence to report which steps failed.
+- **Resolution:** —
+- **Commit:** —
+- **Date:** 2026-07-26
+
+**SE-13 — Stripe amount/currency check doesn't verify the specific Payment Link used, only that the paid amount matches some plan's price**
+- **Status:** 🚫 Deferred (2026-07-27)
+- **Files:** `src/routes/api/public/webhooks/stripe.ts:65-122`; `src/routes/pricing.tsx:80-86`; `subscription_plans.stripe_payment_link`
+- **Description:** When `plan_id` is present, the webhook validates that the paid amount matches that plan's price/currency, that the plan belongs to the referenced app, and that it's active — but it never verifies that the Checkout Session's actual `payment_link` corresponds to the referenced plan's own `stripe_payment_link`. Stripe exposes `session.payment_link` (the Payment Link ID) on the Checkout Session object without needing to expand it.
+- **Risk:** If two plans for the same app are ever priced identically (e.g. during a promotion, or by coincidence), a user can complete checkout via the cheaper/shorter plan's real link, then hand-edit `client_reference_id`'s `plan_id` segment to reference the other, same-priced plan — and receive that plan's duration instead of the one actually paid for.
+- **Recommendation:** Cross-check `session.payment_link` against the referenced plan's own payment link. Not a one-line fix: `session.payment_link` returns a Payment Link ID (e.g. `plink_...`), while `subscription_plans.stripe_payment_link` currently stores the full checkout URL — the ID would need to be stored/derived separately before it can be compared.
+- **Deferral rationale:** Medium severity and narrow (requires two identically-priced plans to exist plus deliberate tampering), while the real fix needs a schema change (new column to store the Payment Link ID) and an admin UI change (capture it on plan creation) in addition to the webhook cross-check — disproportionate scope for this pass compared to the Critical/High items already closed.
 - **Resolution:** —
 - **Commit:** —
 - **Date:** 2026-07-26
@@ -795,6 +808,24 @@ This section aggregates the highest-impact, trust-boundary-crossing issues found
 - **Description:** Cross-reference.
 - **Risk:** See SE-12.
 - **Recommendation:** See SE-12.
+- **Resolution:** —
+- **Commit:** —
+- **Date:** 2026-07-26
+
+---
+
+## 10. Billing / Subscription Lifecycle
+
+**Scope:** Findings about the lifecycle of a subscription after it's granted — renewal, expiry, cancellation, and refund handling — as distinct from the provider-specific integrity of the Stripe/PayPal webhook integrations themselves (tracked under Security). Surfaced during the `DB-2` root-cause analysis; tracked here rather than folded into the Stripe/PayPal-specific writeups in Security, since it's a lifecycle gap common to both providers, not a defect in either integration's own logic.
+
+### High
+
+**BL-1 — No refund or chargeback handling anywhere in the codebase**
+- **Status:** Open
+- **Files:** `src/routes/api/public/webhooks/stripe.ts:41-43`; `src/routes/api/public/webhooks/paypal.ts:67-69`; `payments.status` CHECK constraint (`supabase/migrations/20260724110804_...sql`)
+- **Description:** Both webhook handlers only process one event type each (`checkout.session.completed` / `PAYMENT.CAPTURE.COMPLETED`) and return early for anything else. Neither Stripe's `charge.refunded`/`charge.dispute.created` nor PayPal's `PAYMENT.CAPTURE.REFUNDED`/`REVERSED` is handled anywhere. `payments.status` supports a `'refunded'` value in its schema `CHECK` constraint, but no code path in the repository ever writes it — confirmed via a full-codebase search, not assumed.
+- **Risk:** A refunded or charged-back customer keeps full, permanent premium access with no record anywhere that a refund occurred, and no automatic revocation of entitlement.
+- **Recommendation:** Subscribe to and handle refund/dispute event types in both webhook handlers; on refund, mark the corresponding `payments` row `status='refunded'` and revoke/expire the associated subscription. See also `SE-2`/`SE-4`/`SE-13` for related Stripe-specific integrity gaps in the same webhook.
 - **Resolution:** —
 - **Commit:** —
 - **Date:** 2026-07-26

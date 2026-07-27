@@ -35,6 +35,10 @@ export async function writeAuditLog(params: {
 
 export function addMonthsIso(months: number, from: Date = new Date()): string {
   const d = new Date(from);
+  const day = d.getDate();
+  d.setDate(1); // avoid day-of-month overflow while changing the month
   d.setMonth(d.getMonth() + months);
+  const daysInTargetMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(day, daysInTargetMonth));
   return d.toISOString();
 }

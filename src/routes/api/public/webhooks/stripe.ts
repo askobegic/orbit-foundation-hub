@@ -43,10 +43,29 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
         }
 
         const session = event.data.object as Stripe.Checkout.Session;
+
+        // Only fulfill sessions with confirmed payment. checkout.session.completed
+        // also fires for delayed/asynchronous payment methods before funds are
+        // actually confirmed (payment_status "unpaid"); those are fulfilled later
+        // via checkout.session.async_payment_succeeded, which is not yet handled.
+        if (session.payment_status !== "paid") {
+          console.warn("Stripe webhook: session not yet paid", {
+            session_id: session.id,
+            payment_status: session.payment_status,
+          });
+          return Response.json({ received: true, ignored: "not_paid" });
+        }
+
         const ref = parseRef(session.client_reference_id ?? undefined);
         if (!ref.user_id || !ref.app_id) {
           console.warn("Stripe webhook missing user/app in client_reference_id");
           return Response.json({ received: true });
+        }
+        if (!ref.plan_id) {
+          console.warn("Stripe webhook missing plan_id in client_reference_id", {
+            session_id: session.id,
+          });
+          return Response.json({ received: true, ignored: "missing_plan_id" });
         }
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -71,7 +90,11 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
             .select("duration_months, currency, price, app_id, is_active")
             .eq("id", ref.plan_id)
             .maybeSingle();
-          if (plan) {
+          if (!plan) {
+            console.warn("Stripe webhook: referenced plan not found", { plan_id: ref.plan_id });
+            return Response.json({ received: true, ignored: "plan_not_found" });
+          }
+          {
             planMonths = (plan as { duration_months: number }).duration_months;
             currency = (plan as { currency: string }).currency ?? currency;
             planPrice = Number((plan as { price: number | string }).price);
