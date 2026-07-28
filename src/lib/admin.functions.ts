@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertAdmin, writeAuditLog, addMonthsIso } from "@/lib/admin.server";
+import { isSubscriptionActiveNow } from "@/lib/subscription";
 
 export type VerificationRow = {
   id: string;
@@ -306,9 +307,15 @@ export const adminSendNotification = createServerFn({ method: "POST" })
     } else if (data.target === "premium") {
       const { data: subs } = await supabaseAdmin
         .from("subscriptions")
-        .select("user_id")
+        .select("user_id, status, expires_at")
         .eq("status", "active");
-      userIds = Array.from(new Set(((subs ?? []) as { user_id: string }[]).map((r) => r.user_id)));
+      userIds = Array.from(
+        new Set(
+          ((subs ?? []) as { user_id: string; status: "active"; expires_at: string }[])
+            .filter(isSubscriptionActiveNow)
+            .map((r) => r.user_id),
+        ),
+      );
     } else {
       const { data: profs } = await supabaseAdmin.from("profiles").select("id");
       userIds = ((profs ?? []) as { id: string }[]).map((r) => r.id);
@@ -365,9 +372,15 @@ export const adminListVerificationRequests = createServerFn({ method: "GET" })
     // Candidates: premium (active subscription) users not yet verified
     const { data: subs } = await supabaseAdmin
       .from("subscriptions")
-      .select("user_id")
+      .select("user_id, status, expires_at")
       .eq("status", "active");
-    const ids = Array.from(new Set(((subs ?? []) as { user_id: string }[]).map((r) => r.user_id)));
+    const ids = Array.from(
+      new Set(
+        ((subs ?? []) as { user_id: string; status: "active"; expires_at: string }[])
+          .filter(isSubscriptionActiveNow)
+          .map((r) => r.user_id),
+      ),
+    );
     if (ids.length === 0) return [] as VerificationRow[];
     const { data, error } = await supabaseAdmin
       .from("profiles")

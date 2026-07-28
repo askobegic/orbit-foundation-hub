@@ -321,32 +321,34 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 ### Medium
 
 **AD-1 — Three divergent definitions of "active premium subscription" across `admin.functions.ts`**
-- **Status:** Open
-- **Files:** `src/lib/admin.functions.ts:239-247` (`adminOverviewStats`), `:303-307` (`adminSendNotification`), `:362-367` (`adminListVerificationRequests`)
-- **Description:** Only `adminOverviewStats` checks `status="active"` AND `expires_at > now()` AND `started_at <= now()`. `adminSendNotification` and `adminListVerificationRequests` both check only `status="active"`, with no expiry check.
+- **Status:** ✅ Resolved (2026-07-28)
+- **Files:** `src/lib/admin.functions.ts` (`adminOverviewStats`, `adminSendNotification`, `adminListVerificationRequests`)
+- **Description:** Only `adminOverviewStats` checked `status="active"` AND `expires_at > now()` AND `started_at <= now()`. `adminSendNotification` and `adminListVerificationRequests` both checked only `status="active"`, with no expiry check.
 - **Risk:** If a cron/webhook hasn't yet flipped a lapsed subscription's `status` to `"expired"`, the other two functions still treat it as active — broadcasting "premium-only" notifications to, and surfacing as verification candidates, users whose subscription has actually lapsed.
 - **Classification:** Architecture Deviation — three separate app-level implementations of what should be one Core-owned "is this user's subscription active" answer, per `PROJECT_KNOWLEDGE.md` → Single Source of Truth. Severity intentionally left at Medium (correctness/consistency issue, not an exploitable defect).
 - **Recommendation:** Extract one shared "is currently active premium" predicate and use it in all three places.
-- **Resolution:** —
+- **Resolution:** `adminSendNotification` and `adminListVerificationRequests` now select `expires_at` alongside `user_id`/`status` and filter results through `isSubscriptionActiveNow` (`src/lib/subscription.ts`) — the same shared predicate already established for the dashboard in Priority 2 (Dashboard Consistency), reused here rather than duplicated. `adminOverviewStats` was deliberately left unchanged: it already applied the correct, stricter condition (it was the one place that wasn't broken), and it filters at the DB-query level for aggregate-count performance rather than fetching rows to filter in-process — rewriting it to route through the shared function would trade a reasonable stats-query pattern for no correctness gain. All three now agree on what "currently active" means; the only remaining difference (`adminOverviewStats`'s additional `started_at <= now()` guard) is an intentional, stats-specific refinement, not a divergence in the core definition.
 - **Commit:** —
-- **Date:** 2026-07-26
+- **Date:** Logged 2026-07-26, resolved 2026-07-28
 
 **AD-2 — `PlanForm` doesn't resync its local state after a save**
-- **Status:** Open
+- **Status:** 🚫 Deferred (2026-07-28)
 - **Files:** `src/routes/admin.applications.tsx:224-235` (contrast `AppSettings` in the same file, lines 383-390, which does resync correctly)
 - **Description:** State is seeded once from `initial` with no resync effect. After a save triggers `qc.invalidateQueries(["admin-plans", activeAppId])` and a refetch, the same-keyed `PlanForm` instance keeps its stale local state.
 - **Risk:** Can silently diverge from what's actually persisted (e.g. after a concurrent edit in another admin tab). The "new plan" form also never resets after a successful create.
 - **Recommendation:** Add a `useEffect` keyed on `initial.id`/`updated_at` to resync local state; reset the "new plan" form on successful create.
+- **Deferral rationale:** The described risk assumes a second, concurrently-editing administrator — but the platform's Single Administrator Rule (`CLAUDE.md`) means there is, by design, never more than one administrator. The only realistic trigger is the same person with two browser tabs open, a narrow, self-inflicted scenario with no data-integrity consequence (a save just re-persists the values shown). Reassessed as a minor UI-polish item, not a production risk, under the current single-admin architecture — deferred rather than fixed.
 - **Resolution:** —
 - **Commit:** —
 - **Date:** 2026-07-26
 
 **AD-3 — Admin user search fires a full query on every keystroke**
-- **Status:** Open
+- **Status:** 🚫 Deferred (2026-07-28)
 - **Files:** `src/routes/admin.users.tsx:44,50-53`
 - **Description:** `search` state is included directly in the `useQuery` key (`["admin-users", search]`) with no debounce.
 - **Risk:** `adminListUsers` (an `ilike` scan) re-runs on every keystroke. See also **PE-2**.
 - **Recommendation:** Debounce the search value (~300ms) before it feeds the query key.
+- **Deferral rationale:** The load source is a single administrator's own keystrokes, bounded by the Single Administrator Rule (`CLAUDE.md`) — this can never become a multi-user hot path. No incorrect results, only a theoretical, unbounded-by-real-usage efficiency nicety. Reassessed as performance-only with negligible business value under the current single-admin architecture — deferred rather than fixed.
 - **Resolution:** —
 - **Commit:** —
 - **Date:** 2026-07-26
@@ -445,11 +447,12 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 ### Medium
 
 **DB-3 — `UserType` TypeScript union doesn't include the DB's `super_admin` value**
-- **Status:** Open
+- **Status:** ⚪ Closed — no production impact (2026-07-28)
 - **Files:** `src/types/database.ts:6` vs. `supabase/migrations/20260724110804_...sql:19`
 - **Description:** `export type UserType = "standard" | "premium" | "admin";` but the DB constraint is `CHECK (user_type IN ('standard','premium','admin','super_admin'))`.
 - **Risk:** A row with `user_type = 'super_admin'` is unrepresented in the app's type system, so any `=== "admin"` comparison silently misses `super_admin` rows.
 - **Recommendation:** Add `"super_admin"` to the `UserType` union, or remove it from the DB constraint if it's not actually meant to be used.
+- **Closure rationale:** Re-verified directly against the full codebase: nothing anywhere compares `user_type === "admin"` or `"super_admin"` — admin authorization runs entirely through `user_roles`/`has_role()`/`assertAdmin()`, never through `profiles.user_type`. The only `user_type` comparison in the app is `=== "premium"` (a display badge in `admin.users.tsx`), which this gap doesn't affect. The risk this finding describes has no call site to actually occur at. Closed as having no realized or realizable production impact under the current architecture, not fixed.
 - **Resolution:** —
 - **Commit:** —
 - **Date:** 2026-07-26
