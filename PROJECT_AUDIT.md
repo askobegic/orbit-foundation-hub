@@ -159,11 +159,12 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 - **Date:** 2026-07-26
 
 **AU-6 — `loadOrCreateProfile` never checks Supabase error results**
-- **Status:** Open
+- **Status:** 🕓 Should Fix After First Production Application (2026-07-28)
 - **Files:** `src/context/AuthContext.tsx:28-83`
 - **Description:** The initial SELECT (28–34), UPDATE (50–55), and INSERT (68–80) all destructure only `data`, never `error`. If the SELECT fails transiently, `existing` is `undefined` and the code falls into the INSERT branch for a user who already has a row — that insert fails on the primary key (also unchecked), and the function returns `null`.
 - **Risk:** Downstream, `ProtectedRoute.tsx:21` and dashboard code then treat an existing, real user as having no/incomplete profile and can misroute them to onboarding.
 - **Recommendation:** Check `error` at each step; distinguish "no row found" from a genuine query failure before deciding to insert.
+- **Deferral rationale:** Classified as Should Fix After First Production Application. Defensive hardening for transient infrastructure failures. No data corruption. No production blocker.
 - **Resolution:** —
 - **Commit:** —
 - **Date:** 2026-07-26
@@ -241,11 +242,12 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 - **Date:** 2026-07-26
 
 **DA-5 — `updateAppSetting` computes its payload from a stale closure over `appSettings`**
-- **Status:** Open
+- **Status:** 🚫 Deferred — Safe to Defer (2026-07-28)
 - **Files:** `src/routes/dashboard.settings.tsx:90-117`
 - **Description:** The function optimistically updates state via `setAppSettings((prev) => prev.map(...))`, then immediately reads `appSettings.find(...)` from the outer closure — which still holds the pre-update value.
 - **Risk:** Two quick successive toggles on the same app (e.g. "visible in directory" then "can be contacted") can cause the second write's fallback values to silently revert the first toggle in the database.
 - **Recommendation:** Derive the write payload from the functional updater's `prev` argument (or a ref), not from the outer closure variable.
+- **Deferral rationale:** Technical verification completed. Classified as Safe to Defer. The issue requires an unrealistic timing race and is not reproducible during normal user interaction.
 - **Resolution:** —
 - **Commit:** —
 - **Date:** 2026-07-26
@@ -261,11 +263,12 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 - **Date:** 2026-07-26
 
 **DA-7 — Payment success is confirmed by "any active subscription," not the specific transaction**
-- **Status:** Open
+- **Status:** 🕓 Should Fix After First Production Application (2026-07-28)
 - **Files:** `src/routes/payment.success.tsx:19-22,36-46`
 - **Description:** `search.app_id` is optional in `validateSearch`. When absent, the success check becomes "does this user have any active subscription" rather than "did this checkout activate."
 - **Risk:** A user with a pre-existing subscription for App A who lands on this page for an unrelated/failed App B checkout will see "success" despite nothing new being purchased.
 - **Recommendation:** Require `app_id` (and ideally a server-verified transaction/session id) to render success; correlate against the specific subscription/payment row created for that transaction.
+- **Deferral rationale:** Classified as Should Fix After First Production Application. Requires a specific edge-case navigation path. Does not affect entitlement correctness. Not a production blocker.
 - **Resolution:** —
 - **Commit:** —
 - **Date:** 2026-07-26

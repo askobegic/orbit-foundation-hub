@@ -37,7 +37,7 @@ Specifically, applications must never duplicate:
 
 There is one user, one account, one authentication, one profile, and one shared database, used by every application. Where an application needs something application-specific (e.g. its own business data, its own UI), that data lives in the application's own domain, keyed against the Core's shared `user_id`/`app_id` — it is never a fork of Core data.
 
-**Known deviation from this rule:** the Premium Model (below) is intended to be scoped per application, but the current implementation of `is_user_premium()` and `premium_profiles` treats premium as a single global flag. This is tracked as an architecture deviation in `PROJECT_AUDIT.md` (`DB-4`, `AD-1`) and should be corrected deliberately rather than worked around per-application.
+**Known deviation from this rule:** the Premium Model (below) is intended to be scoped per application, but the current implementation of `is_user_premium()` and `premium_profiles` treats premium as a single global flag. This is tracked as an architecture deviation in `PROJECT_AUDIT.md` (`DB-4`) — the only remaining known architecture deviation — and should be corrected deliberately rather than worked around per-application.
 
 ## Core Responsibilities
 

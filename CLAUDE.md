@@ -74,7 +74,7 @@ This is a deliberate business decision, not a temporary limitation or a missing 
 Restated as a binding rule (full rationale in `PROJECT_KNOWLEDGE.md`):
 - One user database, one authentication system, one profile system, one subscription/billing engine, one permission system, one notification system.
 - No application-specific code may create a parallel user table, a parallel auth flow, a parallel profile store, a parallel entitlement record, or a parallel admin system.
-- Premium entitlement is scoped per application (see `PROJECT_KNOWLEDGE.md` → Premium Model). Where the current implementation doesn't yet honor that scoping, treat it as a tracked deviation (`PROJECT_AUDIT.md` → `DB-4`, `AD-1`) to fix deliberately, not a precedent to build on.
+- Premium entitlement is scoped per application (see `PROJECT_KNOWLEDGE.md` → Premium Model). Where the current implementation doesn't yet honor that scoping, treat it as a tracked deviation (`PROJECT_AUDIT.md` → `DB-4`, the only remaining architecture deviation) to fix deliberately, not a precedent to build on.
 
 ## Security Rules
 
