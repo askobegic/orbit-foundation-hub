@@ -53,14 +53,14 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 ### High
 
 **A-1 — `errorMiddleware` swallows structured errors/status codes into a generic HTML 500**
-- **Status:** Open
-- **Files:** `src/start.ts:6-19`
-- **Description:** The middleware only re-throws errors that are plain objects with a `.statusCode` property. A thrown `Response` (e.g. `new Response("Forbidden", { status: 403 })` from `assertAdmin`, `src/lib/admin.server.ts:14`) has `.status`, not `.statusCode`, so it does not match and gets replaced with a generic HTML error page. The same happens to ordinary domain `Error`s thrown by `trial.functions.ts`/`gdpr.functions.ts`.
-- **Risk:** Server-function callers (React Query / `useServerFn`) expecting a structured JSON error or a real HTTP status instead receive an opaque 500 + HTML body — admin-authorization failures and domain errors are indistinguishable from unexpected crashes.
+- **Status:** ✅ Resolved (2026-07-28)
+- **Files:** `src/start.ts:6-22`
+- **Description:** The middleware only re-threw errors that are plain objects with a `.statusCode` property. A thrown `Response` (e.g. `new Response("Forbidden", { status: 403 })` from `assertAdmin`, `src/lib/admin.server.ts:14`) has `.status`, not `.statusCode`, so it did not match and got replaced with a generic HTML error page. Ordinary domain `Error`s thrown by `trial.functions.ts`/`gdpr.functions.ts` still fall through to the same generic page — expected, since a plain `Error` carries no status to preserve.
+- **Risk:** Server-function callers (React Query / `useServerFn`) expecting a structured JSON error or a real HTTP status instead received an opaque 500 + HTML body — admin-authorization failures were indistinguishable from unexpected crashes.
 - **Recommendation:** Also pass through thrown `Response` instances (check `error instanceof Response` or the presence of `.status`), and/or scope this middleware to page-render requests only, not server-function RPC calls.
-- **Resolution:** —
+- **Resolution:** Added an `error instanceof Response` check ahead of the existing `.statusCode` check; a thrown `Response` (any status) is now re-thrown unchanged instead of being replaced. The pre-existing `.statusCode` branch and the generic-500 fallback for unrecognized errors are both untouched — verified by direct trace of all three paths (a `Response` now passes through unchanged; a plain-object `.statusCode` error takes the same branch it always did; a plain `Error` still falls through to the generic HTML 500). The audit's alternative option (scoping the middleware to page-render requests only) was not taken — the single added condition fully closes the described gap without widening the change. No automated test run — this repository has no test suite (see `CLAUDE.md` → Testing Rules) and no build tooling is available in this environment; verified by static trace only.
 - **Commit:** —
-- **Date:** 2026-07-26
+- **Date:** Logged 2026-07-26, resolved 2026-07-28
 
 ### Medium
 
