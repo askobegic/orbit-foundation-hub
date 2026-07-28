@@ -514,7 +514,7 @@ export function DashboardPage() {
   <div className="grid grid-cols-2 gap-2">
     {[
       { to: "/dashboard/profile", icon: User, label: t("nav.profile") },
-      { to: "/dashboard", icon: Settings, label: t("nav.settings") },
+      { to: "/dashboard/settings", icon: Settings, label: t("nav.settings") },
       { to: "/dashboard/security", icon: Shield, label: t("nav.security") },
       { to: "/dashboard/help", icon: HelpCircle, label: t("nav.help") },
     ].map((q) => (

@@ -57,11 +57,30 @@ export const deleteMyAccount = createServerFn({ method: "POST" })
       "premium_profiles",
       "user_roles",
     ] as const;
+    const failedTables: string[] = [];
     for (const t of userIdTables) {
-      await supabaseAdmin.from(t).delete().eq("user_id", userId);
+      const { error } = await supabaseAdmin.from(t).delete().eq("user_id", userId);
+      if (error) {
+        console.error("deleteMyAccount: delete failed", t, error);
+        failedTables.push(t);
+      }
     }
+    if (failedTables.length > 0) {
+      throw new Error(`Account deletion incomplete, failed to delete from: ${failedTables.join(", ")}`);
+    }
+
+    // Best-effort avatar cleanup -- doesn't block account deletion if it fails.
+    const { data: avatarFiles } = await supabaseAdmin.storage.from("avatars").list(userId);
+    if (avatarFiles && avatarFiles.length > 0) {
+      const { error: storageErr } = await supabaseAdmin.storage
+        .from("avatars")
+        .remove(avatarFiles.map((f) => `${userId}/${f.name}`));
+      if (storageErr) console.error("deleteMyAccount: avatar cleanup failed", storageErr);
+    }
+
     // profiles is keyed by id (matches auth.users.id)
-    await supabaseAdmin.from("profiles").delete().eq("id", userId);
+    const { error: profileDeleteErr } = await supabaseAdmin.from("profiles").delete().eq("id", userId);
+    if (profileDeleteErr) throw new Error(profileDeleteErr.message);
 
     // Finally remove the auth user.
     const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);

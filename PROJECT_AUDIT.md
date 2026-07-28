@@ -221,14 +221,14 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 - **Date:** 2026-07-26
 
 **DA-3 — "Settings" quick-link tile routes back to `/dashboard` instead of `/dashboard/settings`**
-- **Status:** Open
-- **Files:** `src/components/dashboard/DashboardPage.tsx:512` (compare sidebar entry at line 569, which correctly uses `/dashboard/settings`)
+- **Status:** ✅ Resolved (2026-07-28)
+- **Files:** `src/components/dashboard/DashboardPage.tsx` (Quick Links array; compare the sidebar entry in the same file, which already correctly used `/dashboard/settings`)
 - **Description:** Apparent copy/paste from the "Home" entry above it in the same Quick Links array.
 - **Risk:** Clicking "Settings" from Quick Links just reloads the dashboard instead of navigating to settings.
 - **Recommendation:** Change the `to` value to `/dashboard/settings`.
-- **Resolution:** —
+- **Resolution:** Changed the Quick Links entry's `to` value from `/dashboard` to `/dashboard/settings`. Single-line change, no other code touched.
 - **Commit:** —
-- **Date:** 2026-07-26
+- **Date:** Logged 2026-07-26, resolved 2026-07-28
 
 **DA-4 — Sidebar highlights three unrelated nav items simultaneously**
 - **Status:** Open
@@ -686,14 +686,14 @@ This section aggregates the highest-impact, trust-boundary-crossing issues found
 - **Date:** 2026-07-26
 
 **SE-8 — GDPR account deletion: unchecked delete errors and no storage cleanup**
-- **Status:** Open
-- **Files:** `src/lib/gdpr.functions.ts:51-64`
-- **Description:** The per-table delete loop never inspects `{ error }`; a failed delete on any table is silently ignored and the flow proceeds to `auth.admin.deleteUser(userId)`. Avatar files in the `avatars` storage bucket are also never removed.
+- **Status:** ✅ Resolved (2026-07-28)
+- **Files:** `src/lib/gdpr.functions.ts`
+- **Description:** The per-table delete loop never inspected `{ error }`; a failed delete on any table was silently ignored and the flow proceeded to `auth.admin.deleteUser(userId)`. Avatar files in the `avatars` storage bucket were also never removed.
 - **Risk:** Orphaned personal data and avatar files can remain after erasure is reported as successful (`{ ok: true }`).
 - **Recommendation:** Check/aggregate errors from each delete and fail loudly rather than proceeding unconditionally; add a `storage.remove()` pass over the user's avatar objects.
-- **Resolution:** —
+- **Resolution:** The per-table delete loop now captures and aggregates `{ error }` per table; if any table failed, the function throws before reaching the `profiles` delete or `auth.admin.deleteUser` — a partial per-table failure now blocks the destructive, hard-to-reverse final step instead of silently proceeding past it. The `profiles` delete's own error is now checked and thrown too. A best-effort avatar cleanup was added (`storage.list(userId)` then `storage.remove(...)` over whatever is found, covering leftover files from prior extension changes, not just the current one) — deliberately non-fatal: a storage-cleanup failure is logged but doesn't block the higher-priority DB/auth erasure, consistent with the same secondary-write-failure-is-logged-not-fatal pattern already established in `SE-9`. `exportUserData` and the deletion sequence/order were not touched — same steps, now failure-aware.
 - **Commit:** —
-- **Date:** 2026-07-26
+- **Date:** Logged 2026-07-26, resolved 2026-07-28
 
 **SE-9 — Webhook handlers don't check errors on `payments`/`profiles`/`notifications` writes, or on `writeAuditLog`'s own insert**
 - **Status:** ✅ Resolved (2026-07-28)
