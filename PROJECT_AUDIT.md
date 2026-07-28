@@ -117,24 +117,24 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 ### High
 
 **AU-2 — Auth callback race: a slow `SIGNED_IN` handler can bounce a just-authenticated user to `/login`**
-- **Status:** Open
-- **Files:** `src/routes/auth.callback.tsx:66-87`
+- **Status:** ✅ Resolved (2026-07-28)
+- **Files:** `src/routes/auth.callback.tsx:65-89`
 - **Description:** The `onAuthStateChange` handler is `async` (awaits a `profiles` select) before redirecting to `/dashboard` or `/onboarding`. A parallel `setTimeout(..., 5000)` unconditionally redirects to `/login`. `subscription.unsubscribe()` doesn't cancel the already-in-flight promise.
 - **Risk:** If `SIGNED_IN` fires near the 5s mark, the in-flight profile fetch may still be pending when the timeout fires first, sending a successfully authenticated user back to the login screen.
 - **Recommendation:** Track a `settled` flag (or `AbortController`) and clear the timeout as soon as `SIGNED_IN` handling begins, not only once it resolves.
-- **Resolution:** —
+- **Resolution:** The `setTimeout` id is now captured in a `timeoutId` variable, and `clearTimeout(timeoutId)` is called as the first, synchronous statement inside the `SIGNED_IN` branch — before the `await` for the profile fetch. Once real sign-in processing begins, the 5s login-fallback can no longer fire afterward, regardless of how long the profile fetch takes. Verified by trace of all three scenarios: early `SIGNED_IN` (timeout cleared, correct redirect, timeout never fires), `SIGNED_IN` never firing (timeout behavior unchanged), and `SIGNED_IN` at the ~5s boundary (now deterministically resolved in favor of the real sign-in outcome). No other control flow changed.
 - **Commit:** —
-- **Date:** 2026-07-26
+- **Date:** Logged 2026-07-26, resolved 2026-07-28
 
 **AU-3 — Onboarding form silently wipes user input when the language switcher is used**
-- **Status:** Open
-- **Files:** `src/routes/onboarding.tsx:47-76` (effect deps at line 76 include `language`)
-- **Description:** The profile-initialization effect calls every `setXxx` (name, city, country, bio, avatar, etc.) from `profile`/`user` metadata and depends on `language` from `useLanguage()`. The page also renders `<LanguageSwitcher />`.
+- **Status:** ✅ Resolved (2026-07-28)
+- **Files:** `src/routes/onboarding.tsx:47-76`
+- **Description:** The profile-initialization effect calls every `setXxx` (name, city, country, bio, avatar, etc.) from `profile`/`user` metadata and depended on `language` from `useLanguage()`, even though `language` is only used inside the effect as a fallback default for one field. The page also renders `<LanguageSwitcher />`.
 - **Risk:** Switching language at any point mid-onboarding re-runs the whole effect and overwrites everything the user has already typed, including step-2 fields and the uploaded avatar reference.
 - **Recommendation:** Remove `language` from the effect's dependency array; key initialization only on `user?.id`/mount.
-- **Resolution:** —
+- **Resolution:** `language` removed from the effect's dependency array (`[loading, user, profile, navigate, language]` → `[loading, user, profile, navigate]`). The effect still runs on mount and whenever `user`/`profile` genuinely change; a language switch no longer re-triggers it, so typed fields and the uploaded avatar are preserved. One accepted, minor side effect: the `lang` radio-group no longer re-syncs to a language switch made via the switcher mid-onboarding — consistent with every other field no longer being wiped, not a new inconsistency (`lang`'s own `useState` initializer still captures `language` correctly on first render).
 - **Commit:** —
-- **Date:** 2026-07-26
+- **Date:** Logged 2026-07-26, resolved 2026-07-28
 
 ### Medium
 

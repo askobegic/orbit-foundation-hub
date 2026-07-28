@@ -73,7 +73,7 @@ function OnboardingPage() {
     if (metaAvatar && (!profile?.avatar_url || profile.avatar_url === metaAvatar)) {
       setAvatarFromProvider(provider === "apple" ? "apple" : provider === "google" ? "google" : null);
     }
-  }, [loading, user, profile, navigate, language]);
+  }, [loading, user, profile, navigate]);
 
   async function handleUpload(file: File) {
     if (!user) return;

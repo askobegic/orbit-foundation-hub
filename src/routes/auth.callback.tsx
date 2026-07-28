@@ -65,9 +65,11 @@ function AuthCallback() {
       } else {
         // Wait for auth state change
         setStatus("Čekanje...");
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           async (event, session) => {
             if (event === "SIGNED_IN" && session) {
+              if (timeoutId) clearTimeout(timeoutId);
               subscription.unsubscribe();
               const { data: profile } = await supabase
                 .from("profiles")
@@ -80,7 +82,7 @@ function AuthCallback() {
         );
 
         // Timeout fallback
-        setTimeout(() => {
+        timeoutId = setTimeout(() => {
           subscription.unsubscribe();
           window.location.href = "/login";
         }, 5000);
