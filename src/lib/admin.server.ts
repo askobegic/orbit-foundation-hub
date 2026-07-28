@@ -23,7 +23,7 @@ export async function writeAuditLog(params: {
   newData?: unknown;
 }): Promise<void> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  await supabaseAdmin.from("audit_logs").insert({
+  const { error } = await supabaseAdmin.from("audit_logs").insert({
     user_id: params.userId,
     action: params.action,
     entity_type: params.entityType,
@@ -31,6 +31,7 @@ export async function writeAuditLog(params: {
     old_data: (params.oldData ?? null) as never,
     new_data: (params.newData ?? null) as never,
   });
+  if (error) console.error("writeAuditLog: insert failed", params.action, error);
 }
 
 export function addMonthsIso(months: number, from: Date = new Date()): string {

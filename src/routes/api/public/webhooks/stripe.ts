@@ -83,16 +83,22 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
             return Response.json({ received: true, duplicate: true });
           }
 
-          await supabaseAdmin
+          const { error: refundPaymentErr } = await supabaseAdmin
             .from("payments")
             .update({ status: "refunded" } as never)
             .eq("id", paymentRow.id);
+          if (refundPaymentErr) {
+            console.error("Stripe webhook: payments refund update failed", refundPaymentErr);
+          }
 
           if (paymentRow.subscription_id) {
-            await supabaseAdmin
+            const { error: cancelSubErr } = await supabaseAdmin
               .from("subscriptions")
               .update({ status: "cancelled", expires_at: new Date().toISOString() } as never)
               .eq("id", paymentRow.subscription_id);
+            if (cancelSubErr) {
+              console.error("Stripe webhook: subscription cancel on refund failed", cancelSubErr);
+            }
           }
 
           if (paymentRow.user_id) {
@@ -104,10 +110,13 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
               .gt("expires_at", new Date().toISOString())
               .limit(1);
             if (!stillActive || stillActive.length === 0) {
-              await supabaseAdmin
+              const { error: revertProfileErr } = await supabaseAdmin
                 .from("profiles")
                 .update({ user_type: "standard" } as never)
                 .eq("id", paymentRow.user_id);
+              if (revertProfileErr) {
+                console.error("Stripe webhook: profile revert on refund failed", revertProfileErr);
+              }
             }
           }
 
@@ -251,7 +260,7 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
           return new Response("DB error", { status: 500 });
         }
 
-        await supabaseAdmin.from("payments").insert({
+        const { error: insertPaymentErr } = await supabaseAdmin.from("payments").insert({
           user_id: ref.user_id,
           app_id: ref.app_id,
           subscription_id: (sub as { id: string }).id,
@@ -266,13 +275,19 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
           payment_method: "stripe",
           invoice_url: session.invoice ? String(session.invoice) : null,
         } as never);
+        if (insertPaymentErr) {
+          console.error("Stripe webhook: payments insert failed", insertPaymentErr);
+        }
 
-        await supabaseAdmin
+        const { error: premiumProfileErr } = await supabaseAdmin
           .from("profiles")
           .update({ user_type: "premium" } as never)
           .eq("id", ref.user_id);
+        if (premiumProfileErr) {
+          console.error("Stripe webhook: profile premium update failed", premiumProfileErr);
+        }
 
-        await supabaseAdmin.from("notifications").insert({
+        const { error: notifyErr } = await supabaseAdmin.from("notifications").insert({
           user_id: ref.user_id,
           title_bs: "Uplata primljena",
           title_en: "Payment received",
@@ -283,6 +298,9 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
           type: "success",
           app_id: ref.app_id,
         } as never);
+        if (notifyErr) {
+          console.error("Stripe webhook: notification insert failed", notifyErr);
+        }
 
         await writeAuditLog({
           userId: ref.user_id,

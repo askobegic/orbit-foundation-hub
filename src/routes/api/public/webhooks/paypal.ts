@@ -197,12 +197,15 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
           return Response.json({ received: true, duplicate: true });
         }
 
-        await supabaseAdmin
+        const { error: premiumProfileErr } = await supabaseAdmin
           .from("profiles")
           .update({ user_type: "premium" } as never)
           .eq("id", ref.user_id);
+        if (premiumProfileErr) {
+          console.error("PayPal webhook: profile premium update failed", premiumProfileErr);
+        }
 
-        await supabaseAdmin.from("notifications").insert({
+        const { error: notifyErr } = await supabaseAdmin.from("notifications").insert({
           user_id: ref.user_id,
           title_bs: "Uplata primljena",
           title_en: "Payment received",
@@ -213,6 +216,9 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
           type: "success",
           app_id: ref.app_id,
         } as never);
+        if (notifyErr) {
+          console.error("PayPal webhook: notification insert failed", notifyErr);
+        }
 
         await writeAuditLog({
           userId: ref.user_id,

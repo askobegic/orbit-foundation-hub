@@ -65,14 +65,14 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 ### Medium
 
 **A-2 — `.env.example` is out of sync with variables actually read by server code**
-- **Status:** Open
-- **Files:** `.env.example` vs. `src/integrations/supabase/client.server.ts:33-34`, `src/integrations/supabase/auth-middleware.ts:36-37`, `src/routes/api/public/webhooks/paypal.ts:12,17-19`, `src/lib/n8n.server.ts:14`
-- **Description:** `.env.example` documents `VITE_SUPABASE_*` variables that no in-scope code reads (the client hardcodes URL/anon key in `src/integrations/supabase/client.ts:4-5` instead), while omitting server-only variables the app actually requires (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_PUBLISHABLE_KEY`, `PAYPAL_ENV`, `PAYPAL_WEBHOOK_ID`, `N8N_WEBHOOK_URL`). `RESEND_API_KEY` is listed but unused anywhere under `src/`.
+- **Status:** ✅ Resolved (2026-07-28)
+- **Files:** `.env.example`
+- **Description:** `.env.example` documented `VITE_SUPABASE_*` variables that no in-scope code reads (the client hardcodes URL/anon key in `src/integrations/supabase/client.ts:4-5` instead), while omitting server-only variables the app actually requires (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_PUBLISHABLE_KEY`, `PAYPAL_ENV`, `PAYPAL_WEBHOOK_ID`, `N8N_WEBHOOK_URL`). `RESEND_API_KEY` was listed but unused anywhere under `src/`.
 - **Risk:** A fresh deployment following `.env.example` is missing required secrets and will fail at runtime.
 - **Recommendation:** Reconcile `.env.example` with actual `process.env.*` usage.
-- **Resolution:** —
+- **Resolution:** Added the five confirmed-missing server-side variables (`SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `PAYPAL_WEBHOOK_ID`, `PAYPAL_ENV`, `N8N_WEBHOOK_URL`) grouped under their relevant existing/new section headers; removed `RESEND_API_KEY` (reconfirmed zero references anywhere under `src/`). Verified line-by-line against every `process.env.*` read in `src/` — all are now present. Deliberately left `VITE_SUPABASE_URL`/`VITE_SUPABASE_PUBLISHABLE_KEY`/`VITE_SUPABASE_PROJECT_ID` untouched despite being unread by in-scope application code: the file's own comment marks that block as owned by the Lovable Cloud platform integration, not this repository's source, and removing them can't be verified safe from source alone.
 - **Commit:** —
-- **Date:** 2026-07-26
+- **Date:** Logged 2026-07-26, resolved 2026-07-28
 
 **A-3 — `server.ts`'s "catastrophic SSR error" detection depends on parsing an internal framework error shape**
 - **Status:** Open
@@ -693,14 +693,14 @@ This section aggregates the highest-impact, trust-boundary-crossing issues found
 - **Date:** 2026-07-26
 
 **SE-9 — Webhook handlers don't check errors on `payments`/`profiles`/`notifications` writes, or on `writeAuditLog`'s own insert**
-- **Status:** Open
-- **Files:** `src/routes/api/public/webhooks/stripe.ts:133,145-160`; `src/routes/api/public/webhooks/paypal.ts:156,167-182`; `src/lib/admin.server.ts:25-33`
-- **Description:** Unlike the `subscriptions` insert (whose error is checked), every subsequent write in the same handler discards its `{ error }` result.
+- **Status:** ✅ Resolved (2026-07-28)
+- **Files:** `src/routes/api/public/webhooks/stripe.ts`; `src/routes/api/public/webhooks/paypal.ts`; `src/lib/admin.server.ts`
+- **Description:** Unlike the `subscriptions` write (whose error is checked), every subsequent write in the same handler discarded its `{ error }` result.
 - **Risk:** A failure in any of them leaves an active subscription with no matching payment record, no user notification, and no audit trail — with zero logging or alerting.
 - **Recommendation:** Check and log/alert on the result of each write; consider wrapping the post-payment side-effect sequence to report which steps failed.
-- **Resolution:** —
+- **Resolution:** All 9 previously-unchecked writes now capture `{ error }` and `console.error` it when present — `writeAuditLog`'s own `audit_logs` insert (fixes it once for every caller, including `admin.functions.ts`); Stripe's refund-branch `payments`/`subscriptions`/`profiles` updates and fulfillment-branch `payments`/`profiles`/`notifications` writes; PayPal's `profiles`/`notifications` writes. Logging only, by deliberate scope decision — no response code, retry, or idempotency behavior changed in any branch, since the entitlement-granting write had already succeeded by the point each of these runs; turning them into hard failures would risk the provider retrying an already-fulfilled event. Verified by trace: every success-path return value and status code is unchanged; a failing secondary write now logs via `console.error` instead of being silently discarded.
 - **Commit:** —
-- **Date:** 2026-07-26
+- **Date:** Logged 2026-07-26, resolved 2026-07-28
 
 **SE-13 — Stripe amount/currency check doesn't verify the specific Payment Link used, only that the paid amount matches some plan's price**
 - **Status:** 🚫 Deferred (2026-07-27)
