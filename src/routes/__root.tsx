@@ -14,6 +14,7 @@ import appCss from "../styles.css?url";
 import "@/lib/i18n";
 import { AuthProvider } from "@/context/AuthContext";
 import { LanguageProvider } from "@/context/LanguageContext";
+import { ApplicationProvider } from "@/context/ApplicationContext";
 
 function NotFoundComponent() {
   return (
@@ -76,20 +77,18 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
+    // Neutral placeholder only -- the actual per-application name/title/
+    // favicon is applied client-side by ApplicationProvider once the
+    // Application Resolver resolves the current hostname. Nothing here
+    // should name a specific application; see PROJECT_KNOWLEDGE.md ->
+    // Authentication (Application Resolver).
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-{ title: "Core Platform" },
-{ name: "description", content: "Core Platform — Jedna prijava za sve aplikacije" },
-{ name: "author", content: "Core Platform" },
-{ property: "og:title", content: "Core Platform" },
-{ property: "og:description", content: "Core Platform — Jedna prijava za sve aplikacije" },
+      { title: "Loading…" },
       { name: "theme-color", content: "#1D6BF3" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "default" },
-      { name: "apple-mobile-web-app-title", content: "Core" },
     ],
     links: [
       {
@@ -126,13 +125,15 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <LanguageProvider>
-          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-          <Outlet />
-          <Toaster position="top-right" richColors />
-        </LanguageProvider>
-      </AuthProvider>
+      <ApplicationProvider>
+        <AuthProvider>
+          <LanguageProvider>
+            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+            <Outlet />
+            <Toaster position="top-right" richColors />
+          </LanguageProvider>
+        </AuthProvider>
+      </ApplicationProvider>
     </QueryClientProvider>
   );
 }

@@ -32,13 +32,14 @@ A separate, non-severity tag, **Architecture Deviation**, marks findings where t
 | Architecture | 0 | 1 | 2 | 1 |
 | Authentication | 1 | 2 | 3 | 2 |
 | Dashboard | 0 | 1 | 6 | 4 |
-| Admin Panel | 0 | 0 | 4 | 5 |
-| Database | 2 | 0 | 1 | 2 |
+| Admin Panel | 0 | 0 | 5 | 5 |
+| Database | 2 | 0 | 1 | 4 |
 | Routing | 0 | 0 | 0 | 2 |
 | Components | 0 | 1 | 3 | 2 |
-| Security (cross-cutting + payments) | 4 | 2 | 5 | 3 |
+| Security (cross-cutting + payments) | 4 | 2 | 5 | 4 |
 | Performance | 0 | 0 | 2 | 5 |
 | Billing / Subscription Lifecycle | 0 | 1 | 0 | 0 |
+| Messaging | 0 | 0 | 0 | 1 |
 
 Several issues are cross-cutting (e.g. the profile self-escalation bug is a Database/RLS root cause with an Authentication code path and a Security consequence). Each is written up **once**, in the section that owns its root cause, with short cross-reference entries elsewhere.
 
@@ -242,15 +243,14 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 - **Date:** 2026-07-26
 
 **DA-5 — `updateAppSetting` computes its payload from a stale closure over `appSettings`**
-- **Status:** 🚫 Deferred — Safe to Defer (2026-07-28)
-- **Files:** `src/routes/dashboard.settings.tsx:90-117`
+- **Status:** ✅ Resolved (2026-07-30)
+- **Files:** `src/routes/dashboard.settings.tsx:90-122`
 - **Description:** The function optimistically updates state via `setAppSettings((prev) => prev.map(...))`, then immediately reads `appSettings.find(...)` from the outer closure — which still holds the pre-update value.
 - **Risk:** Two quick successive toggles on the same app (e.g. "visible in directory" then "can be contacted") can cause the second write's fallback values to silently revert the first toggle in the database.
 - **Recommendation:** Derive the write payload from the functional updater's `prev` argument (or a ref), not from the outer closure variable.
-- **Deferral rationale:** Technical verification completed. Classified as Safe to Defer. The issue requires an unrealistic timing race and is not reproducible during normal user interaction.
-- **Resolution:** —
+- **Resolution:** Reopened and fixed during the User Settings completion pass — the write payload is now computed inside the `setAppSettings((prev) => ...)` updater itself (captured into a local variable from the freshly-merged `next` array), not from the outer closure. No longer deferred: fixing it cost nothing extra while already rewriting adjacent code in the same file for the notification-preferences bug below, so there was no reason to leave a known, already-diagnosed bug in place.
 - **Commit:** —
-- **Date:** 2026-07-26
+- **Date:** Logged 2026-07-26, resolved 2026-07-30
 
 **DA-6 — `payment.success.tsx` never stops polling and has no failure/timeout state**
 - **Status:** Open
@@ -286,14 +286,14 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 - **Date:** 2026-07-26
 
 **DA-9 — Hardcoded, non-localized delete-confirmation phrase**
-- **Status:** Open
-- **Files:** `src/routes/dashboard.settings.tsx:179,349`
-- **Description:** Account deletion requires typing the literal Bosnian word `"OBRIŠI"` regardless of active UI language, while everything else in the dialog is translated via `t()`.
+- **Status:** ✅ Resolved (2026-07-30)
+- **Files:** `src/routes/dashboard.settings.tsx`; `src/locales/{bs,en,de}.json`
+- **Description:** Account deletion requires typing the literal Bosnian word `"OBRIŠI"` regardless of active UI language, while everything else in the dialog is translated via `t()`. Confirmed live: EN/DE locale strings literally read "Type OBRIŠI to confirm" / "Geben Sie OBRIŠI ein" — telling English/German users to type a Bosnian word.
 - **Risk:** Confusing for EN/DE users in an otherwise fully localized dialog.
 - **Recommendation:** Localize the required confirmation token per language, or clearly state that the literal word is required irrespective of language.
-- **Resolution:** —
+- **Resolution:** Added a new `privacy.deleteConfirmWord` key per locale (`OBRIŠI` / `DELETE` / `LÖSCHEN`); `typeToConfirm` and `deleteMismatch` now interpolate `{{word}}` instead of hardcoding the Bosnian literal. The input placeholder, the disabled-state check, and `handleDelete`'s comparison all read the same localized word, so the confirmation phrase now matches the active language everywhere it appears.
 - **Commit:** —
-- **Date:** 2026-07-26
+- **Date:** Logged 2026-07-26, resolved 2026-07-30
 
 **DA-10 — `ShareAndInvite` builds profile/invite URLs without `encodeURIComponent`**
 - **Status:** Open
@@ -400,14 +400,14 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 - **Date:** Logged 2026-07-26, resolved 2026-07-27
 
 **AD-8 — Pervasive `as never` casts on admin write payloads defeat compile-time schema checking**
-- **Status:** Open
-- **Files:** `src/lib/admin.functions.ts` (e.g. lines 45, 105, 112, 133, 157, 327, 389, 414, 450)
-- **Description:** Nearly every insert/update payload is cast `as never` to satisfy Supabase's currently-placeholder generated types (see `src/types/database.ts` header comment).
-- **Risk:** None of these write paths get real compile-time verification against the actual schema — a column rename/typo wouldn't be caught until runtime.
-- **Recommendation:** Once real generated table types are wired up, remove the `as never` casts.
-- **Resolution:** —
+- **Status:** ✅ Resolved (2026-07-31)
+- **Files:** `src/lib/admin.functions.ts` (all 12 prior occurrences), `src/lib/admin.server.ts`, `src/lib/notifications.functions.ts`, `src/lib/trial.functions.ts`, `src/routes/api/public/webhooks/{stripe,paypal}.ts`, `src/routes/admin.users.tsx`
+- **Description:** Nearly every insert/update payload was cast `as never` to satisfy Supabase's stale/incomplete generated types (`src/integrations/supabase/types.ts`) — a snapshot from before several live migrations, missing `has_any_active_premium`/`get_premium_application_ids`/`get_visible_application_ids` entirely and still typing the already-dropped single-argument `is_user_premium`.
+- **Risk:** None of these write paths got real compile-time verification against the actual schema — a column rename/typo wouldn't have been caught until runtime.
+- **Recommendation:** Regenerate the real generated table types, then remove the `as never` casts.
+- **Resolution:** `src/integrations/supabase/types.ts` regenerated via `supabase gen types typescript` against the live (fully migration-synced, see **DB-6**) database. Of the 41 `as never` occurrences repo-wide, 39 were removed cleanly (verified individually: each file was stripped and re-typechecked before the removal was kept) and 2 remain, both deliberately: `src/lib/admin.server.ts`'s `writeAuditLog` narrows genuinely-`unknown` caller data to the DB's `Json` type (an honest `as Json`, not `as never`) since arbitrary caller data can't be verified as JSON-serializable at compile time; `src/routes/api/public/webhooks/stripe.ts`'s pinned Stripe API version string predates the installed SDK's typed literal, an unrelated pre-existing issue this cast happened to also mask — see **SE-18**, left as a documented cast rather than silently changing a payment-webhook's pinned API version as a side effect of this cleanup.
 - **Commit:** —
-- **Date:** 2026-07-26
+- **Date:** Logged 2026-07-26, resolved 2026-07-31
 
 **AD-9 — `planInputSchema.currency` accepts any string, not a constrained set**
 - **Status:** Open
@@ -418,6 +418,17 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 - **Resolution:** —
 - **Commit:** —
 - **Date:** 2026-07-26
+
+**AD-10 — `profiles.user_type`'s Premium flag drifted permanently after `adminRevokePremium` (never reset it), and duplicated what `hasAnyActivePremium()` already answers correctly**
+- **Status:** ✅ Resolved (2026-07-31)
+- **Files:** `src/lib/admin.functions.ts` (`adminGrantPremium`, `adminRevokePremium`, `adminListUsers`), `src/routes/api/public/webhooks/{stripe,paypal}.ts`, `src/routes/admin.users.tsx`
+- **Description:** Discovered during the Global Premium Visibility & Contact System's documentation/architecture pass: `adminGrantPremium` set `profiles.user_type = "premium"`, but `adminRevokePremium` only cancelled the `subscriptions` row — it never reset `user_type` back to `"standard"`. `admin.users.tsx` displayed `user_type` directly (list badge, filter dropdown, detail modal), so a revoked user's admin-panel badge stayed stuck on "premium" indefinitely. Both Stripe and PayPal webhooks also wrote `user_type` on fulfillment, and Stripe's refund handler separately tried (correctly, but redundantly) to revert it.
+- **Risk:** Admin-facing display bug (a revoked user still shown/filterable as "Premium"), plus a second, independently-maintained representation of Premium status that could silently diverge from the real, live-computed answer.
+- **Classification:** Architecture Deviation — a stored duplicate of what the CORE Premium Service (`hasAnyActivePremium()`) already answers authoritatively, contradicting Single Source of Truth.
+- **Recommendation:** Stop writing `user_type` for Premium purposes anywhere; derive admin-panel Premium display/filtering from `subscriptions` directly, the same predicate `hasAnyActivePremium()` uses.
+- **Resolution:** Removed the `user_type` write from `adminGrantPremium`, both webhooks' fulfillment paths, and Stripe's refund-revert block entirely (nothing left to revert once nothing writes it). `adminListUsers` now resolves a `premiumFilter` ("premium"/"standard") against `subscriptions` directly and returns each row with a computed `is_premium` boolean; `admin.users.tsx`'s badge, filter dropdown, and detail modal all consume `is_premium` instead of `user_type`. The filter dropdown's "Admin"/"Super admin" options were also dropped — they filtered against `user_type` values no code has ever written (see **DB-3**), so they always returned zero rows; removing them alongside the rest of this same column's filter logic was in scope, not a separate change. `profiles.user_type` itself is left in the schema, unused, pending an explicit decision on whether to drop it (see `PROJECT_KNOWLEDGE.md` → Database tables).
+- **Commit:** —
+- **Date:** 2026-07-31
 
 ---
 
@@ -463,15 +474,35 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 ### Low
 
 **DB-4 — `is_user_premium()` is not scoped per application, despite a per-app subscription/pricing model**
-- **Status:** Open
-- **Files:** `supabase/migrations/20260725070421_432f3b63-9cdc-48d8-8393-c21afa2d58fd.sql:129-142`; consumed at `src/routes/u.$username.tsx:63`
-- **Description:** The function returns `true` if the user has any active subscription to any app — it does not filter by `app_id` even though `subscriptions.app_id` exists. `premium_profiles` (the bio-link/contact-details table) has no `app_id` column at all — one global row per user.
-- **Risk:** A subscription to any single app currently unlocks the global "Premium" badge/contact-sharing on the shared bio-link page everywhere.
-- **Classification:** Architecture Deviation — `PROJECT_KNOWLEDGE.md` → Premium Model states premium belongs to an application, not globally. The current schema/function implement a global concept instead. Severity intentionally left at Low per prior approval; this is tracked as an architecture-consistency gap to close deliberately, not an exploitable defect.
-- **Recommendation:** Scope `is_user_premium()` (and, longer-term, `premium_profiles`) by `app_id` to match the stated Premium Model, or explicitly revise the Premium Model documentation if a global perk is intended after all.
-- **Resolution:** —
+- **Status:** ✅ Resolved
+- **Files:** `supabase/migrations/20260729130400_scope_is_user_premium_by_app.sql` (was `20260725070421_432f3b63-9cdc-48d8-8393-c21afa2d58fd.sql:129-142`); consumed at `src/routes/u.$username.tsx`
+- **Description:** The function returned `true` if the user had any active subscription to any app — it did not filter by `app_id` even though `subscriptions.app_id` exists. `premium_profiles` (the bio-link/contact-details table) still has no `app_id` column — one global contact-details row per user, but that is now a deliberate, documented choice (a single set of contact details, gated per-application at the application layer), not the bug.
+- **Risk:** A subscription to any single app previously unlocked the global "Premium" badge/contact-sharing on the shared bio-link page everywhere.
+- **Classification:** Architecture Deviation — `PROJECT_KNOWLEDGE.md` → Premium Model states premium belongs to an application, not globally. The current schema/function implemented a global concept instead.
+- **Resolution:** `is_user_premium(uuid)` replaced outright with `is_user_premium(_user_id uuid, _app_id uuid)` (single call site, no overload needed), matching the already-correct per-app `subscriptions` schema and the already-correct `adminGrantPremium`/`adminRevokePremium`/`/dashboard/subscriptions` behavior. `src/routes/u.$username.tsx` rewritten to: (1) list only the applications where the profile owner has an active Premium subscription ("Premium on: ..."), computed per application rather than from one global flag; (2) gate contact functions (internal message, WhatsApp, Viber) on Premium being active for **both** the profile owner and the visitor, **for the specific application currently being browsed** (resolved via the existing Application Resolver / `useApplication()`), showing an upgrade modal otherwise; phone/email/website remain gated on the owner's per-app Premium status only. Verified live via a disposable-user end-to-end test: single-app premium, multi-app premium, a standard (non-premium) visitor correctly blocked, and a real authenticated (non-service-role) session producing identical results to anon.
+- **Update (2026-07-31):** superseded by a deliberate business-rule reversal, not a regression of this fix — the platform owner decided Premium should be a single, ecosystem-wide entitlement (the Global Premium Visibility & Contact System). `is_user_premium(_user_id, _app_id)` was removed outright (both the TS wrapper and its backing SQL function, via `supabase/migrations/20260730100000_global_premium_visibility_model.sql`), replaced by the already-existing `has_any_active_premium(_user_id)` as the one and only Premium check. See `PROJECT_KNOWLEDGE.md` → Premium Model for the current architecture; this entry is left intact as the historical record of the per-app design and its reasoning.
 - **Commit:** —
-- **Date:** 2026-07-26
+- **Date:** 2026-07-30; superseded 2026-07-31
+
+**DB-6 — Two migrations existed locally but were never applied to the live database (recurrence of the SE-16/SE-17 pattern)**
+- **Status:** ✅ Resolved (2026-07-31)
+- **Files:** `supabase/migrations/20260729130500_admin_application_assets_policy.sql`, `supabase/migrations/20260730100000_global_premium_visibility_model.sql`
+- **Description:** `supabase migration list --linked` showed both migrations present locally with no matching remote-applied timestamp — the same root cause already documented for SE-16/SE-17 (bulk `migration repair --status applied` bookkeeping trusted without per-migration verification). Discovered while regenerating `src/integrations/supabase/types.ts`: the freshly generated types were missing `get_visible_application_ids` and still showed `is_user_premium(uuid, uuid)` as live, proving the Global Premium migration had never actually run.
+- **Risk:** Code written against `get_visible_application_ids` (`src/lib/premium.ts`'s `getVisibleApplications`) would have failed at runtime against the live database — the function didn't exist there. `is_user_premium(uuid, uuid)` also remained live and callable despite being dead code, an unnecessary attack-surface/confusion leftover.
+- **Recommendation:** Push both migrations; going forward, verify `supabase migration list --linked` shows a matching remote timestamp immediately after writing any new migration, not only when a symptom surfaces later.
+- **Resolution:** `20260729130500` was additionally not idempotent (`CREATE POLICY` with no `DROP POLICY IF EXISTS` guard, unlike the rest of this repository's storage-policy migrations) and failed on first push attempt; added the missing `DROP POLICY IF EXISTS` guards (matching the convention already used elsewhere, e.g. `20260729130200`), then both migrations pushed successfully via `supabase db push --linked`. `supabase migration list --linked` reconfirmed afterward: all 32 local migrations now show a matching remote-applied timestamp.
+- **Commit:** —
+- **Date:** 2026-07-31
+
+**DB-7 — `ApplicationRow.primary_color`/`secondary_color` are typed as required `string`, but the database schema allows `NULL`**
+- **Status:** Open
+- **Files:** `src/types/database.ts` (`ApplicationRow`); schema: `supabase/migrations/20260724110804_...sql:89` (`primary_color text DEFAULT '#1D6BF3'` — no `NOT NULL`)
+- **Description:** Discovered while regenerating `src/integrations/supabase/types.ts` and removing an `as never` cast in `src/lib/premium.ts`'s `getVisibleApplications`: the freshly generated (accurate) types show `primary_color`/`secondary_color` as `string | null`, which is not assignable to `ApplicationRow`'s hand-written `string`. The column has a `DEFAULT`, not a `NOT NULL` constraint, so an explicit `NULL` write is possible even though it never happens in practice today (every write path supplies a value).
+- **Risk:** Low today (no code path currently writes `NULL` to either column), but `ApplicationRow` overstates the real guarantee — any future write path that omits these fields, or explicitly nulls them, would produce a value the type system claims can't exist.
+- **Recommendation:** Either widen `ApplicationRow.primary_color`/`secondary_color` to `string | null` and update the handful of consumers that assume non-null (most already have a `?? "#1D6BF3"`-style fallback), or add a `NOT NULL` constraint to match the type's promise — a decision for whoever owns the Applications Registry design, not made unilaterally here.
+- **Resolution:** Worked around locally with a documented `as unknown as ApplicationRow[]` cast in `getVisibleApplications` (same effective behavior as the pre-existing, less-precise cast it replaced) — not a fix, just preserved the status quo without silently forcing a mismatched type through.
+- **Commit:** —
+- **Date:** 2026-07-31
 
 **DB-5 — Stale `GRANT SELECT ... TO anon` left over from superseded early migrations**
 - **Status:** Open
@@ -679,14 +710,14 @@ This section aggregates the highest-impact, trust-boundary-crossing issues found
 ### Medium
 
 **SE-7 — Client-built payment correlation IDs are unsigned and user-tamperable**
-- **Status:** Open
-- **Files:** `src/routes/pricing.tsx:80-92`
-- **Description:** `client_reference_id`/`custom` are built entirely client-side as `${user.id}__${activeAppId}__${plan.id}` and appended as a plain query string to a static payment link.
-- **Risk:** Nothing stops a user from copying the link and editing these values before completing checkout. Exploitability beyond **SE-2** depends on whether the webhook cross-checks the actual amount paid, which it only does when `plan_id` is present.
+- **Status:** ✅ Resolved (2026-07-30)
+- **Files:** `src/lib/payment-reference.server.ts` (new), `src/lib/payments.functions.ts` (new), `src/routes/pricing.tsx`, `src/routes/api/public/webhooks/stripe.ts`, `src/routes/api/public/webhooks/paypal.ts`
+- **Description:** `client_reference_id`/`custom` were built entirely client-side as `${user.id}__${activeAppId}__${plan.id}` and appended as a plain query string to a static payment link.
+- **Risk:** Nothing stopped a user from copying the link and editing these values before completing checkout — in particular the `user_id` segment, letting a payer assign the resulting entitlement to a different account entirely while still paying an amount that matches some real plan (so **SE-2**/**SE-14**'s amount/plan check alone couldn't catch it).
 - **Recommendation:** Always verify amount/plan against the payment provider's authoritative transaction data server-side; never trust the reference string alone to determine what to grant.
-- **Resolution:** —
+- **Resolution:** The reference is now generated server-side and HMAC-signed (`PAYMENT_REF_SECRET`, `src/lib/payment-reference.server.ts`): `createPaymentReference` (new `createServerFn`) takes the authenticated session's `user_id` from `context.userId` (never client input), validates the requested plan belongs to the requested application and is active, then returns `${user_id}__${app_id}__${plan_id}__${hmac}`. `pricing.tsx`'s buy buttons now call this server function before redirecting, instead of building the string inline. Both webhooks were changed to call one shared `verifyPaymentReference()` (replacing the previous separate, unsigned `parseRef`/`parseCustom` — consolidating two near-duplicate parsers into one verified one) which recomputes and timing-safe-compares the HMAC, rejecting anything malformed, unsigned, or tampered before any of the existing amount/plan checks even run. Verified live via a disposable-user, real-webhook-call test: a tampered reference (single flipped signature character) is rejected with no payment or entitlement created, while a genuine signed reference activates normally, renews correctly, and rejects redelivered events (see Priority 4 payment-flow test run, 2026-07-30). `PAYMENT_REF_SECRET` added to `.env.example`.
 - **Commit:** —
-- **Date:** 2026-07-26
+- **Date:** Logged 2026-07-26, resolved 2026-07-30
 
 **SE-8 — GDPR account deletion: unchecked delete errors and no storage cleanup**
 - **Status:** ✅ Resolved (2026-07-28)
@@ -718,6 +749,26 @@ This section aggregates the highest-impact, trust-boundary-crossing issues found
 - **Resolution:** —
 - **Commit:** —
 - **Date:** 2026-07-26
+
+**SE-16 — `payments.stripe_payment_intent_id` was missing live despite an existing migration file for it**
+- **Status:** ✅ Resolved (2026-07-30)
+- **Files:** `supabase/migrations/20260729130450_restore_missing_stripe_payment_intent_id.sql` (new; was `20260727100000_add_stripe_payment_intent_id.sql`)
+- **Description:** Discovered while live-testing the Priority 4 payment flow: the Stripe webhook's `payments` insert failed every time with `PGRST204 "Could not find the 'stripe_payment_intent_id' column of 'payments' in the schema cache"`. Direct query confirmed the column genuinely didn't exist. `supabase migration list` showed `20260727100000_add_stripe_payment_intent_id.sql` as applied remotely — the same false-positive-bookkeeping root cause as every other missing-object discovery this session (an earlier bulk `migration repair --status applied` marked it applied without it ever actually running).
+- **Risk:** Every real Stripe payment silently failed to record a `payments` row (logged as an error per **SE-9**, but not fatal — subscription activation still succeeded). More importantly, the entire **BL-1** Stripe refund-matching query (`.eq("stripe_payment_intent_id", ...)`) could never match anything, so a refund would never actually revoke the subscription it should have.
+- **Recommendation:** Re-run the original `ALTER TABLE ... ADD COLUMN` against the live database.
+- **Resolution:** New migration re-adds the column (`IF NOT EXISTS`-guarded). Verified live: the column now exists, the Stripe fulfillment webhook's `payments` insert succeeds, and — since this was blocking it — the full refund flow (`charge.refunded` → `payments.status='refunded'` → subscription cancelled → `is_user_premium()` flips to `false`) was also tested end-to-end for the first time and confirmed working.
+- **Commit:** —
+- **Date:** 2026-07-30
+
+**SE-17 — `payments_paypal_payment_id_key` UNIQUE constraint was missing live despite an existing migration file for it (SE-15 regressed)**
+- **Status:** ✅ Resolved (2026-07-30)
+- **Files:** `supabase/migrations/20260729130460_restore_missing_paypal_payment_id_unique.sql` (new; was `20260727090000_unique_paypal_payment_id.sql`)
+- **Description:** Discovered while live-testing PayPal's idempotency guard for Priority 4: two `payments` inserts using the same `paypal_payment_id` both succeeded with no error, when SE-15's own resolution says this constraint should reject the second one. `supabase migration list` showed `20260727090000_unique_paypal_payment_id.sql` as applied remotely — again, never actually run. Same root cause and discovery pattern as **SE-16**, found back-to-back while testing the same feature.
+- **Risk:** Exactly the risk SE-15 already described (TOCTOU race on redelivered PayPal webhook events could produce duplicate `payments` ledger rows), fully live despite SE-15 being logged as resolved.
+- **Recommendation:** Re-run the original `ALTER TABLE ... ADD CONSTRAINT` against the live database.
+- **Resolution:** New migration re-adds the constraint, guarded via a `pg_constraint` existence check (`ADD CONSTRAINT IF NOT EXISTS` has no direct Postgres syntax for this constraint type). Verified live: a second insert with a duplicate `paypal_payment_id` now fails with `23505` as expected.
+- **Commit:** —
+- **Date:** 2026-07-30
 
 **SE-15 — PayPal idempotency guard has a TOCTOU race: `payments.paypal_payment_id` has no database-level `UNIQUE` constraint**
 - **Status:** ✅ Resolved (2026-07-27)
@@ -760,6 +811,16 @@ This section aggregates the highest-impact, trust-boundary-crossing issues found
 - **Resolution:** —
 - **Commit:** —
 - **Date:** 2026-07-26
+
+**SE-18 — Pinned Stripe API version string doesn't match the installed SDK's typed literal**
+- **Status:** Open
+- **Files:** `src/routes/api/public/webhooks/stripe.ts` (`new Stripe(secret, { apiVersion: "2024-11-20.acacia" })`)
+- **Description:** Discovered while removing `as never` casts for **AD-8**: with accurate types in place, `"2024-11-20.acacia"` is not assignable to the installed `stripe` package's expected literal (`"2026-06-24.dahlia"`) — the cast had been silently masking this. Stripe's API generally tolerates an older pinned version on requests even from a newer SDK, so this is a type/SDK mismatch, not necessarily a live functional failure — but it wasn't verified either way, and shouldn't be changed as an incidental side effect of an unrelated cleanup.
+- **Risk:** Unknown without verification — could be purely cosmetic (older pinned version still fully supported), or could mean the webhook is silently missing behavior/fields introduced between the two API versions.
+- **Recommendation:** Decide deliberately whether to bump the pinned `apiVersion` to match the installed SDK (checking Stripe's changelog between the two versions for any breaking payload/webhook-shape changes first) or pin the SDK itself to a version matching the intended API version — either way, a decision for whoever owns the payment integration, not a side effect of type cleanup.
+- **Resolution:** Left as a documented `as never` cast (the one deliberately-kept exception noted in **AD-8**'s resolution) rather than silently changed.
+- **Commit:** —
+- **Date:** 2026-07-31
 
 ---
 
@@ -857,6 +918,24 @@ This section aggregates the highest-impact, trust-boundary-crossing issues found
   **Deployment requirement:** the Stripe Dashboard's webhook endpoint must be configured to send the `charge.refunded` event for this to take effect — this cannot be verified or configured from this environment. (The full list of required webhook events across both providers belongs in future deployment documentation, e.g. `DEPLOYMENT.md`/`WEBHOOK_SETUP.md` — not duplicated here.)
 - **Commit:** —
 - **Date:** Logged 2026-07-26, resolved (Phase 1 / Stripe) 2026-07-27
+
+---
+
+## 11. Messaging (Priority 7)
+
+**Scope:** The one-on-one messaging system (`conversations`/`messages` tables, `conversation.functions.ts`/`message.functions.ts`). Verified against the actual implementation, not assumed, as part of a pre-commit edge-case review: self-conversation prevention, concurrent conversation creation, hide/auto-restore, notification-vs-realtime interaction, and Inbox ordering were all traced through the real code. Four of six checked scenarios were already correct by design; two were real gaps and were fixed in the same pass (self-messaging UI guard in `ProfileCard.tsx`; a race-condition-safe re-fetch on `23505` unique-violation in `getOrCreateConversation`). This entry records the one gap deliberately left open.
+
+### Low
+
+**MSG-1 — `sendMessage` has no idempotency guard against a duplicate call for the same logical message**
+- **Status:** Open — recorded as a future enhancement, not a defect requiring immediate action
+- **Files:** `src/lib/message.functions.ts` (`sendMessage`)
+- **Description:** Each call unconditionally inserts a new `messages` row and a new `notifications` row. `ChatComposer`'s `sending` state guard only prevents a same-instance double-click; it does not protect against a genuine network-level retry (e.g., a client timeout after the server has already completed and committed the request), which would produce two message rows and two notifications for what the user experienced as a single send.
+- **Risk:** Low — narrow window (requires an actual transport-level retry, not a UI double-click, which is already guarded), and the result is a duplicated message/notification, not a data-integrity or security issue. Not tied to realtime timing — `NotificationBell`'s realtime subscription never writes anything, so it cannot itself cause duplication (verified during the same review).
+- **Recommendation:** Add a client-generated idempotency key (e.g., a UUID generated once per compose action, checked against a short dedupe window or a `UNIQUE` constraint) before this feature sees meaningful production volume.
+- **Resolution:** —
+- **Commit:** —
+- **Date:** 2026-07-31
 
 ---
 

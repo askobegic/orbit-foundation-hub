@@ -8,19 +8,13 @@ import { useLanguage } from "@/context/LanguageContext";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { CountrySelect } from "@/components/ui/CountrySelect";
 import { supabase } from "@/integrations/supabase/client";
+import { extractIdentityFromAuthUser } from "@/lib/identity";
+import { generateUniqueUsername } from "@/lib/username";
 import type { UserLanguage } from "@/types/database";
 import { useServerFn } from "@tanstack/react-start";
 import { notifyNewUserRegistered } from "@/lib/notifications.functions";
 
 export const Route = createFileRoute("/onboarding")({
-  head: () => ({
-    meta: [
-      { title: "Kompletiraj profil — Core Platform" },
-      { name: "description", content: "Postavite fotografiju i osnovne informacije da završite registraciju." },
-      { property: "og:title", content: "Kompletiraj profil — Core Platform" },
-      { property: "og:description", content: "Postavite fotografiju i osnovne informacije da završite registraciju." },
-    ],
-  }),
   component: OnboardingPage,
 });
 
@@ -33,7 +27,7 @@ function OnboardingPage() {
 
   const [step, setStep] = useState<1 | 2>(1);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [avatarFromProvider, setAvatarFromProvider] = useState<null | "google" | "apple">(null);
+  const [avatarFromProvider, setAvatarFromProvider] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [firstName, setFirstName] = useState("");
@@ -54,24 +48,17 @@ function OnboardingPage() {
       void navigate({ to: "/dashboard", replace: true });
       return;
     }
-    const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
-    const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : "");
-    const fullName = str(meta.full_name) || str(meta.name);
-    const [splitFirst, ...splitRest] = fullName.split(" ");
-    const metaFirst = str(meta.given_name) || str(meta.first_name) || splitFirst || "";
-    const metaLast = str(meta.family_name) || str(meta.last_name) || splitRest.join(" ") || "";
-    const metaAvatar = str(meta.avatar_url) || str(meta.picture);
-    const provider = ((user.app_metadata as Record<string, unknown> | undefined)?.provider ?? "").toString();
+    const identity = extractIdentityFromAuthUser(user);
 
-    setAvatarUrl(profile?.avatar_url ?? metaAvatar ?? null);
-    setFirstName(profile?.first_name ?? metaFirst);
-    setLastName(profile?.last_name ?? metaLast);
+    setAvatarUrl(profile?.avatar_url ?? identity.avatarUrl ?? null);
+    setFirstName(profile?.first_name ?? identity.firstName);
+    setLastName(profile?.last_name ?? identity.lastName);
     setCity(profile?.city ?? "");
     setCountry(profile?.country ?? "BA");
     setBio(profile?.bio ?? "");
     setLang(profile?.language ?? language);
-    if (metaAvatar && (!profile?.avatar_url || profile.avatar_url === metaAvatar)) {
-      setAvatarFromProvider(provider === "apple" ? "apple" : provider === "google" ? "google" : null);
+    if (identity.avatarUrl && (!profile?.avatar_url || profile.avatar_url === identity.avatarUrl)) {
+      setAvatarFromProvider(true);
     }
   }, [loading, user, profile, navigate]);
 
@@ -88,17 +75,16 @@ function OnboardingPage() {
     setUploading(true);
     try {
       const ext = file.name.split(".").pop() || "jpg";
-      const path = `${user.id}/avatar.${ext}`;
-      const { error } = await supabase.storage.from("avatars").upload(path, file, {
+      const path = `avatars/${user.id}/avatar.${ext}`;
+      const { error } = await supabase.storage.from("core").upload(path, file, {
         upsert: true,
         contentType: file.type,
       });
       if (error) throw error;
-      const { data: signed, error: signErr } = await supabase.storage
-        .from("avatars")
-        .createSignedUrl(path, 60 * 60 * 24 * 365);
-      if (signErr) throw signErr;
-      setAvatarUrl(signed.signedUrl);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("core").getPublicUrl(path);
+      setAvatarUrl(publicUrl);
     } catch {
       toast.error(t("auth.uploadError"));
     } finally {
@@ -107,6 +93,7 @@ function OnboardingPage() {
   }
 
   async function handleComplete() {
+    if (!user) return;
     if (!avatarUrl) {
       toast.error(t("auth.photoRequired"));
       return;
@@ -114,13 +101,18 @@ function OnboardingPage() {
     if (!firstName.trim() || !lastName.trim() || !city.trim() || !country.trim()) return;
     setSaving(true);
     try {
+      // Username bootstrap: generate once, only if not already set (e.g. a
+      // returning incomplete profile) -- never overwrites an existing one.
+      let username = profile?.username ?? "";
+      if (!username) {
+        username = await generateUniqueUsername(firstName.trim(), lastName.trim(), user.id);
+      }
       await updateProfile({
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
         city: city.trim(),
         country: country.trim(),
         bio: bio.trim() || null,
         avatar_url: avatarUrl,
+        username,
         language: lang,
         profile_complete: true,
       });
@@ -188,32 +180,34 @@ function OnboardingPage() {
             {avatarFromProvider && (
               <div className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
                 <span>✓</span>
-                {avatarFromProvider === "apple"
-                  ? t("auth.photoImportedApple")
-                  : t("auth.photoImportedGoogle")}
+                {t("auth.photoImported")}
               </div>
             )}
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) {
-                  setAvatarFromProvider(null);
-                  void handleUpload(f);
-                }
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              disabled={uploading}
-              className="rounded-lg border border-[#E5E7EB] bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
-            >
-              {uploading ? t("common.loading") : avatarUrl ? t("auth.changePhoto") : t("auth.uploadPhoto")}
-            </button>
+            {/* Identity Lock: a photo, once present (imported or the one
+                manual upload below), is never editable again -- no "change
+                photo" control is ever shown once avatarUrl is set. */}
+            {!avatarUrl && (
+              <>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void handleUpload(f);
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  disabled={uploading}
+                  className="rounded-lg border border-[#E5E7EB] bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                >
+                  {uploading ? t("common.loading") : t("auth.uploadPhoto")}
+                </button>
+              </>
+            )}
             <button
               type="button"
               onClick={() => {
@@ -230,8 +224,10 @@ function OnboardingPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            <Field label={t("profile.firstName")} value={firstName} onChange={setFirstName} required />
-            <Field label={t("profile.lastName")} value={lastName} onChange={setLastName} required />
+            {/* Identity Lock: name comes from the identity provider and is
+                never a free-text field, even before it locks in. */}
+            <IdentityField label={t("profile.firstName")} value={firstName} />
+            <IdentityField label={t("profile.lastName")} value={lastName} />
             <label className="text-sm font-medium text-gray-700">
               {t("profile.city")} *
               <input
@@ -290,27 +286,14 @@ function OnboardingPage() {
   );
 }
 
-function Field({
-  label,
-  value,
-  onChange,
-  required,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  required?: boolean;
-}) {
+// Identity Lock: name/photo are imported from the identity provider and are
+// never editable, so they render as plain identity information, not a form
+// field -- no input element at all.
+function IdentityField({ label, value }: { label: string; value: string }) {
   return (
-    <label className="text-sm font-medium text-gray-700">
-      {label}
-      {required ? " *" : ""}
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full rounded-lg border border-[#E5E7EB] px-3 py-2 text-sm outline-none focus:border-[#1D6BF3]"
-      />
-    </label>
+    <div>
+      <div className="text-sm font-medium text-gray-700">{label}</div>
+      <div className="mt-1 text-sm text-gray-900">{value}</div>
+    </div>
   );
 }

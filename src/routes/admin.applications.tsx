@@ -94,8 +94,7 @@ function AdminApps() {
   });
 
   const toggleEnabled = useMutation({
-    mutationFn: (v: { app_id: string; is_enabled: boolean }) =>
-      setEnabled({ data: v }),
+    mutationFn: (v: { app_id: string; is_enabled: boolean }) => setEnabled({ data: v }),
     onSuccess: () => {
       toast.success("Updated");
       qc.invalidateQueries({ queryKey: ["admin-apps"] });
@@ -104,8 +103,7 @@ function AdminApps() {
   });
 
   const saveSettings = useMutation({
-    mutationFn: (v: AppSettingsPayload & { app_id: string }) =>
-      updateSettings({ data: v }),
+    mutationFn: (v: AppSettingsPayload & { app_id: string }) => updateSettings({ data: v }),
     onSuccess: () => {
       toast.success("Postavke sačuvane");
       qc.invalidateQueries({ queryKey: ["admin-apps"] });
@@ -254,15 +252,19 @@ function PlanForm({
   const [p, setP] = useState<Partial<SubscriptionPlanRow>>(initial);
 
   function feat(l: "bs" | "en" | "de", v: string) {
-    setP({ ...p, [`features_${l}`]: v.split("\n").map((x) => x.trim()).filter(Boolean) });
+    setP({
+      ...p,
+      [`features_${l}`]: v
+        .split("\n")
+        .map((x) => x.trim())
+        .filter(Boolean),
+    });
   }
 
   return (
     <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
       <div className="mb-3 flex items-center justify-between">
-        <span className="text-sm font-semibold">
-          {isNew ? "New plan" : p.name}
-        </span>
+        <span className="text-sm font-semibold">{isNew ? "New plan" : p.name}</span>
         {onDelete && (
           <button
             onClick={onDelete}
@@ -377,20 +379,16 @@ type NewAppPayload = {
   domain: string | null;
   primary_color: string;
   secondary_color: string;
+  google_client_id: string | null;
 };
 
-function NewAppForm({
-  onCreate,
-  busy,
-}: {
-  onCreate: (v: NewAppPayload) => void;
-  busy?: boolean;
-}) {
+function NewAppForm({ onCreate, busy }: { onCreate: (v: NewAppPayload) => void; busy?: boolean }) {
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [domain, setDomain] = useState("");
   const [primaryColor, setPrimaryColor] = useState("#1D6BF3");
   const [secondaryColor, setSecondaryColor] = useState("#6366F1");
+  const [googleClientId, setGoogleClientId] = useState("");
 
   function submit() {
     if (!name.trim() || !slug.trim()) return;
@@ -400,10 +398,12 @@ function NewAppForm({
       domain: domain.trim() || null,
       primary_color: primaryColor,
       secondary_color: secondaryColor,
+      google_client_id: googleClientId.trim() || null,
     });
     setName("");
     setSlug("");
     setDomain("");
+    setGoogleClientId("");
   }
 
   return (
@@ -411,8 +411,8 @@ function NewAppForm({
       <h2 className="mb-4 text-sm font-semibold text-gray-900">New Application</h2>
       <p className="mb-3 text-xs text-gray-500">
         Registers a new application. It automatically gets every Core capability (auth, profiles,
-        billing, notifications, permissions, audit log) with no further setup. It's created
-        disabled — add plans and branding below, then switch it on in App Settings once it's ready.
+        billing, notifications, permissions, audit log) with no further setup. It's created disabled
+        — add plans and branding below, then switch it on in App Settings once it's ready.
       </p>
       <div className="grid gap-3 md:grid-cols-3">
         <Field label="Name">
@@ -455,6 +455,14 @@ function NewAppForm({
             onChange={(e) => setSecondaryColor(e.target.value)}
           />
         </Field>
+        <Field label="Google Client ID" wide>
+          <input
+            className="input"
+            value={googleClientId}
+            onChange={(e) => setGoogleClientId(e.target.value)}
+            placeholder="xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com"
+          />
+        </Field>
       </div>
       <div className="mt-4 flex justify-end">
         <button
@@ -481,6 +489,7 @@ type AppSettingsPayload = {
   sort_order: number;
   logo_url: string | null;
   favicon_url: string | null;
+  google_client_id: string | null;
   short_description_bs: string | null;
   short_description_en: string | null;
   short_description_de: string | null;
@@ -505,13 +514,15 @@ function AppSettings({
   const [sortOrder, setSortOrder] = useState(app.sort_order);
   const [logoUrl, setLogoUrl] = useState<string | null>(app.logo_url);
   const [faviconUrl, setFaviconUrl] = useState<string | null>(app.favicon_url);
+  const [googleClientId, setGoogleClientId] = useState(app.google_client_id ?? "");
   const [dBs, setDBs] = useState(app.short_description_bs ?? "");
   const [dEn, setDEn] = useState(app.short_description_en ?? "");
   const [dDe, setDDe] = useState(app.short_description_de ?? "");
   const [enabled, setEnabled] = useState(app.is_enabled !== false);
-  const [uploading, setUploading] = useState<null | "logo" | "favicon">(null);
+  const [uploading, setUploading] = useState<null | "logo" | "favicon" | "cover">(null);
   const logoRef = useRef<HTMLInputElement>(null);
   const favRef = useRef<HTMLInputElement>(null);
+  const coverRef = useRef<HTMLInputElement>(null);
 
   useEffectR(() => {
     setName(app.name);
@@ -523,6 +534,7 @@ function AppSettings({
     setSortOrder(app.sort_order);
     setLogoUrl(app.logo_url);
     setFaviconUrl(app.favicon_url);
+    setGoogleClientId(app.google_client_id ?? "");
     setDBs(app.short_description_bs ?? "");
     setDEn(app.short_description_en ?? "");
     setDDe(app.short_description_de ?? "");
@@ -538,35 +550,46 @@ function AppSettings({
     app.sort_order,
     app.logo_url,
     app.favicon_url,
+    app.google_client_id,
     app.short_description_bs,
     app.short_description_en,
     app.short_description_de,
     app.is_enabled,
   ]);
 
-  async function upload(kind: "logo" | "favicon", file: File) {
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("Fajl je prevelik (max 2MB)");
+  async function upload(kind: "logo" | "favicon" | "cover", file: File) {
+    const maxSize = kind === "cover" ? 5 * 1024 * 1024 : 2 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.error(`Fajl je prevelik (max ${maxSize / (1024 * 1024)}MB)`);
       return;
     }
-    if (!["image/png", "image/svg+xml", "image/jpeg", "image/webp", "image/x-icon", "image/vnd.microsoft.icon"].includes(file.type)) {
+    if (
+      ![
+        "image/png",
+        "image/svg+xml",
+        "image/jpeg",
+        "image/webp",
+        "image/x-icon",
+        "image/vnd.microsoft.icon",
+      ].includes(file.type)
+    ) {
       toast.error("Nepodržan format");
       return;
     }
     setUploading(kind);
     try {
       const ext = file.name.split(".").pop() || "png";
-      const path = `${app.slug}/${kind}.${ext}`;
+      const path = `applications/${app.slug}/${kind}.${ext}`;
       const { error } = await supabase.storage
-        .from("app-logos")
+        .from("core")
         .upload(path, file, { upsert: true, contentType: file.type });
       if (error) throw error;
-      const { data, error: signErr } = await supabase.storage
-        .from("app-logos")
-        .createSignedUrl(path, 60 * 60 * 24 * 365);
-      if (signErr) throw signErr;
-      if (kind === "logo") setLogoUrl(data.signedUrl);
-      else setFaviconUrl(data.signedUrl);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("core").getPublicUrl(path);
+      if (kind === "logo") setLogoUrl(publicUrl);
+      else if (kind === "favicon") setFaviconUrl(publicUrl);
+      else setCoverImageUrl(publicUrl);
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -589,6 +612,7 @@ function AppSettings({
       sort_order: sortOrder,
       logo_url: logoUrl,
       favicon_url: faviconUrl,
+      google_client_id: googleClientId.trim() || null,
       short_description_bs: dBs.trim() || null,
       short_description_en: dEn.trim() || null,
       short_description_de: dDe.trim() || null,
@@ -608,11 +632,7 @@ function AppSettings({
           <input className="input" value={slug} onChange={(e) => setSlug(e.target.value)} />
         </Field>
         <Field label="Domain">
-          <input
-            className="input"
-            value={domain}
-            onChange={(e) => setDomain(e.target.value)}
-          />
+          <input className="input" value={domain} onChange={(e) => setDomain(e.target.value)} />
         </Field>
         <Field label="Primary color">
           <input
@@ -638,17 +658,9 @@ function AppSettings({
             onChange={(e) => setSortOrder(Number(e.target.value))}
           />
         </Field>
-        <Field label="Cover image URL" wide>
-          <input
-            className="input"
-            placeholder="https://..."
-            value={coverImageUrl}
-            onChange={(e) => setCoverImageUrl(e.target.value)}
-          />
-        </Field>
       </div>
 
-      <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-8">
+      <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:gap-8">
         <div>
           <div className="mb-1 text-xs font-medium text-gray-600">Logo</div>
           <div className="flex items-center gap-3">
@@ -712,6 +724,65 @@ function AppSettings({
           </div>
           <p className="mt-1 text-[11px] text-gray-400">PNG, SVG, ICO · max 2MB</p>
         </div>
+
+        <div>
+          <div className="mb-1 text-xs font-medium text-gray-600">Cover Image</div>
+          <div className="flex items-center gap-3">
+            <div className="flex h-16 w-32 items-center justify-center overflow-hidden rounded-xl bg-gray-50 ring-1 ring-gray-200">
+              {coverImageUrl ? (
+                <img src={coverImageUrl} alt="cover" className="h-full w-full object-cover" />
+              ) : (
+                <span className="text-xs text-gray-400">—</span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => coverRef.current?.click()}
+              disabled={uploading === "cover"}
+              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+            >
+              {uploading === "cover" ? "Uploading…" : "Promijeni cover"}
+            </button>
+            <input
+              ref={coverRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void upload("cover", f);
+              }}
+            />
+          </div>
+          <p className="mt-1 text-[11px] text-gray-400">PNG, JPG, WEBP · max 5MB</p>
+        </div>
+      </div>
+
+      <div className="mb-4">
+        <div className="mb-2 text-xs font-medium text-gray-600">Preview</div>
+        <BrandingPreview
+          name={name}
+          logoUrl={logoUrl}
+          coverImageUrl={coverImageUrl || null}
+          primaryColor={primaryColor}
+          secondaryColor={secondaryColor}
+        />
+      </div>
+
+      <div className="mb-4">
+        <Field label="Google Client ID">
+          <input
+            className="input"
+            value={googleClientId}
+            onChange={(e) => setGoogleClientId(e.target.value)}
+            placeholder="xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com"
+          />
+        </Field>
+        <p className="mt-1 text-[11px] text-gray-400">
+          This application's own Google Cloud OAuth Client ID (its own consent-screen name/logo).
+          Not secret. The Client Secret is never stored here -- it stays only in Supabase's Auth
+          provider configuration.
+        </p>
       </div>
 
       <div className="grid gap-3">
@@ -752,6 +823,50 @@ function AppSettings({
           <Save className="h-4 w-4" />
           {busy ? "Spremam…" : "Sačuvaj postavke"}
         </button>
+      </div>
+    </div>
+  );
+}
+
+// Combined live preview of an application's branding -- cover, logo, and
+// both colors together -- so an admin can see the result before saving.
+// Presentational only; mirrors the same cover/logo treatment
+// ProfileCard.tsx uses, not a new visual language.
+function BrandingPreview({
+  name,
+  logoUrl,
+  coverImageUrl,
+  primaryColor,
+  secondaryColor,
+}: {
+  name: string;
+  logoUrl: string | null;
+  coverImageUrl: string | null;
+  primaryColor: string;
+  secondaryColor: string;
+}) {
+  return (
+    <div className="w-full max-w-xs overflow-hidden rounded-2xl ring-1 ring-gray-200">
+      <div
+        className="relative h-20 bg-cover bg-center"
+        style={
+          coverImageUrl
+            ? { backgroundImage: `url(${coverImageUrl})` }
+            : { background: `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)` }
+        }
+      >
+        {logoUrl && (
+          <div className="absolute left-2 top-2 flex h-6 w-6 items-center justify-center overflow-hidden rounded-md bg-white/90 shadow">
+            <img src={logoUrl} alt="" className="h-full w-full object-contain p-0.5" />
+          </div>
+        )}
+      </div>
+      <div className="flex items-center gap-2 bg-white p-3">
+        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: primaryColor }} />
+        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: secondaryColor }} />
+        <span className="truncate text-xs font-medium text-gray-700">
+          {name || "Application name"}
+        </span>
       </div>
     </div>
   );

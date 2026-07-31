@@ -2,7 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { assertAdmin, writeAuditLog, addMonthsIso } from "@/lib/admin.server";
+import {
+  assertAdmin,
+  writeAuditLog,
+  addMonthsIso,
+  deleteUserAccountCascade,
+} from "@/lib/admin.server";
 import { isSubscriptionActiveNow } from "@/lib/subscription";
 
 export type VerificationRow = {
@@ -43,7 +48,7 @@ export const adminUpsertPlan = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: row, error } = await supabaseAdmin
       .from("subscription_plans")
-      .upsert(data as never)
+      .upsert(data)
       .select("*")
       .single();
     if (error) throw new Error(error.message);
@@ -104,17 +109,18 @@ export const adminGrantPremium = createServerFn({ method: "POST" })
           expires_at,
           amount_paid: 0,
           currency: "EUR",
-        } as never,
+        },
         { onConflict: "user_id,app_id" },
       )
       .select("*")
       .single();
     if (error) throw new Error(error.message);
 
-    await supabaseAdmin
-      .from("profiles")
-      .update({ user_type: "premium" } as never)
-      .eq("id", data.user_id);
+    // Global Premium Visibility & Contact System: Premium status is derived
+    // solely from hasAnyActivePremium() (live, from `subscriptions`) --
+    // profiles.user_type is no longer written here. The previous write left
+    // a stale, drift-prone duplicate: adminRevokePremium never reset it, so
+    // a revoked user's admin-panel badge stayed stuck on "premium" forever.
 
     await writeAuditLog({
       userId: context.userId,
@@ -134,7 +140,7 @@ export const adminGrantPremium = createServerFn({ method: "POST" })
       message_de: "Ihr Premium-Zugang ist jetzt aktiv.",
       type: "success",
       app_id: data.app_id,
-    } as never);
+    });
 
     const { sendN8nEvent } = await import("@/lib/n8n.server");
     await sendN8nEvent("premium_activated", {
@@ -158,7 +164,7 @@ export const adminRevokePremium = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: sub, error } = await supabaseAdmin
       .from("subscriptions")
-      .update({ status: "cancelled", expires_at: new Date().toISOString() } as never)
+      .update({ status: "cancelled", expires_at: new Date().toISOString() })
       .eq("id", data.subscription_id)
       .select("*")
       .single();
@@ -175,28 +181,175 @@ export const adminRevokePremium = createServerFn({ method: "POST" })
 
 // ---------- Admin lists ----------
 
+const listUsersSchema = z.object({
+  search: z.string().optional().default(""),
+  // Global Premium Visibility & Contact System: premium/standard is no
+  // longer a profiles.user_type value -- it's derived live from
+  // subscriptions, the same predicate hasAnyActivePremium() uses.
+  premiumFilter: z.enum(["premium", "standard"]).optional(),
+  is_verified: z.boolean().optional(),
+  is_active: z.boolean().optional(),
+  page: z.number().int().min(1).default(1),
+  pageSize: z.number().int().min(1).max(100).default(25),
+});
+
 export const adminListUsers = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((raw: unknown) =>
-    z.object({ search: z.string().optional().default("") }).parse(raw ?? {}),
-  )
+  .inputValidator((raw: unknown) => listUsersSchema.parse(raw ?? {}))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Resolve the full set of currently-Premium user ids up front -- same
+    // "active" predicate as has_any_active_premium() -- only when the
+    // caller actually asked to filter or needs it applied before pagination.
+    let premiumUserIds: string[] | null = null;
+    if (data.premiumFilter) {
+      const { data: activeSubs, error: subsError } = await supabaseAdmin
+        .from("subscriptions")
+        .select("user_id")
+        .eq("status", "active")
+        .gt("expires_at", new Date().toISOString());
+      if (subsError) throw new Error(subsError.message);
+      premiumUserIds = [
+        ...new Set((activeSubs ?? []).map((s) => s.user_id).filter((id): id is string => !!id)),
+      ];
+    }
+
+    const from = (data.page - 1) * data.pageSize;
+    const to = from + data.pageSize - 1;
     let q = supabaseAdmin
       .from("profiles")
-      .select("id, email, first_name, last_name, username, user_type, city, created_at")
+      .select(
+        "id, email, first_name, last_name, username, city, country, is_verified, is_active, created_at, updated_at",
+        { count: "exact" },
+      )
       .order("created_at", { ascending: false })
-      .limit(100);
+      .range(from, to);
     if (data.search) {
       const s = `%${data.search}%`;
       q = q.or(
         `email.ilike.${s},username.ilike.${s},first_name.ilike.${s},last_name.ilike.${s}`,
       );
     }
-    const { data: rows, error } = await q;
+    if (data.premiumFilter === "premium") {
+      q = q.in("id", premiumUserIds!.length > 0 ? premiumUserIds! : ["00000000-0000-0000-0000-000000000000"]);
+    } else if (data.premiumFilter === "standard") {
+      if (premiumUserIds!.length > 0) q = q.not("id", "in", `(${premiumUserIds!.join(",")})`);
+    }
+    if (data.is_verified !== undefined) q = q.eq("is_verified", data.is_verified);
+    if (data.is_active !== undefined) q = q.eq("is_active", data.is_active);
+    const { data: rows, error, count } = await q;
     if (error) throw new Error(error.message);
-    return rows ?? [];
+
+    // Per-row Premium badge for the page actually being displayed -- a
+    // second, cheap set-membership check, not a re-query, when the filter
+    // above already resolved the full set.
+    const pageIds = (rows ?? []).map((r) => r.id);
+    let premiumOnPage: Set<string>;
+    if (premiumUserIds) {
+      premiumOnPage = new Set(premiumUserIds);
+    } else {
+      const { data: activeSubs, error: subsError } = await supabaseAdmin
+        .from("subscriptions")
+        .select("user_id")
+        .in("user_id", pageIds.length > 0 ? pageIds : ["00000000-0000-0000-0000-000000000000"])
+        .eq("status", "active")
+        .gt("expires_at", new Date().toISOString());
+      if (subsError) throw new Error(subsError.message);
+      premiumOnPage = new Set(
+        (activeSubs ?? []).map((s) => s.user_id).filter((id): id is string => !!id),
+      );
+    }
+    const rowsWithPremium = (rows ?? []).map((r) => ({
+      ...r,
+      is_premium: premiumOnPage.has(r.id),
+    }));
+
+    return { rows: rowsWithPremium, total: count ?? 0, page: data.page, pageSize: data.pageSize };
+  });
+
+// ---------- User actions: edit, suspend/reactivate, delete ----------
+// Deliberately excludes first_name/last_name/avatar_url -- those are under
+// Identity Lock (see PROJECT_KNOWLEDGE.md -> Profiles); editing them is a
+// separate, not-yet-built administrator identity-review workflow, not part
+// of general user-management completion.
+
+const userUpdateSchema = z.object({
+  user_id: z.string().uuid(),
+  city: z.string().trim().min(1).nullable().optional(),
+  country: z.string().trim().min(1).nullable().optional(),
+  bio: z.string().nullable().optional(),
+  username: z.string().trim().min(1).nullable().optional(),
+  email: z.string().email().nullable().optional(),
+});
+
+export const adminUpdateUser = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => userUpdateSchema.parse(raw))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { user_id, ...patch } = data;
+    const { data: row, error } = await supabaseAdmin
+      .from("profiles")
+      .update(patch)
+      .eq("id", user_id)
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    await writeAuditLog({
+      userId: context.userId,
+      action: "user.update",
+      entityType: "profile",
+      entityId: user_id,
+      newData: patch,
+    });
+    return row;
+  });
+
+export const adminSetUserActive = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) =>
+    z.object({ user_id: z.string().uuid(), is_active: z.boolean() }).parse(raw),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    if (data.user_id === context.userId && !data.is_active) {
+      throw new Error("You cannot suspend your own account.");
+    }
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row, error } = await supabaseAdmin
+      .from("profiles")
+      .update({ is_active: data.is_active })
+      .eq("id", data.user_id)
+      .select("id, is_active")
+      .single();
+    if (error) throw new Error(error.message);
+    await writeAuditLog({
+      userId: context.userId,
+      action: data.is_active ? "user.reactivate" : "user.suspend",
+      entityType: "profile",
+      entityId: data.user_id,
+      newData: { is_active: data.is_active },
+    });
+    return row;
+  });
+
+export const adminDeleteUser = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => z.object({ user_id: z.string().uuid() }).parse(raw))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    if (data.user_id === context.userId) {
+      throw new Error("Use account settings to delete your own account.");
+    }
+    await deleteUserAccountCascade({
+      targetUserId: data.user_id,
+      actorUserId: context.userId,
+      action: "user.delete",
+    });
+    return { ok: true };
   });
 
 export const adminListAuditLogs = createServerFn({ method: "POST" })
@@ -334,7 +487,7 @@ export const adminSendNotification = createServerFn({ method: "POST" })
       message_en: data.message_en,
       message_de: data.message_de,
     }));
-    const { error } = await supabaseAdmin.from("notifications").insert(rows as never);
+    const { error } = await supabaseAdmin.from("notifications").insert(rows);
     if (error) throw new Error(error.message);
 
     await writeAuditLog({
@@ -402,7 +555,7 @@ export const adminSetVerified = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin
       .from("profiles")
-      .update({ is_verified: data.verified } as never)
+      .update({ is_verified: data.verified })
       .eq("id", data.user_id);
     if (error) throw new Error(error.message);
     await writeAuditLog({
@@ -436,6 +589,7 @@ const appCreateSchema = z.object({
   domain: z.string().min(1).nullable().optional(),
   primary_color: z.string().min(1).optional(),
   secondary_color: z.string().min(1).optional(),
+  google_client_id: z.string().min(1).nullable().optional(),
 });
 
 export const adminCreateApplication = createServerFn({ method: "POST" })
@@ -449,7 +603,7 @@ export const adminCreateApplication = createServerFn({ method: "POST" })
     // instead of a half-configured app appearing live immediately.
     const { data: row, error } = await supabaseAdmin
       .from("applications")
-      .insert({ ...data, is_enabled: false } as never)
+      .insert({ ...data, is_enabled: false })
       .select("*")
       .single();
     if (error) throw new Error(error.message);
@@ -475,7 +629,7 @@ export const adminSetAppEnabled = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: row, error } = await supabaseAdmin
       .from("applications")
-      .update({ is_enabled: data.is_enabled } as never)
+      .update({ is_enabled: data.is_enabled })
       .eq("id", data.app_id)
       .select("id, is_enabled")
       .single();
@@ -508,6 +662,7 @@ const appSettingsSchema = z.object({
   sort_order: z.number().int().optional(),
   logo_url: z.string().url().nullable().optional(),
   favicon_url: z.string().url().nullable().optional(),
+  google_client_id: z.string().min(1).nullable().optional(),
   short_description_bs: z.string().max(160).nullable().optional(),
   short_description_en: z.string().max(160).nullable().optional(),
   short_description_de: z.string().max(160).nullable().optional(),
@@ -523,7 +678,7 @@ export const adminUpdateAppSettings = createServerFn({ method: "POST" })
     const { app_id, ...patch } = data;
     const { data: row, error } = await supabaseAdmin
       .from("applications")
-      .update(patch as never)
+      .update(patch)
       .eq("id", app_id)
       .select("*")
       .single();

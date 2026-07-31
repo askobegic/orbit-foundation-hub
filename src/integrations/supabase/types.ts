@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       applications: {
@@ -20,8 +45,9 @@ export type Database = {
           created_at: string | null
           domain: string | null
           favicon_url: string | null
+          google_client_id: string | null
           id: string
-          is_enabled: boolean
+          is_enabled: boolean | null
           logo_url: string | null
           name: string
           primary_color: string | null
@@ -39,8 +65,9 @@ export type Database = {
           created_at?: string | null
           domain?: string | null
           favicon_url?: string | null
+          google_client_id?: string | null
           id?: string
-          is_enabled?: boolean
+          is_enabled?: boolean | null
           logo_url?: string | null
           name: string
           primary_color?: string | null
@@ -58,8 +85,9 @@ export type Database = {
           created_at?: string | null
           domain?: string | null
           favicon_url?: string | null
+          google_client_id?: string | null
           id?: string
-          is_enabled?: boolean
+          is_enabled?: boolean | null
           logo_url?: string | null
           name?: string
           primary_color?: string | null
@@ -119,6 +147,114 @@ export type Database = {
           {
             foreignKeyName: "audit_logs_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          created_at: string
+          hidden_by_a_at: string | null
+          hidden_by_b_at: string | null
+          id: string
+          last_message_at: string | null
+          user_a_id: string
+          user_b_id: string
+        }
+        Insert: {
+          created_at?: string
+          hidden_by_a_at?: string | null
+          hidden_by_b_at?: string | null
+          id?: string
+          last_message_at?: string | null
+          user_a_id: string
+          user_b_id: string
+        }
+        Update: {
+          created_at?: string
+          hidden_by_a_at?: string | null
+          hidden_by_b_at?: string | null
+          id?: string
+          last_message_at?: string | null
+          user_a_id?: string
+          user_b_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_user_a_id_fkey"
+            columns: ["user_a_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_user_a_id_fkey"
+            columns: ["user_a_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_user_b_id_fkey"
+            columns: ["user_b_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_user_b_id_fkey"
+            columns: ["user_b_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          body: string
+          conversation_id: string
+          created_at: string
+          id: string
+          read_at: string | null
+          sender_id: string
+        }
+        Insert: {
+          body: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          sender_id: string
+        }
+        Update: {
+          body?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
             isOneToOne: false
             referencedRelation: "profiles_public"
             referencedColumns: ["id"]
@@ -204,6 +340,7 @@ export type Database = {
           paypal_payment_id: string | null
           status: string | null
           stripe_payment_id: string | null
+          stripe_payment_intent_id: string | null
           subscription_id: string | null
           user_id: string | null
         }
@@ -218,6 +355,7 @@ export type Database = {
           paypal_payment_id?: string | null
           status?: string | null
           stripe_payment_id?: string | null
+          stripe_payment_intent_id?: string | null
           subscription_id?: string | null
           user_id?: string | null
         }
@@ -232,6 +370,7 @@ export type Database = {
           paypal_payment_id?: string | null
           status?: string | null
           stripe_payment_id?: string | null
+          stripe_payment_intent_id?: string | null
           subscription_id?: string | null
           user_id?: string | null
         }
@@ -360,6 +499,7 @@ export type Database = {
           email: string | null
           first_name: string | null
           id: string
+          identity_locked_at: string | null
           is_active: boolean | null
           is_verified: boolean | null
           language: string | null
@@ -381,6 +521,7 @@ export type Database = {
           email?: string | null
           first_name?: string | null
           id: string
+          identity_locked_at?: string | null
           is_active?: boolean | null
           is_verified?: boolean | null
           language?: string | null
@@ -402,6 +543,7 @@ export type Database = {
           email?: string | null
           first_name?: string | null
           id?: string
+          identity_locked_at?: string | null
           is_active?: boolean | null
           is_verified?: boolean | null
           language?: string | null
@@ -597,24 +739,39 @@ export type Database = {
       }
       user_roles: {
         Row: {
-          created_at: string
+          created_at: string | null
           id: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
+          role: string | null
+          user_id: string | null
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           id?: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
+          role?: string | null
+          user_id?: string | null
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id?: string
+          role?: string | null
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -755,10 +912,18 @@ export type Database = {
       }
     }
     Functions: {
-      is_user_premium: { Args: { _user_id: string }; Returns: boolean }
+      get_premium_application_ids: {
+        Args: { _user_id: string }
+        Returns: string[]
+      }
+      get_visible_application_ids: {
+        Args: { _user_id: string }
+        Returns: string[]
+      }
+      has_any_active_premium: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "moderator" | "user"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -884,9 +1049,10 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
-    Enums: {
-      app_role: ["admin", "moderator", "user"],
-    },
+    Enums: {},
   },
 } as const

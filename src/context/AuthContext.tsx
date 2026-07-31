@@ -8,6 +8,7 @@ import {
 } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { extractIdentityFromAuthUser } from "@/lib/identity";
 import type { ProfileRow, ProfileUpdate } from "@/types/database";
 
 interface AuthContextValue {
@@ -34,16 +35,15 @@ async function loadOrCreateProfile(u: User): Promise<ProfileRow | null> {
     .maybeSingle();
 
   if (existing) {
-    // Auto-import missing fields from OAuth metadata
-    const meta = (u.user_metadata ?? {}) as Record<string, unknown>;
-    const str = (v: unknown) =>
-      typeof v === "string" && v.trim() ? v.trim() : "";
-    const fullName = str(meta.full_name) || str(meta.name);
-    const [first, ...rest] = fullName.split(" ");
+    // Auto-import missing fields from the identity provider. Only ever
+    // fills gaps -- once a field is set (in particular, once Identity Lock
+    // engages at onboarding completion), this condition is always false,
+    // so this never conflicts with the lock.
+    const identity = extractIdentityFromAuthUser(u);
     const patch: ProfileUpdate = {};
-    if (!existing.first_name) patch.first_name = str(meta.given_name) || str(meta.first_name) || first || "";
-    if (!existing.last_name) patch.last_name = str(meta.family_name) || str(meta.last_name) || rest.join(" ") || "";
-    if (!existing.avatar_url) patch.avatar_url = str(meta.avatar_url) || str(meta.picture);
+    if (!existing.first_name) patch.first_name = identity.firstName;
+    if (!existing.last_name) patch.last_name = identity.lastName;
+    if (!existing.avatar_url) patch.avatar_url = identity.avatarUrl;
     if (!existing.email && u.email) patch.email = u.email;
 
     if (Object.keys(patch).length > 0) {
@@ -59,20 +59,16 @@ async function loadOrCreateProfile(u: User): Promise<ProfileRow | null> {
   }
 
   // Create new profile for first-time users
-  const meta = (u.user_metadata ?? {}) as Record<string, unknown>;
-  const str = (v: unknown) =>
-    typeof v === "string" && v.trim() ? v.trim() : "";
-  const fullName = str(meta.full_name) || str(meta.name);
-  const [first, ...rest] = fullName.split(" ");
+  const identity = extractIdentityFromAuthUser(u);
 
   const { data: created } = await supabase
     .from("profiles")
     .insert({
       id: u.id,
       email: u.email ?? "",
-      first_name: str(meta.given_name) || str(meta.first_name) || first || "",
-      last_name: str(meta.family_name) || str(meta.last_name) || rest.join(" ") || "",
-      avatar_url: str(meta.avatar_url) || str(meta.picture) || "",
+      first_name: identity.firstName,
+      last_name: identity.lastName,
+      avatar_url: identity.avatarUrl,
       profile_complete: false,
       language: "bs",
     })
@@ -125,14 +121,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     profile,
     loading,
 
+    // Intentionally disabled -- never wire this up. This platform supports
+    // multiple applications, each with its own Google OAuth Client ID, all
+    // authenticating into the same Supabase project via
+    // signInWithIdToken() (see login.tsx). Supabase's Google provider holds
+    // exactly one Client Secret; the redirect-based signInWithOAuth() flow
+    // authenticates the code exchange using that single secret, so it can
+    // only ever be correct for one of the applications' Google Clients.
+    // Enabling it for Google would silently produce incorrect
+    // authentication for every other application. See PROJECT_KNOWLEDGE.md
+    // -> Authentication.
     signInWithGoogle: async () => {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
-      return error ? { error } : {};
+      throw new Error(
+        "Google redirect OAuth flow is intentionally disabled. This platform uses signInWithIdToken() exclusively.",
+      );
     },
 
     signInWithPhone: async (phone: string) => {

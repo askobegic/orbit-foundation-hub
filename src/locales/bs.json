@@ -8,8 +8,13 @@
     "settings": "Postavke",
     "security": "Sigurnost",
     "notifications": "Obavještenja",
+    "messages": "Poruke",
     "help": "Pomoć i podrška",
     "logout": "Odjavi se"
+  },
+  "messages": {
+    "title": "Poruke",
+    "empty": "Još nema razgovora"
   },
   "share": {
     "shareProfile": "Podijeli profil",
@@ -69,7 +74,9 @@
     "editProfile": "Uredi profil",
     "standardProfile": "Osnovni profil",
     "premiumProfile": "Premium profil",
-    "premiumLocked": "Nadogradi na Premium da otključaš ove opcije",
+    "premiumLocked": "Nadogradi na Premium da ove informacije budu vidljive na tvom javnom profilu",
+    "call": "Pozovi",
+    "publicOn": "Javni profil na",
     "upgradeNow": "Nadogradi sada",
     "professionPlaceholder": "Dodaj profesiju...",
     "addProfession": "Dodaj profesiju",
@@ -96,7 +103,16 @@
     "notEntered": "Nije uneseno",
     "basicInfo": "Osnovni podaci",
     "cityPlaceholder": "Npr. Sarajevo",
-    "selectCountry": "Odaberi državu"
+    "selectCountry": "Odaberi državu",
+    "premiumOn": "Premium na",
+    "sendMessage": "Pošalji poruku",
+    "viber": "Viber",
+    "messagingSoon": "Poruke uskoro dolaze.",
+    "premiumOnlyTitle": "Premium funkcija",
+    "premiumOnlyFeature": "Ova funkcija dostupna je Premium članovima.",
+    "premiumOnlyBoth": "Samo Premium članovi mogu kontaktirati Premium članove. Nadogradi svoj račun da nastaviš.",
+    "standardMember": "STANDARD ČLAN",
+    "premiumMember": "PREMIUM ČLAN"
   },
   "countries": {
     "BA": "Bosna i Hercegovina",
@@ -304,9 +320,11 @@
     "deleteCta": "Obriši moj nalog",
     "confirmTitle": "Obriši nalog",
     "confirmBody": "Ova akcija je nepovratna. Svi vaši podaci će biti obrisani.",
-    "typeToConfirm": "Za potvrdu upišite OBRIŠI:",
+    "typeToConfirm": "Za potvrdu upišite {{word}}:",
+    "deleteConfirmWord": "OBRIŠI",
     "deleteConfirm": "Trajno obriši",
-    "deleteMismatch": "Molimo upišite tačno OBRIŠI za potvrdu.",
-    "deleteDone": "Vaš nalog je obrisan."
+    "deleteMismatch": "Molimo upišite tačno {{word}} za potvrdu.",
+    "deleteDone": "Vaš nalog je obrisan.",
+    "exportFileName": "moji-podaci"
   }
 }

@@ -1,11 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { addMonthsIso, writeAuditLog } from "@/lib/admin.server";
+import { verifyPaymentReference } from "@/lib/payment-reference.server";
 
+// Verifies the HMAC signature created by createPaymentReference
+// (src/lib/payments.functions.ts) -- see PROJECT_AUDIT.md -> SE-7. A
+// malformed or tampered custom_id (including the old, unsigned
+// underscore-joined format) fails verification and is treated as "missing".
 function parseCustom(v: string | null | undefined) {
-  if (!v) return { user_id: null, app_id: null, plan_id: null };
-  const [user_id, app_id, plan_id] = v.split("_");
-  return { user_id: user_id ?? null, app_id: app_id ?? null, plan_id: plan_id ?? null };
+  const verified = verifyPaymentReference(v);
+  if (!verified) return { user_id: null, app_id: null, plan_id: null };
+  return verified;
 }
 
 async function paypalBase() {
@@ -75,7 +80,12 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
           invoice_id?: string;
         };
         const ref = parseCustom(resource.custom_id);
-        if (!ref.user_id || !ref.app_id) return Response.json({ received: true });
+        if (!ref.user_id || !ref.app_id) {
+          console.warn("PayPal webhook: missing, malformed, or unsigned custom_id", {
+            capture_id: resource.id,
+          });
+          return Response.json({ received: true });
+        }
         if (!ref.plan_id) {
           console.warn("PayPal webhook missing plan_id in custom_id", { capture_id: resource.id });
           return Response.json({ received: true, ignored: "missing_plan_id" });
@@ -171,7 +181,7 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
               currency,
               started_at: new Date().toISOString(),
               expires_at: addMonthsIso(months),
-            } as never,
+            },
             { onConflict: "user_id,app_id" },
           )
           .select("id")
@@ -191,19 +201,16 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
           currency,
           status: "success",
           payment_method: "paypal",
-        } as never);
+        });
         if (paymentErr) {
           console.error("PayPal webhook: payments insert failed", paymentErr);
           return Response.json({ received: true, duplicate: true });
         }
 
-        const { error: premiumProfileErr } = await supabaseAdmin
-          .from("profiles")
-          .update({ user_type: "premium" } as never)
-          .eq("id", ref.user_id);
-        if (premiumProfileErr) {
-          console.error("PayPal webhook: profile premium update failed", premiumProfileErr);
-        }
+        // Global Premium Visibility & Contact System: Premium status is
+        // derived solely from hasAnyActivePremium() (live, from
+        // `subscriptions`, upserted above) -- profiles.user_type is no
+        // longer written here.
 
         const { error: notifyErr } = await supabaseAdmin.from("notifications").insert({
           user_id: ref.user_id,
@@ -215,7 +222,7 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
           message_de: "Ihr Premium-Abonnement ist aktiv.",
           type: "success",
           app_id: ref.app_id,
-        } as never);
+        });
         if (notifyErr) {
           console.error("PayPal webhook: notification insert failed", notifyErr);
         }

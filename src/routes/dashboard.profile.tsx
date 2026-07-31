@@ -4,13 +4,9 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import { AvatarUpload } from "@/components/profile/AvatarUpload";
 import { ToggleField } from "@/components/profile/ToggleField";
 import { ProfessionTagInput } from "@/components/profile/ProfessionTagInput";
-import {
-  SocialLinksSection,
-  type SocialLinks,
-} from "@/components/profile/SocialLinksSection";
+import { SocialLinksSection, type SocialLinks } from "@/components/profile/SocialLinksSection";
 import { ProfileCompletionBar } from "@/components/profile/ProfileCompletionBar";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { CountrySelect } from "@/components/ui/CountrySelect";
@@ -19,10 +15,8 @@ import { useLanguage } from "@/context/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { generateUniqueUsername } from "@/lib/username";
 import { isSafeProfileUrl } from "@/lib/url";
-import type {
-  PremiumProfileRow,
-  UserLanguage,
-} from "@/types/database";
+import { hasAnyActivePremium } from "@/lib/premium";
+import type { PremiumProfileRow, UserLanguage } from "@/types/database";
 
 export const Route = createFileRoute("/dashboard/profile")({
   head: () => ({
@@ -90,14 +84,12 @@ function EditProfilePage() {
   useEffect(() => {
     if (!user) return;
     void (async () => {
-      const { data: sub } = await supabase
-        .from("subscriptions")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("status", "active")
-        .limit(1)
-        .maybeSingle();
-      setHasPremium(!!sub);
+      // Global Premium Visibility & Contact System: the shared CORE check,
+      // not a raw ad hoc subscriptions query -- this used to check only
+      // status = 'active' without expires_at, unlike every other Premium
+      // check in the codebase. hasPremium is informational only here (it
+      // no longer gates editing -- every user can edit every field below).
+      setHasPremium(await hasAnyActivePremium(user.id));
 
       const { data } = await supabase
         .from("premium_profiles")
@@ -142,12 +134,9 @@ function EditProfilePage() {
         finalUsername = await generateUniqueUsername(firstName, lastName, user.id);
       }
       await updateProfile({
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
         city: city.trim(),
         country: country.trim(),
         language,
-        avatar_url: avatarUrl,
         username: finalUsername,
         profile_complete: true,
       });
@@ -219,7 +208,9 @@ function EditProfilePage() {
         <header className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">{t("profile.editProfile")}</h1>
-            <Link to="/dashboard" className="text-sm text-gray-500 hover:underline">← {t("nav.home")}</Link>
+            <Link to="/dashboard" className="text-sm text-gray-500 hover:underline">
+              ← {t("nav.home")}
+            </Link>
           </div>
           <LanguageSwitcher />
         </header>
@@ -227,14 +218,30 @@ function EditProfilePage() {
         <ProfileCompletionBar profile={profile} />
 
         <section className="rounded-2xl bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold text-gray-900">{t("profile.standardProfile")}</h2>
+          <h2 className="mb-4 text-lg font-semibold text-gray-900">
+            {t("profile.standardProfile")}
+          </h2>
           <div className="flex flex-col gap-4">
-            {user && (
-              <AvatarUpload userId={user.id} value={avatarUrl} onChange={setAvatarUrl} />
-            )}
+            {/* Identity Lock: name and photo are imported from the identity
+                provider (or set once, if none was supplied) and are
+                permanently locked -- displayed as plain identity
+                information, never as editable controls. */}
+            <div className="flex items-center gap-4">
+              <div className="h-20 w-20 overflow-hidden rounded-full bg-gray-100">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-2xl text-gray-400">
+                    ?
+                  </div>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+                <IdentityField label={t("profile.firstName")} value={firstName} />
+                <IdentityField label={t("profile.lastName")} value={lastName} />
+              </div>
+            </div>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <TextField label={t("profile.firstName")} value={firstName} onChange={setFirstName} required />
-              <TextField label={t("profile.lastName")} value={lastName} onChange={setLastName} required />
               <TextField
                 label={t("profile.city")}
                 value={city}
@@ -272,17 +279,16 @@ function EditProfilePage() {
             >
               {savingStd ? t("common.loading") : t("profile.save")}
             </button>
-            <Link
-              to="/dashboard"
-              className="text-sm text-[#1D6BF3] hover:underline"
-            >
+            <Link to="/dashboard" className="text-sm text-[#1D6BF3] hover:underline">
               ← {t("auth.backToDashboard")}
             </Link>
           </div>
         </section>
 
         <section className="rounded-2xl bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold text-gray-900">{t("profile.premiumProfile")}</h2>
+          <h2 className="mb-4 text-lg font-semibold text-gray-900">
+            {t("profile.premiumProfile")}
+          </h2>
           {!hasPremium && (
             <div className="mb-4 rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50 to-blue-50 p-4">
               <p className="text-sm font-medium text-purple-900">{t("profile.premiumLocked")}</p>
@@ -291,33 +297,77 @@ function EditProfilePage() {
               </button>
             </div>
           )}
-          <fieldset disabled={!hasPremium} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4">
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <ToggleField label={t("profile.phone")} value={phone} onChange={setPhone} isPublic={phonePublic} onToggle={setPhonePublic} type="tel" disabled={!hasPremium} />
-              <ToggleField label={t("profile.whatsapp")} value={whatsapp} onChange={setWhatsapp} isPublic={whatsappPublic} onToggle={setWhatsappPublic} type="tel" disabled={!hasPremium} />
-              <ToggleField label={t("profile.contactEmail")} value={contactEmail} onChange={setContactEmail} isPublic={contactEmailPublic} onToggle={setContactEmailPublic} type="email" disabled={!hasPremium} />
-              <ToggleField label={t("profile.website")} value={website} onChange={setWebsite} isPublic={websitePublic} onToggle={setWebsitePublic} type="url" disabled={!hasPremium} />
+              <ToggleField
+                label={t("profile.phone")}
+                value={phone}
+                onChange={setPhone}
+                isPublic={phonePublic}
+                onToggle={setPhonePublic}
+                type="tel"
+              />
+              <ToggleField
+                label={t("profile.whatsapp")}
+                value={whatsapp}
+                onChange={setWhatsapp}
+                isPublic={whatsappPublic}
+                onToggle={setWhatsappPublic}
+                type="tel"
+              />
+              <ToggleField
+                label={t("profile.contactEmail")}
+                value={contactEmail}
+                onChange={setContactEmail}
+                isPublic={contactEmailPublic}
+                onToggle={setContactEmailPublic}
+                type="email"
+              />
+              <ToggleField
+                label={t("profile.website")}
+                value={website}
+                onChange={setWebsite}
+                isPublic={websitePublic}
+                onToggle={setWebsitePublic}
+                type="url"
+              />
             </div>
-            <TextField label={t("profile.primaryProfession")} value={primaryProfession} onChange={setPrimaryProfession} required />
+            <TextField
+              label={t("profile.primaryProfession")}
+              value={primaryProfession}
+              onChange={setPrimaryProfession}
+              required
+            />
             <div>
-              <label className="text-sm font-medium text-gray-700">{t("profile.secondaryProfessions")}</label>
+              <label className="text-sm font-medium text-gray-700">
+                {t("profile.secondaryProfessions")}
+              </label>
               <div className="mt-1">
-                <ProfessionTagInput value={secondaryProfessions} onChange={setSecondaryProfessions} disabled={!hasPremium} />
+                <ProfessionTagInput value={secondaryProfessions} onChange={setSecondaryProfessions} />
               </div>
             </div>
-            <SocialLinksSection value={social} onChange={setSocial} disabled={!hasPremium} />
+            <SocialLinksSection value={social} onChange={setSocial} />
             <button
               type="button"
               onClick={handleSavePremium}
-              disabled={savingPrem || !hasPremium}
+              disabled={savingPrem}
               className="self-start rounded-lg bg-[#1D6BF3] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#155ac9] disabled:opacity-60"
             >
               {savingPrem ? t("common.loading") : t("profile.save")}
             </button>
-          </fieldset>
+          </div>
         </section>
       </div>
     </main>
+  );
+}
+
+function IdentityField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-xs font-medium text-gray-500">{label}</div>
+      <div className="text-sm text-gray-900">{value}</div>
+    </div>
   );
 }
 

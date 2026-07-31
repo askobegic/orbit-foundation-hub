@@ -2,19 +2,20 @@ import { createFileRoute } from "@tanstack/react-router";
 import Stripe from "stripe";
 
 import { addMonthsIso, writeAuditLog } from "@/lib/admin.server";
+import { verifyPaymentReference } from "@/lib/payment-reference.server";
 
+// Verifies the HMAC signature created by createPaymentReference
+// (src/lib/payments.functions.ts) -- see PROJECT_AUDIT.md -> SE-7. A
+// malformed or tampered client_reference_id (including the old, unsigned
+// three-segment format) fails verification and is treated as "missing".
 function parseRef(ref: string | null | undefined): {
   user_id: string | null;
   app_id: string | null;
   plan_id: string | null;
 } {
-  if (!ref) return { user_id: null, app_id: null, plan_id: null };
-  const parts = ref.split("__");
-  return {
-    user_id: parts[0] ?? null,
-    app_id: parts[1] ?? null,
-    plan_id: parts[2] ?? null,
-  };
+  const verified = verifyPaymentReference(ref);
+  if (!verified) return { user_id: null, app_id: null, plan_id: null };
+  return verified;
 }
 
 export const Route = createFileRoute("/api/public/webhooks/stripe")({
@@ -25,6 +26,11 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
         const whsec = process.env.STRIPE_WEBHOOK_SECRET;
         if (!secret || !whsec) return new Response("Not configured", { status: 500 });
 
+        // Pinned API version predates the installed `stripe` SDK's typed
+        // literal ("2026-06-24.dahlia") -- an as-never cast here is
+        // deliberate, not Supabase-type-related: changing the pinned
+        // version is a payment-webhook behavior decision, out of scope for
+        // this pass. Flagged separately rather than silently upgraded.
         const stripe = new Stripe(secret, { apiVersion: "2024-11-20.acacia" as never });
         const sig = request.headers.get("stripe-signature");
         if (!sig) return new Response("Missing signature", { status: 400 });
@@ -69,7 +75,9 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
             .eq("stripe_payment_intent_id", paymentIntentId)
             .maybeSingle();
           if (!payment) {
-            console.warn("Stripe webhook: refund for unmatched payment_intent", { paymentIntentId });
+            console.warn("Stripe webhook: refund for unmatched payment_intent", {
+              paymentIntentId,
+            });
             return Response.json({ received: true, ignored: "payment_not_found" });
           }
 
@@ -85,7 +93,7 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
 
           const { error: refundPaymentErr } = await supabaseAdmin
             .from("payments")
-            .update({ status: "refunded" } as never)
+            .update({ status: "refunded" })
             .eq("id", paymentRow.id);
           if (refundPaymentErr) {
             console.error("Stripe webhook: payments refund update failed", refundPaymentErr);
@@ -94,31 +102,18 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
           if (paymentRow.subscription_id) {
             const { error: cancelSubErr } = await supabaseAdmin
               .from("subscriptions")
-              .update({ status: "cancelled", expires_at: new Date().toISOString() } as never)
+              .update({ status: "cancelled", expires_at: new Date().toISOString() })
               .eq("id", paymentRow.subscription_id);
             if (cancelSubErr) {
               console.error("Stripe webhook: subscription cancel on refund failed", cancelSubErr);
             }
           }
 
-          if (paymentRow.user_id) {
-            const { data: stillActive } = await supabaseAdmin
-              .from("subscriptions")
-              .select("id")
-              .eq("user_id", paymentRow.user_id)
-              .eq("status", "active")
-              .gt("expires_at", new Date().toISOString())
-              .limit(1);
-            if (!stillActive || stillActive.length === 0) {
-              const { error: revertProfileErr } = await supabaseAdmin
-                .from("profiles")
-                .update({ user_type: "standard" } as never)
-                .eq("id", paymentRow.user_id);
-              if (revertProfileErr) {
-                console.error("Stripe webhook: profile revert on refund failed", revertProfileErr);
-              }
-            }
-          }
+          // Global Premium Visibility & Contact System: Premium status is
+          // derived solely from hasAnyActivePremium() (live, from
+          // `subscriptions`) -- profiles.user_type is no longer written or
+          // read as a Premium signal anywhere, so there is nothing left to
+          // revert here once the subscription above is cancelled.
 
           await writeAuditLog({
             userId: paymentRow.user_id,
@@ -151,7 +146,9 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
 
         const ref = parseRef(session.client_reference_id ?? undefined);
         if (!ref.user_id || !ref.app_id) {
-          console.warn("Stripe webhook missing user/app in client_reference_id");
+          console.warn("Stripe webhook: missing, malformed, or unsigned client_reference_id", {
+            session_id: session.id,
+          });
           return Response.json({ received: true });
         }
         if (!ref.plan_id) {
@@ -250,7 +247,7 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
               currency,
               started_at: new Date().toISOString(),
               expires_at: addMonthsIso(planMonths),
-            } as never,
+            },
             { onConflict: "user_id,app_id" },
           )
           .select("id")
@@ -274,18 +271,15 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
           status: "success",
           payment_method: "stripe",
           invoice_url: session.invoice ? String(session.invoice) : null,
-        } as never);
+        });
         if (insertPaymentErr) {
           console.error("Stripe webhook: payments insert failed", insertPaymentErr);
         }
 
-        const { error: premiumProfileErr } = await supabaseAdmin
-          .from("profiles")
-          .update({ user_type: "premium" } as never)
-          .eq("id", ref.user_id);
-        if (premiumProfileErr) {
-          console.error("Stripe webhook: profile premium update failed", premiumProfileErr);
-        }
+        // Global Premium Visibility & Contact System: Premium status is
+        // derived solely from hasAnyActivePremium() (live, from
+        // `subscriptions`, upserted above) -- profiles.user_type is no
+        // longer written here.
 
         const { error: notifyErr } = await supabaseAdmin.from("notifications").insert({
           user_id: ref.user_id,
@@ -297,7 +291,7 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
           message_de: "Ihr Premium-Abonnement ist aktiv.",
           type: "success",
           app_id: ref.app_id,
-        } as never);
+        });
         if (notifyErr) {
           console.error("Stripe webhook: notification insert failed", notifyErr);
         }

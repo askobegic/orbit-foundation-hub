@@ -57,7 +57,7 @@ export const activateTrialIfEligible = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error: insErr } = await supabaseAdmin
       .from("subscriptions")
-      .upsert(rows as never, { onConflict: "user_id,app_id" });
+      .upsert(rows, { onConflict: "user_id,app_id" });
     if (insErr) throw new Error(insErr.message);
 
     await supabaseAdmin.from("audit_logs").insert({
@@ -65,7 +65,7 @@ export const activateTrialIfEligible = createServerFn({ method: "POST" })
       action: "trial_activated",
       entity_type: "subscription",
       new_data: { days: TRIAL_DAYS, apps: apps.length, expires_at: expiresAt.toISOString() },
-    } as never);
+    });
 
     return { activated: true, expires_at: expiresAt.toISOString() };
   });

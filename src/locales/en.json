@@ -8,8 +8,13 @@
     "settings": "Settings",
     "security": "Security",
     "notifications": "Notifications",
+    "messages": "Messages",
     "help": "Help & Support",
     "logout": "Sign Out"
+  },
+  "messages": {
+    "title": "Messages",
+    "empty": "No conversations yet"
   },
   "auth": {
     "login": "Sign In",
@@ -69,7 +74,9 @@
     "editProfile": "Edit Profile",
     "standardProfile": "Standard Profile",
     "premiumProfile": "Premium Profile",
-    "premiumLocked": "Upgrade to Premium to unlock these options",
+    "premiumLocked": "Upgrade to Premium to make this information visible on your public profile",
+    "call": "Call",
+    "publicOn": "Public profile on",
     "upgradeNow": "Upgrade Now",
     "professionPlaceholder": "Add profession...",
     "addProfession": "Add Profession",
@@ -96,7 +103,16 @@
     "notEntered": "Not entered",
     "basicInfo": "Basic Info",
     "cityPlaceholder": "e.g. Sarajevo",
-    "selectCountry": "Select country"
+    "selectCountry": "Select country",
+    "premiumOn": "Premium on",
+    "sendMessage": "Send message",
+    "viber": "Viber",
+    "messagingSoon": "Messaging is coming soon.",
+    "premiumOnlyTitle": "Premium feature",
+    "premiumOnlyFeature": "This feature is available to Premium members.",
+    "premiumOnlyBoth": "Only Premium members can contact Premium members. Upgrade your account to continue.",
+    "standardMember": "STANDARD MEMBER",
+    "premiumMember": "PREMIUM MEMBER"
   },
   "countries": {
     "BA": "Bosnia and Herzegovina",
@@ -304,9 +320,11 @@
     "deleteCta": "Delete my account",
     "confirmTitle": "Delete account",
     "confirmBody": "This action cannot be undone. All your data will be deleted.",
-    "typeToConfirm": "Type OBRIŠI to confirm:",
+    "typeToConfirm": "Type {{word}} to confirm:",
+    "deleteConfirmWord": "DELETE",
     "deleteConfirm": "Permanently delete",
-    "deleteMismatch": "Please type OBRIŠI exactly to confirm.",
-    "deleteDone": "Your account has been deleted."
+    "deleteMismatch": "Please type {{word}} exactly to confirm.",
+    "deleteDone": "Your account has been deleted.",
+    "exportFileName": "my-data"
   }
 }

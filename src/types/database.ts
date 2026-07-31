@@ -31,6 +31,13 @@ export interface ProfileRow {
   is_verified: boolean;
   is_active: boolean;
   profile_complete: boolean;
+  notify_email: boolean;
+  notify_in_app: boolean;
+  notify_marketing: boolean;
+  // Set automatically by the enforce_identity_lock trigger the moment
+  // onboarding completes -- never client-writable. See PROJECT_KNOWLEDGE.md
+  // -> Profiles (Identity Lock).
+  identity_locked_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -55,6 +62,9 @@ export type ProfileUpdate = Partial<
     | "language"
     | "email"
     | "profile_complete"
+    | "notify_email"
+    | "notify_in_app"
+    | "notify_marketing"
   >
 >;
 
@@ -93,6 +103,9 @@ export interface ApplicationRow {
   cover_image_url: string | null;
   primary_color: string;
   secondary_color: string;
+  // Google Cloud OAuth Client ID for this application's own branded
+  // consent screen. Not secret -- see PROJECT_KNOWLEDGE.md -> Authentication.
+  google_client_id: string | null;
   short_description_bs: string | null;
   short_description_en: string | null;
   short_description_de: string | null;

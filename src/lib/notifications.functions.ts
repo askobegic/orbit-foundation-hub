@@ -32,7 +32,7 @@ export const updateUserSettings = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("profiles")
-      .update(data as never)
+      .update(data)
       .eq("id", context.userId);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -43,7 +43,7 @@ export const markAllNotificationsRead = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const { error } = await context.supabase
       .from("notifications")
-      .update({ is_read: true } as never)
+      .update({ is_read: true })
       .eq("user_id", context.userId)
       .eq("is_read", false);
     if (error) throw new Error(error.message);
@@ -56,7 +56,7 @@ export const markNotificationRead = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("notifications")
-      .update({ is_read: true } as never)
+      .update({ is_read: true })
       .eq("id", data.id)
       .eq("user_id", context.userId);
     if (error) throw new Error(error.message);

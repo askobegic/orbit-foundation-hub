@@ -8,8 +8,13 @@
     "settings": "Einstellungen",
     "security": "Sicherheit",
     "notifications": "Benachrichtigungen",
+    "messages": "Nachrichten",
     "help": "Hilfe & Support",
     "logout": "Abmelden"
+  },
+  "messages": {
+    "title": "Nachrichten",
+    "empty": "Noch keine Unterhaltungen"
   },
   "auth": {
     "login": "Anmelden",
@@ -69,7 +74,9 @@
     "editProfile": "Profil bearbeiten",
     "standardProfile": "Standardprofil",
     "premiumProfile": "Premium-Profil",
-    "premiumLocked": "Upgrade auf Premium, um diese Optionen freizuschalten",
+    "premiumLocked": "Upgrade auf Premium, damit diese Informationen auf deinem öffentlichen Profil sichtbar werden",
+    "call": "Anrufen",
+    "publicOn": "Öffentliches Profil auf",
     "upgradeNow": "Jetzt upgraden",
     "professionPlaceholder": "Beruf hinzufügen...",
     "addProfession": "Beruf hinzufügen",
@@ -95,7 +102,16 @@
     "notEntered": "Nicht angegeben",
     "basicInfo": "Grunddaten",
     "cityPlaceholder": "z. B. Sarajevo",
-    "selectCountry": "Land auswählen"
+    "selectCountry": "Land auswählen",
+    "premiumOn": "Premium bei",
+    "sendMessage": "Nachricht senden",
+    "viber": "Viber",
+    "messagingSoon": "Nachrichten kommen bald.",
+    "premiumOnlyTitle": "Premium-Funktion",
+    "premiumOnlyFeature": "Diese Funktion ist Premium-Mitgliedern vorbehalten.",
+    "premiumOnlyBoth": "Nur Premium-Mitglieder können Premium-Mitglieder kontaktieren. Aktualisiere dein Konto, um fortzufahren.",
+    "standardMember": "STANDARD-MITGLIED",
+    "premiumMember": "PREMIUM-MITGLIED"
   },
   "countries": {
     "BA": "Bosnien und Herzegowina",
@@ -304,9 +320,11 @@
     "deleteCta": "Mein Konto löschen",
     "confirmTitle": "Konto löschen",
     "confirmBody": "Diese Aktion kann nicht rückgängig gemacht werden. Alle Ihre Daten werden gelöscht.",
-    "typeToConfirm": "Geben Sie OBRIŠI ein, um zu bestätigen:",
+    "typeToConfirm": "Geben Sie {{word}} ein, um zu bestätigen:",
+    "deleteConfirmWord": "LÖSCHEN",
     "deleteConfirm": "Endgültig löschen",
-    "deleteMismatch": "Bitte geben Sie genau OBRIŠI ein.",
-    "deleteDone": "Ihr Konto wurde gelöscht."
+    "deleteMismatch": "Bitte geben Sie genau {{word}} ein.",
+    "deleteDone": "Ihr Konto wurde gelöscht.",
+    "exportFileName": "meine-daten"
   }
 }

@@ -4,9 +4,8 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { useApplication } from "@/context/ApplicationContext";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
-
-const GOOGLE_CLIENT_ID = "655229906985-1av2f5327h4evc381gpb5vs3rv4h1u00.apps.googleusercontent.com";
 
 declare global {
   interface Window {
@@ -24,21 +23,18 @@ declare global {
 }
 
 export const Route = createFileRoute("/login")({
-  head: () => ({
-    meta: [
-      { title: "Prijava — Core Platform" },
-      { name: "description", content: "Prijavite se na Core Platform." },
-    ],
-  }),
   component: LoginPage,
 });
 
 function LoginPage() {
   const { t } = useTranslation();
   const { user, profile, loading } = useAuth();
+  const { application, loading: applicationLoading } = useApplication();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const googleButtonRef = useRef<HTMLDivElement>(null);
+
+  const googleClientId = application?.google_client_id ?? null;
 
   // Redirect if already logged in
   useEffect(() => {
@@ -85,12 +81,15 @@ function LoginPage() {
     };
   }, [t]);
 
-  // Load Google GSI and render button
+  // Load Google GSI and render button, once the Application Resolver has
+  // supplied this application's own Google Client ID.
   useEffect(() => {
+    if (!googleClientId) return;
+
     const initGoogle = () => {
       if (!window.google || !googleButtonRef.current) return;
       window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
+        client_id: googleClientId,
         callback: window.handleGoogleCredential,
         auto_select: false,
         cancel_on_tap_outside: true,
@@ -125,7 +124,7 @@ function LoginPage() {
         document.head.removeChild(script);
       }
     };
-  }, []);
+  }, [googleClientId]);
 
   return (
     <main
@@ -137,29 +136,56 @@ function LoginPage() {
         style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}
       >
         <div className="mb-6 flex justify-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#1D6BF3] text-lg font-bold text-white">
-            C
-          </div>
+          {application?.logo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={application.logo_url}
+              alt={application.name}
+              className="h-12 w-12 rounded-xl object-contain"
+            />
+          ) : (
+            <div
+              className="flex h-12 w-12 items-center justify-center rounded-xl text-lg font-bold text-white"
+              style={{ backgroundColor: application?.primary_color ?? "#1D6BF3" }}
+            >
+              {application?.name.slice(0, 1) ?? ""}
+            </div>
+          )}
         </div>
 
         <h1 className="mb-8 text-center text-2xl font-semibold text-gray-900">
           {t("auth.welcome")}
         </h1>
 
-        {/* Google renders its own button here */}
         <div className="flex justify-center">
-          {busy ? (
+          {applicationLoading ? (
+            <div className="flex items-center gap-3 py-3">
+              <span className="h-5 w-5 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+            </div>
+          ) : busy ? (
             <div className="flex items-center gap-3 py-3">
               <span className="h-5 w-5 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
               <span className="text-sm text-gray-500">Prijava u toku...</span>
             </div>
-          ) : (
+          ) : googleClientId ? (
             <div ref={googleButtonRef} />
+          ) : (
+            <p className="text-center text-sm text-gray-500">
+              Prijava trenutno nije dostupna za ovu aplikaciju.
+            </p>
           )}
         </div>
 
+        <p className="mt-6 text-center text-xs leading-relaxed text-gray-500">
+          <strong className="font-semibold">Hinweis:</strong> Auf dieser Plattform sind nur Profile
+          mit echtem Vor- und Nachnamen sowie einem Profilfoto der Person erlaubt. Profile mit
+          falschen Angaben oder ungeeigneten Bildern können nach einer Überprüfung entfernt werden.
+        </p>
+
         <LanguageSwitcher className="mt-6" />
-        <p className="mt-6 text-center text-xs text-gray-500">© 2025 Core Platform</p>
+        {application?.name && (
+          <p className="mt-6 text-center text-xs text-gray-500">© 2025 {application.name}</p>
+        )}
       </div>
     </main>
   );

@@ -28,16 +28,15 @@ export function AvatarUpload({ userId, value, onChange, size = 96 }: Props) {
     setUploading(true);
     try {
       const ext = file.name.split(".").pop() || "jpg";
-      const path = `${userId}/avatar.${ext}`;
+      const path = `avatars/${userId}/avatar.${ext}`;
       const { error } = await supabase.storage
-        .from("avatars")
+        .from("core")
         .upload(path, file, { upsert: true, contentType: file.type });
       if (error) throw error;
-      const { data, error: signErr } = await supabase.storage
-        .from("avatars")
-        .createSignedUrl(path, 60 * 60 * 24 * 365);
-      if (signErr) throw signErr;
-      onChange(data.signedUrl);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("core").getPublicUrl(path);
+      onChange(publicUrl);
     } catch {
       toast.error(t("auth.uploadError"));
     } finally {
@@ -56,7 +55,9 @@ export function AvatarUpload({ userId, value, onChange, size = 96 }: Props) {
         {value ? (
           <img src={value} alt="Avatar" className="h-full w-full object-cover" />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-2xl text-gray-400">?</div>
+          <div className="flex h-full w-full items-center justify-center text-2xl text-gray-400">
+            ?
+          </div>
         )}
       </button>
       <div className="flex flex-col gap-1">

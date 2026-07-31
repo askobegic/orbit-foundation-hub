@@ -70,10 +70,9 @@ function SettingsPage() {
           .eq("user_id", user.id),
       ]);
       const map = new Map(
-        (settings ?? []).map((s: { app_id: string; is_visible: boolean; is_contactable: boolean }) => [
-          s.app_id,
-          s,
-        ]),
+        (settings ?? []).map(
+          (s: { app_id: string; is_visible: boolean; is_contactable: boolean }) => [s.app_id, s],
+        ),
       );
       const merged = ((apps as ApplicationRow[] | null) ?? []).map((app) => {
         const s = map.get(app.id);
@@ -92,21 +91,31 @@ function SettingsPage() {
     patch: { is_visible?: boolean; is_contactable?: boolean },
   ) {
     if (!user) return;
-    setAppSettings((prev) =>
-      prev.map((r) => (r.app.id === appId ? { ...r, ...patch } : r)),
-    );
-    setSavingApps((s) => ({ ...s, [appId]: true }));
-    try {
-      const current = appSettings.find((r) => r.app.id === appId);
-      const payload = {
+    // Derive the write payload from the functional updater's own `prev`,
+    // not from the outer `appSettings` closure -- the closure can be stale
+    // if two toggles fire in quick succession (see PROJECT_AUDIT.md -> DA-5).
+    let payload: {
+      user_id: string;
+      app_id: string;
+      is_visible: boolean;
+      is_contactable: boolean;
+    } | null = null;
+    setAppSettings((prev) => {
+      const next = prev.map((r) => (r.app.id === appId ? { ...r, ...patch } : r));
+      const row = next.find((r) => r.app.id === appId);
+      payload = {
         user_id: user.id,
         app_id: appId,
-        is_visible: patch.is_visible ?? current?.is_visible ?? true,
-        is_contactable: patch.is_contactable ?? current?.is_contactable ?? true,
+        is_visible: row?.is_visible ?? true,
+        is_contactable: row?.is_contactable ?? true,
       };
+      return next;
+    });
+    setSavingApps((s) => ({ ...s, [appId]: true }));
+    try {
       const { error } = await supabase
         .from("user_app_settings")
-        .upsert(payload, { onConflict: "user_id,app_id" });
+        .upsert(payload!, { onConflict: "user_id,app_id" });
       if (error) throw error;
       toast.success(t("settings.saved"));
     } catch {
@@ -118,15 +127,10 @@ function SettingsPage() {
 
   useEffect(() => {
     if (!profile) return;
-    setLang(((profile.language ?? "bs") as "bs" | "en" | "de"));
-    const p = profile as unknown as {
-      notify_email?: boolean;
-      notify_in_app?: boolean;
-      notify_marketing?: boolean;
-    };
-    setEmail(p.notify_email ?? true);
-    setInApp(p.notify_in_app ?? true);
-    setMarketing(p.notify_marketing ?? false);
+    setLang((profile.language ?? "bs") as "bs" | "en" | "de");
+    setEmail(profile.notify_email ?? true);
+    setInApp(profile.notify_in_app ?? true);
+    setMarketing(profile.notify_marketing ?? false);
   }, [profile]);
 
   async function handleSave() {
@@ -162,7 +166,7 @@ function SettingsPage() {
         "-",
       );
       a.href = url;
-      a.download = `moji-podaci-${username}.json`;
+      a.download = `${t("privacy.exportFileName")}-${username}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -175,9 +179,11 @@ function SettingsPage() {
     }
   }
 
+  const deleteConfirmWord = t("privacy.deleteConfirmWord");
+
   async function handleDelete() {
-    if (deleteConfirm !== "OBRIŠI") {
-      toast.error(t("privacy.deleteMismatch"));
+    if (deleteConfirm !== deleteConfirmWord) {
+      toast.error(t("privacy.deleteMismatch", { word: deleteConfirmWord }));
       return;
     }
     setDeleting(true);
@@ -256,14 +262,21 @@ function SettingsPage() {
               <p className="py-4 text-sm text-gray-500">{t("common.loading")}</p>
             )}
             {appSettings.map((row) => (
-              <div key={row.app.id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div
+                key={row.app.id}
+                className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between"
+              >
                 <div className="flex items-center gap-3">
                   <div
                     className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg text-xs font-semibold text-white"
                     style={{ background: row.app.primary_color ?? "#1D6BF3" }}
                   >
                     {row.app.logo_url ? (
-                      <img src={row.app.logo_url} alt={row.app.name} className="h-full w-full object-cover" />
+                      <img
+                        src={row.app.logo_url}
+                        alt={row.app.name}
+                        className="h-full w-full object-cover"
+                      />
                     ) : (
                       row.app.name.slice(0, 2).toUpperCase()
                     )}
@@ -317,7 +330,11 @@ function SettingsPage() {
               disabled={exporting}
               className="inline-flex w-fit items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-60"
             >
-              {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              {exporting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
               {exporting ? t("privacy.exporting") : t("privacy.exportCta")}
             </button>
           </div>
@@ -341,12 +358,14 @@ function SettingsPage() {
             <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
               <h3 className="text-base font-semibold text-gray-900">{t("privacy.confirmTitle")}</h3>
               <p className="mt-2 text-sm text-gray-600">{t("privacy.confirmBody")}</p>
-              <p className="mt-3 text-xs text-gray-500">{t("privacy.typeToConfirm")}</p>
+              <p className="mt-3 text-xs text-gray-500">
+                {t("privacy.typeToConfirm", { word: deleteConfirmWord })}
+              </p>
               <input
                 type="text"
                 value={deleteConfirm}
                 onChange={(e) => setDeleteConfirm(e.target.value)}
-                placeholder="OBRIŠI"
+                placeholder={deleteConfirmWord}
                 className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
               />
               <div className="mt-4 flex justify-end gap-2">
@@ -363,10 +382,14 @@ function SettingsPage() {
                 <button
                   type="button"
                   onClick={handleDelete}
-                  disabled={deleting || deleteConfirm !== "OBRIŠI"}
+                  disabled={deleting || deleteConfirm !== deleteConfirmWord}
                   className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
                 >
-                  {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  {deleting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
                   {t("privacy.deleteConfirm")}
                 </button>
               </div>

@@ -22,10 +22,12 @@ import {
   ChevronRight,
   Lock,
   BadgeCheck,
+  MessageSquare,
 } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { hasAnyActivePremium } from "@/lib/premium";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrialBanner } from "@/components/dashboard/TrialBanner";
@@ -135,15 +137,22 @@ export function DashboardPage() {
     },
   });
 
-  const premiumAppIds = useMemo(
-    () => new Set((subsQuery.data ?? []).map((s) => s.app_id).filter(Boolean) as string[]),
-    [subsQuery.data],
-  );
-  // Single source of truth for "is this user premium" on this page: derived
-  // from the same live, already-filtered subscription data "My Applications"
-  // below uses -- not from profiles.user_type, which is a stored flag that
-  // doesn't reflect real-time subscription state.
-  const hasPremium = premiumAppIds.size > 0;
+  // Global Premium Visibility & Contact System: the one shared "is this
+  // user Premium" check, same as every other surface (Profile Card,
+  // dashboard.profile.tsx) -- not re-derived from subsQuery, and not
+  // profiles.user_type (a stored flag that doesn't reflect real-time
+  // subscription state). Premium is ecosystem-wide, so this single value
+  // applies uniformly to every "My Applications" tile below -- there is no
+  // per-application Premium/Standard distinction anymore.
+  const hasPremiumQuery = useQuery({
+    queryKey: ["premium", "hasAny", user?.id],
+    queryFn: () => hasAnyActivePremium(user!.id),
+    enabled: !!user?.id,
+  });
+  const hasPremium = hasPremiumQuery.data ?? false;
+  // Per-app expiry/plan display remains a legitimate billing-record concern
+  // (which application's plan is expiring when), independent of the global
+  // Premium permission above.
   const premiumExpiryByApp = useMemo(() => {
     const map = new Map<string, string>();
     (subsQuery.data ?? []).forEach((s) => {
@@ -283,7 +292,10 @@ export function DashboardPage() {
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2">
                   {(appsQuery.data ?? []).map((app) => {
-                    const isPremium = premiumAppIds.has(app.id);
+                    // Premium is global (see hasPremium above) -- every
+                    // tile reflects the same platform-wide status, not a
+                    // per-application one.
+                    const isPremium = hasPremium;
                     const isActive = app.is_enabled !== false && app.status === "active";
                     const desc =
                       app[`short_description_${lang}` as const] ??
@@ -574,6 +586,7 @@ function Sidebar({ onSignOut }: { onSignOut: () => void }) {
     { to: "/dashboard/settings", icon: Settings, label: t("nav.settings") },
     { to: "/dashboard/security", icon: Shield, label: t("nav.security") },
     { to: "/dashboard/notifications", icon: Bell, label: t("nav.notifications") },
+    { to: "/dashboard/messages", icon: MessageSquare, label: t("nav.messages") },
     { to: "/dashboard/help", icon: HelpCircle, label: t("nav.help") },
   ] as const;
 

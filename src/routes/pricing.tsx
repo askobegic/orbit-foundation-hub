@@ -1,11 +1,14 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { Check, Crown, ArrowLeft } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { createPaymentReference } from "@/lib/payments.functions";
 import type { ApplicationRow, SubscriptionPlanRow } from "@/types/database";
 
 export const Route = createFileRoute("/pricing")({
@@ -39,6 +42,8 @@ function PricingPage() {
   const { app: appSlugFromUrl } = Route.useSearch();
   const lang = (i18n.language?.slice(0, 2) ?? "bs") as "bs" | "en" | "de";
   const [selectedApp, setSelectedApp] = useState<string | null>(null);
+  const [payingPlanId, setPayingPlanId] = useState<string | null>(null);
+  const createReference = useServerFn(createPaymentReference);
 
   const appsQuery = useQuery({
     queryKey: ["pricing", "apps"],
@@ -53,7 +58,7 @@ function PricingPage() {
   });
 
   const appFromSlug = appSlugFromUrl
-    ? appsQuery.data?.find((a) => a.slug === appSlugFromUrl)?.id ?? null
+    ? (appsQuery.data?.find((a) => a.slug === appSlugFromUrl)?.id ?? null)
     : null;
   const activeAppId = selectedApp ?? appFromSlug ?? appsQuery.data?.[0]?.id ?? null;
 
@@ -77,18 +82,31 @@ function PricingPage() {
     [appsQuery.data, activeAppId],
   );
 
-  function buildStripeUrl(plan: SubscriptionPlanRow) {
-    if (!plan.stripe_payment_link || !user || !activeAppId) return null;
-    return appendParams(plan.stripe_payment_link, {
-      client_reference_id: `${user.id}__${activeAppId}__${plan.id}`,
-      prefilled_email: user.email ?? "",
-    });
-  }
-  function buildPayPalUrl(plan: SubscriptionPlanRow) {
-    if (!plan.paypal_payment_link || !user || !activeAppId) return null;
-    return appendParams(plan.paypal_payment_link, {
-      custom: `${user.id}_${activeAppId}_${plan.id}`,
-    });
+  // The (user_id, app_id, plan_id) reference is signed server-side
+  // (createPaymentReference) rather than built as a plain client-side string
+  // -- see PROJECT_AUDIT.md -> SE-7. Both webhooks reject an unsigned or
+  // tampered reference before granting any entitlement.
+  async function handlePay(plan: SubscriptionPlanRow, provider: "stripe" | "paypal") {
+    const link = provider === "stripe" ? plan.stripe_payment_link : plan.paypal_payment_link;
+    if (!link || !user || !activeAppId) return;
+    setPayingPlanId(plan.id);
+    try {
+      const { reference } = await createReference({
+        data: { app_id: activeAppId, plan_id: plan.id },
+      });
+      const url =
+        provider === "stripe"
+          ? appendParams(link, {
+              client_reference_id: reference,
+              prefilled_email: user.email ?? "",
+            })
+          : appendParams(link, { custom: reference });
+      window.location.href = url;
+    } catch (err) {
+      console.error("createPaymentReference failed", err);
+      toast.error(t("common.errorGeneric"));
+      setPayingPlanId(null);
+    }
   }
 
   return (
@@ -126,9 +144,7 @@ function PricingPage() {
                   ? "text-white shadow-sm"
                   : "bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"
               }`}
-              style={
-                activeAppId === app.id ? { backgroundColor: app.primary_color } : undefined
-              }
+              style={activeAppId === app.id ? { backgroundColor: app.primary_color } : undefined}
             >
               <span className="inline-flex items-center gap-2">
                 {app.logo_url ? (
@@ -166,11 +182,10 @@ function PricingPage() {
           )}
           {(plansQuery.data ?? []).map((plan) => {
             const features =
-              (plan[`features_${lang}` as const] as string[]) ??
-              plan.features_en ??
-              [];
-            const stripeUrl = buildStripeUrl(plan);
-            const paypalUrl = buildPayPalUrl(plan);
+              (plan[`features_${lang}` as const] as string[]) ?? plan.features_en ?? [];
+            const canStripe = !!(plan.stripe_payment_link && user && activeAppId);
+            const canPaypal = !!(plan.paypal_payment_link && user && activeAppId);
+            const isPaying = payingPlanId === plan.id;
             const monthly = plan.duration_months
               ? (Number(plan.price) / plan.duration_months).toFixed(2)
               : "-";
@@ -227,13 +242,15 @@ function PricingPage() {
                   ))}
                 </ul>
                 <div className="mt-6 space-y-2">
-                  {stripeUrl ? (
-                    <a
-                      href={stripeUrl}
-                      className="block w-full rounded-lg bg-[#1D6BF3] px-4 py-2 text-center text-sm font-medium text-white hover:bg-[#1858cf]"
+                  {canStripe ? (
+                    <button
+                      type="button"
+                      disabled={isPaying}
+                      onClick={() => void handlePay(plan, "stripe")}
+                      className="block w-full rounded-lg bg-[#1D6BF3] px-4 py-2 text-center text-sm font-medium text-white hover:bg-[#1858cf] disabled:opacity-60"
                     >
-                      {t("pricing.payStripe")}
-                    </a>
+                      {isPaying ? t("common.loading") : t("pricing.payStripe")}
+                    </button>
                   ) : (
                     <button
                       disabled
@@ -242,13 +259,15 @@ function PricingPage() {
                       {t("pricing.stripeUnavailable")}
                     </button>
                   )}
-                  {paypalUrl ? (
-                    <a
-                      href={paypalUrl}
-                      className="block w-full rounded-lg border border-[#F59E0B] px-4 py-2 text-center text-sm font-medium text-[#F59E0B] hover:bg-[#F59E0B]/10"
+                  {canPaypal ? (
+                    <button
+                      type="button"
+                      disabled={isPaying}
+                      onClick={() => void handlePay(plan, "paypal")}
+                      className="block w-full rounded-lg border border-[#F59E0B] px-4 py-2 text-center text-sm font-medium text-[#F59E0B] hover:bg-[#F59E0B]/10 disabled:opacity-60"
                     >
-                      {t("pricing.payPaypal")}
-                    </a>
+                      {isPaying ? t("common.loading") : t("pricing.payPaypal")}
+                    </button>
                   ) : (
                     <button
                       disabled
