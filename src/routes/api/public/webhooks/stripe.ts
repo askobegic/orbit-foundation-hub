@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import Stripe from "stripe";
 
 import { addMonthsIso, writeAuditLog } from "@/lib/admin.server";
-import { verifyPaymentReference } from "@/lib/payment-reference.server";
+import { activateCampaignFromPurchase } from "@/lib/advertising.server";
+import { verifyCampaignReference, verifyPaymentReference } from "@/lib/payment-reference.server";
 
 // Verifies the HMAC signature created by createPaymentReference
 // (src/lib/payments.functions.ts) -- see PROJECT_AUDIT.md -> SE-7. A
@@ -71,7 +72,7 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
 
           const { data: payment } = await supabaseAdmin
             .from("payments")
-            .select("id, user_id, subscription_id, status")
+            .select("id, user_id, subscription_id, campaign_id, status")
             .eq("stripe_payment_intent_id", paymentIntentId)
             .maybeSingle();
           if (!payment) {
@@ -85,6 +86,7 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
             id: string;
             user_id: string | null;
             subscription_id: string | null;
+            campaign_id: string | null;
             status: string;
           };
           if (paymentRow.status === "refunded") {
@@ -106,6 +108,16 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
               .eq("id", paymentRow.subscription_id);
             if (cancelSubErr) {
               console.error("Stripe webhook: subscription cancel on refund failed", cancelSubErr);
+            }
+          }
+
+          if (paymentRow.campaign_id) {
+            const { error: cancelCampaignErr } = await supabaseAdmin
+              .from("ad_campaigns")
+              .update({ status: "cancelled", updated_at: new Date().toISOString() })
+              .eq("id", paymentRow.campaign_id);
+            if (cancelCampaignErr) {
+              console.error("Stripe webhook: campaign cancel on refund failed", cancelCampaignErr);
             }
           }
 
@@ -142,6 +154,81 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
             payment_status: session.payment_status,
           });
           return Response.json({ received: true, ignored: "not_paid" });
+        }
+
+        // Priority 8.4: Advertising campaign checkout uses its own signed
+        // reference shape (a leading "campaign" tag -- see
+        // payment-reference.server.ts), so it can never be confused with a
+        // subscription reference. Checked first and returns early; the
+        // subscription flow below is otherwise completely unchanged.
+        const campaignRef = verifyCampaignReference(session.client_reference_id ?? undefined);
+        if (campaignRef) {
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+          const { data: existingPayment } = await supabaseAdmin
+            .from("payments")
+            .select("id")
+            .eq("stripe_payment_id", session.id)
+            .maybeSingle();
+          if (existingPayment) {
+            return Response.json({ received: true, duplicate: true });
+          }
+
+          const amount = (session.amount_total ?? 0) / 100;
+          const currency = (session.currency ?? "eur").toUpperCase();
+
+          const result = await activateCampaignFromPurchase({
+            campaignId: campaignRef.campaign_id,
+            userId: campaignRef.user_id,
+            appId: campaignRef.app_id,
+            paidAmount: amount,
+            paidCurrency: currency,
+          });
+          if (!result.ok) {
+            console.warn("Stripe webhook: campaign activation failed", {
+              session_id: session.id,
+              reason: result.reason,
+            });
+            return Response.json({ received: true, ignored: result.reason });
+          }
+
+          const { error: insertPaymentErr } = await supabaseAdmin.from("payments").insert({
+            user_id: campaignRef.user_id,
+            app_id: campaignRef.app_id,
+            campaign_id: campaignRef.campaign_id,
+            stripe_payment_id: session.id,
+            stripe_payment_intent_id:
+              typeof session.payment_intent === "string"
+                ? session.payment_intent
+                : (session.payment_intent?.id ?? null),
+            amount,
+            currency,
+            status: "success",
+            payment_method: "stripe",
+            invoice_url: session.invoice ? String(session.invoice) : null,
+          });
+          if (insertPaymentErr) {
+            console.error("Stripe webhook: campaign payment insert failed", insertPaymentErr);
+          }
+
+          await writeAuditLog({
+            userId: campaignRef.user_id,
+            action: "payment.stripe.campaign_success",
+            entityType: "ad_campaign",
+            entityId: campaignRef.campaign_id,
+            newData: { session_id: session.id, amount, currency, creditApplied: result.creditApplied },
+          });
+
+          const { grantRewardAction } = await import("@/lib/rewards.server");
+          await grantRewardAction({
+            userId: campaignRef.user_id,
+            action: "advertising_purchase",
+            resourceType: "ad_campaign",
+            resourceId: campaignRef.campaign_id,
+            sourceAppId: campaignRef.app_id,
+          });
+
+          return Response.json({ received: true });
         }
 
         const ref = parseRef(session.client_reference_id ?? undefined);
@@ -234,6 +321,18 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
           }
         }
 
+        // Checked before the upsert below so we can tell first purchase
+        // apart from a renewal for Rewards & Loyalty (reward_action_rules
+        // has separate entries for premium_purchase/premium_renewal) --
+        // the upsert itself reuses the same row either way.
+        const { data: existingSub } = await supabaseAdmin
+          .from("subscriptions")
+          .select("id")
+          .eq("user_id", ref.user_id)
+          .eq("app_id", ref.app_id)
+          .maybeSingle();
+        const isRenewal = !!existingSub;
+
         const { data: sub, error: subErr } = await supabaseAdmin
           .from("subscriptions")
           .upsert(
@@ -302,6 +401,21 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
           entityType: "subscription",
           entityId: (sub as { id: string }).id,
           newData: { session_id: session.id, amount, currency },
+        });
+
+        const { grantRewardAction, recordPremiumReferralIfApplicable } = await import(
+          "@/lib/rewards.server"
+        );
+        await grantRewardAction({
+          userId: ref.user_id,
+          action: isRenewal ? "premium_renewal" : "premium_purchase",
+          resourceType: "subscription",
+          resourceId: (sub as { id: string }).id,
+          sourceAppId: ref.app_id,
+        });
+        await recordPremiumReferralIfApplicable({
+          userId: ref.user_id,
+          subscriptionId: (sub as { id: string }).id,
         });
 
         const { sendN8nEvent } = await import("@/lib/n8n.server");

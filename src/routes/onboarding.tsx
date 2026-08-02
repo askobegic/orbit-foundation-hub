@@ -13,6 +13,8 @@ import { generateUniqueUsername } from "@/lib/username";
 import type { UserLanguage } from "@/types/database";
 import { useServerFn } from "@tanstack/react-start";
 import { notifyNewUserRegistered } from "@/lib/notifications.functions";
+import { consumeReferral } from "@/lib/referral";
+import { linkReferral } from "@/lib/rewards.functions";
 
 export const Route = createFileRoute("/onboarding")({
   component: OnboardingPage,
@@ -24,6 +26,7 @@ function OnboardingPage() {
   const { language, setLanguage: setAppLanguage } = useLanguage();
   const navigate = useNavigate();
   const notifyNewUser = useServerFn(notifyNewUserRegistered);
+  const linkReferralFn = useServerFn(linkReferral);
 
   const [step, setStep] = useState<1 | 2>(1);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -141,6 +144,14 @@ function OnboardingPage() {
         await notifyNewUser({});
       } catch (err) {
         console.warn("[n8n] notify new user failed", err);
+      }
+      const referrerUsername = consumeReferral();
+      if (referrerUsername) {
+        try {
+          await linkReferralFn({ data: { referrerUsername } });
+        } catch (err) {
+          console.warn("[rewards] link referral failed", err);
+        }
       }
       toast.success(t("auth.profileSaved"));
       void navigate({ to: "/dashboard", replace: true });

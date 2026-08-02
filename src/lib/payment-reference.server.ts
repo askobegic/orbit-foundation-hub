@@ -41,3 +41,39 @@ export function verifyPaymentReference(
 
   return { user_id, app_id, plan_id };
 }
+
+// Priority 8.4: Advertising campaign checkout reuses the same webhook
+// infrastructure and HMAC signing approach as subscriptions, but with its
+// own distinct reference shape (a leading "campaign" tag) so a campaign
+// reference and a subscription reference can never be confused with each
+// other by either webhook -- verifyPaymentReference above is completely
+// unchanged and untouched by this addition.
+//
+// Carries the campaign id itself, not a plan/price id: this codebase has
+// no dynamic Checkout Session creation (subscriptions use static,
+// admin-configured Stripe/PayPal Payment Links -- see pricing.tsx), so
+// there is no channel to carry campaign creative data (title/image/link)
+// through the payment provider. The campaign row is created as 'draft'
+// (creative already stored) before checkout; the webhook activates that
+// same row by id on payment success rather than creating it from scratch.
+export function signCampaignReference(userId: string, appId: string, campaignId: string): string {
+  const base = `campaign__${userId}__${appId}__${campaignId}`;
+  return `${base}__${sign(base)}`;
+}
+
+export function verifyCampaignReference(
+  ref: string | null | undefined,
+): { user_id: string; app_id: string; campaign_id: string } | null {
+  if (!ref) return null;
+  const parts = ref.split("__");
+  if (parts.length !== 5 || parts[0] !== "campaign") return null;
+  const [, user_id, app_id, campaign_id, signature] = parts;
+  if (!user_id || !app_id || !campaign_id || !signature) return null;
+
+  const expected = sign(`campaign__${user_id}__${app_id}__${campaign_id}`);
+  const a = Buffer.from(signature, "hex");
+  const b = Buffer.from(expected, "hex");
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+
+  return { user_id, app_id, campaign_id };
+}

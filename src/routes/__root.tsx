@@ -15,6 +15,7 @@ import "@/lib/i18n";
 import { AuthProvider } from "@/context/AuthContext";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { ApplicationProvider } from "@/context/ApplicationContext";
+import { captureReferralFromUrl } from "@/lib/referral";
 
 function NotFoundComponent() {
   return (
@@ -122,6 +123,10 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    captureReferralFromUrl();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

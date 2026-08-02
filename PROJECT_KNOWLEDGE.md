@@ -278,6 +278,75 @@ The platform is designed so that adding a new application means adding a new row
 
 Any design that would require a new application to bring its own auth, its own user table, or its own billing logic is, by definition, not following this architecture and should be treated as a deviation to resolve, not a pattern to repeat.
 
+## Capabilities (Priority 8 — Final CORE Architecture)
+
+**CORE never branches on which application is calling it by name.** No code path anywhere in this repository may read as "if BosniaFans" / "if Ticketaria" — the mechanism that makes this enforceable rather than aspirational is **capabilities**: a controlled, admin-extensible vocabulary of feature keys (`premium`, `messaging`, `advertising`, `rewards`, `featured_business`, `featured_event`, `business_directory`, `events`, `discover`, `community`, and any future key an admin registers), each independently enabled or disabled per application.
+
+- `capability_definitions` is the vocabulary itself — `key` (stable, e.g. `advertising`), `label`, `displayOrder`, and a soft lifecycle (`enabled`/`archived`, never a hard delete once a capability may be referenced elsewhere). New capabilities are added by an admin inserting a row here — **never by a deployment**, which is the concrete mechanism behind "administrator can change business rules without code changes."
+- `application_capabilities` is the per-application on/off switch — one row per `(app, capability)` pair. An application's enabled set is publicly readable (the calling application itself, and cross-application UI, both need it without an admin session) but only admin-writable.
+- **A capability being disabled for an application must disable that feature completely and consistently** — dashboard widget, navigation entry, the ability to create new records, the API's own responses, and any background processing all have to agree. This is each *consuming* module's own responsibility (the capability flag is the single source of truth every one of those surfaces reads from), not something `capability_definitions`/`application_capabilities` themselves enforce structurally — there is no automatic mechanism that hides a dashboard widget just because a database row changed; every module that has a capability-gated surface must actually check it. This is a correctness obligation on every future module, called out here so it isn't missed silently as new modules are added.
+- A definition being **archived** always wins over an application's own `enabled=true` row — archiving a capability platform-wide takes precedence over any per-application setting.
+
+**CORE Capabilities Service** (`src/lib/capabilities.functions.ts`): `getApplicationCapabilities(appId)` is the one and only place an enabled-capability set is ever read from — components/modules must never query `application_capabilities` directly. Admin-only: `adminListCapabilityDefinitions`, `adminUpsertCapabilityDefinition`, `adminSetApplicationCapability`, `adminListApplicationCapabilities`.
+
+## Dashboard Widget Modularity (Priority 8.2)
+
+The CORE Dashboard (`/dashboard`) is composed of independent, admin-toggleable widgets rather than a fixed set of sections every application always sees identically. Same registry + per-application-override shape as Capabilities, deliberately reused rather than inventing a second pattern for the same underlying problem ("is X visible for this application, globally or by override"):
+
+- `dashboard_widgets` — the widget registry (`key`, `label`, `displayOrder`, soft-lifecycle `enabled`/`archived`), seeded with the six sections that already exist on the dashboard today: `trial_banner`, `my_applications`, `active_subscription`, `payment_history`, `quick_links`, `share_and_invite`. The identity/profile header and the trust-badge footer are not widgets — they're permanent chrome, not optional sections.
+- `dashboard_widget_settings` — per-application override (`widget_key`, `app_id`, `enabled`); a missing row means "use the registry's global default," exactly like `application_capabilities`.
+- **`requiresCapability`** (nullable, on the registry row): a widget can declare that it only makes sense when a given capability is enabled for the application — this is the dependency-validation hook a dashboard widget plugs into, so disabling that capability hides its widget automatically, with no separate check to remember. First consumer: the `rewards` widget added in Priority 8.3, gated on the `rewards` capability.
+- `getDashboardWidgets(appId)` (`src/lib/dashboard-widgets.functions.ts`) is the one place this is ever resolved — `DashboardPage.tsx` fetches it once (keyed on the currently-resolved application via `useApplication()`) and conditionally renders each section, and the Rewards nav/quick-link entry, from that single result, rather than each surface deciding independently whether to render.
+
+## Rewards & Loyalty (Priority 8.3)
+
+Entirely action-driven: applications and CORE flows never report point values, only that an **action** happened (`invite_registration`, `premium_purchase`, `premium_renewal`, `premium_referral_verified`, `advertising_purchase`, or an application-reported action like `business_approved`/`vendor_approved`/`event_created`/`place_approved`/`review_approved`). CORE alone resolves every business rule — points, cooldowns, limits — from configuration. There is no switch statement or per-action branch anywhere in the implementation; an action CORE doesn't recognize (typo, or a not-yet-configured application action) still gets a ledger row for full auditability, it just carries `0` points.
+
+- **`reward_action_rules`** — the sole lookup table for what an action is worth: `action` (unique key), `points`, `cooldown_seconds`, `max_per_user` (nullable), plus soft lifecycle/`display_order`. `grantRewardAction()` (`src/lib/rewards.server.ts`) is the only function that reads it and the only place points are ever decided.
+- **Ledger, not a mutable balance.** `reward_ledger` is append-only and every row's `points` is non-negative — Lifetime Points is `SUM(points)` and only ever grows, matching "Lifetime Points never decrease." The redeemable Reward Points balance is `SUM(reward_ledger.points) − SUM(reward_redemptions.points_spent)`, which can decrease — redemption spends against this derived balance, never against the ledger itself.
+- **Levels** (`reward_levels`: `key`, `label`, `min_lifetime_points`) — Member, Bronze, Silver, Gold, Platinum, Ambassador, Legend by default, purely data — a user's level is whichever enabled/non-archived row has the highest `min_lifetime_points` at or below their Lifetime Points.
+- **Achievements** (`reward_achievements`) auto-trigger off a `trigger_action` + `trigger_count` (e.g. "First Invite" triggers once `invite_registration` has happened `1` time) — resolved generically by counting matching `reward_ledger` rows, not by hardcoding which achievement means what.
+- **Premium Referral verification** is the one two-step flow in this module: `recordPremiumReferralIfApplicable()` records a pending referral the moment a referred user's Premium first activates (Stripe/PayPal webhooks), with a `verification_due_at` computed from the admin-configurable `reward_config.referral_verification_days` (default 30). `promotePendingReferralVerifications(referrerId)` — called lazily whenever that referrer next loads their own Rewards Dashboard, matching this codebase's existing precedent of `TrialBanner`'s reactive-on-load activation rather than a scheduled job (no cron infrastructure exists here) — checks whether the referred user's Premium is *still* active once the period has elapsed and, if so, marks the referral verified and grants `premium_referral_verified` to the referrer. **Known, deliberate simplification:** this checks "is Premium active at the moment the period elapses," not "was Premium continuously active for the whole period" — true continuous-activity tracking would need subscription status history this codebase doesn't keep.
+- **Referral linking** (`linkReferral`, `src/lib/rewards.functions.ts`) is deliberately service-role-only, not a client-editable profile field: `profiles.referred_by_user_id` is not in the `authenticated` column grant (see Profiles RLS below), because letting a user set their own referrer directly would let them fabricate a referral for reward fraud. The `?ref=<username>` link is captured client-side (`src/lib/referral.ts`, first-touch only, localStorage) and consumed once at onboarding completion, which calls `linkReferral` — first-write-only, self-referral rejected.
+- **Every catalog reward requires two independent, non-substitutable conditions**: `reward_catalog.points_cost` (Reward Points) AND `verified_referrals_required` (a threshold check against the referrer's verified-referral count, never consumed/deducted on redemption — `reward_redemptions.verified_referrals_at_redemption` is an audit snapshot only). Defaults: 1/3/6/12 Month Premium, Advertising Credit, Featured Business, Featured Event — all admin-editable via `reward_catalog`, no deployment required to change a price or add a reward.
+- **Fulfillment abstraction — Rewards records, it never fulfills.** `reward_catalog.grant_type` names a **fulfillment type** resolved against `reward_fulfillment_types`, an admin-extensible registry (same shape as `capability_definitions`) rather than a hardcoded literal union — a later module registers its own type there without a CORE deployment, and Rewards never needs to know what that type *means*. `redeemReward` validates eligibility, deducts points immediately (via the `reward_redemptions` insert), and records `grant_result: { status: "pending_fulfillment", grantType, grantValue }` — full stop. It does not extend Premium, credit Advertising, or create a Featured slot; turning `pending_fulfillment` into an actual granted benefit is entirely the responsibility of whichever module owns that `grant_type`, built whenever that module is built. **Priority 8.4 is the first concrete proof of this boundary**: Advertising owns `advertising_credit` and implements its fulfillment (`adminFulfillAdvertisingCreditRedemption`, see Advertising below) without Rewards' code changing at all. `featured_slot` fulfillment and a Premium-duration fulfillment path (including which application a redeemed duration should attach to, given `subscriptions` still has `UNIQUE(user_id, app_id)` while Premium itself is ecosystem-wide) remain open, unimplemented — deliberately, not overlooked. This is a durable architectural boundary, not a temporary gap: it's what keeps Rewards from ever needing to know about Advertising or any future module.
+- **Catalog items can require a capability** (`reward_catalog.requires_capability`, nullable FK to `capability_definitions.key`) — same dependency-validation mechanism as `dashboard_widgets.requires_capability`. `getRewardsMe` filters the returned catalog to items whose required capability (if any) is enabled for the caller's current application; `redeemReward` re-checks the same condition server-side before allowing the redemption (fails closed if the reward requires a capability but no application context was provided). With no application context at all, nothing is filtered — matching the same "no application context = don't hide anything" fallback `DashboardPage.tsx`'s `isWidgetEnabled` uses.
+- Reward-granting call sites: `invite_registration` (onboarding, via `linkReferral`), `premium_purchase`/`premium_renewal` (Stripe/PayPal webhooks — first purchase vs. renewal is distinguished by whether a `subscriptions` row already existed for that `(user, app)` pair *before* the webhook's upsert, not by a separate flag), `advertising_purchase` (Stripe/PayPal webhooks, campaign checkout — see Advertising below). The application-reported actions (`business_approved`, etc.) still have no caller — seeded in `reward_action_rules` ahead of whichever application features eventually report them, matching this table's "seed the vocabulary, not hardcode who uses it" design.
+
+## Advertising (Priority 8.4)
+
+Placements, pricing, and moderation are all configuration; campaign checkout reuses CORE's existing billing engine rather than introducing a second one.
+
+- **Placements** (`ad_placements`) — an admin-extensible registry (`hero_banner`, `sidebar_banner`, `profile_footer` seeded), same soft-lifecycle shape as every other Priority 8 registry.
+- **Pricing is a replaceable strategy, not a hardcoded model.** `ad_pricing_strategies` is the vocabulary (only `fixed_duration` has a resolver implemented this phase — CPM/CPC/credit-ledger/usage-based billing were explicitly scoped out, not silently deferred). `ad_placement_prices` is the actual price list: `app_id` nullable (`NULL` = global default), `placement_key`, `duration_days`, `price`/`currency`, plus `stripe_payment_link`/`paypal_payment_link` (see Checkout below). When both a global and an app-specific row exist for the same `duration_days`, the app-specific one wins — `resolvePlacementPrices()` (`src/lib/advertising.server.ts`) is the one place this merge happens.
+- **Moderation mode and advertiser eligibility are both configurable, not hardcoded**, each with a global default (`ad_config`) and an optional per-application override (`ad_application_settings`) — resolved by `resolveModerationMode()`/`resolveEligibilityRule()`, the single centralized resolvers every consumer reads from (no per-call-site branching on what a mode means):
+  - **Moderation:** `manual` (default — a purchased campaign starts `pending` and needs admin approval), `auto` (starts `active` immediately), `trusted_only` (`active` only if the buyer is a trusted advertiser, else `pending`).
+  - **Eligibility:** `anyone` (default), `premium_only`, `verified_only`, `trusted_only` — checked once, at draft-campaign creation. `business_accounts_only` is a known, deliberate vocabulary gap: CORE has no "business account" concept yet, so it isn't offered as a selectable value at the database CHECK-constraint level (picking an unimplemented mode would otherwise silently behave like "anyone").
+  - **Trusted advertisers** (`ad_trusted_advertisers`) is a plain admin-managed allow-list, same shape as `user_roles` (existence = trusted, no soft lifecycle needed on a binary flag) — **per-application**, not global: `(user_id, app_id)` is the primary key, so trust granted for one application says nothing about any other. `isTrustedAdvertiser(userId, appId)` is the one place this is ever checked.
+- **Draft campaigns expire, they don't accumulate forever.** A campaign created via `createDraftCampaign` but never paid for is cancelled automatically once `ad_config.draft_expiry_hours` (default 48, admin-editable via `adminSetAdDraftExpiryHours`) has elapsed. Enforced lazily by `expireStaleDraftCampaigns(userId)`, called at the top of `getMyCampaigns` — matching this codebase's established no-cron, reactive-on-load pattern (same as Rewards & Loyalty's referral-verification promotion) rather than a scheduled job. Cancelled, never deleted, consistent with this codebase's "never hard-delete a record that might be referenced elsewhere" convention.
+- **Editing an approved campaign's creative or destination re-enters moderation whenever moderation is currently required for that application.** `updateCampaignCreative` doesn't track "was this approved" as a separate bit — it re-runs `resolveInitialCampaignStatus` (the exact same resolver `activateCampaignFromPurchase` uses) on every edit to a non-`draft`, non-terminal campaign, so the answer is always freshly derived from the application's current moderation mode, never a stale decision baked in at approval time. A `draft` campaign (not yet paid) is simply updated in place, since there's no moderation state to protect yet; `ended`/`cancelled` campaigns can no longer be edited at all.
+- **Checkout reuses subscriptions' exact billing model — no parallel payment system.** This codebase has no dynamic Checkout Session creation anywhere; subscriptions are sold via static, admin-configured Stripe/PayPal Payment Links with a signed reference appended as a URL param (see `pricing.tsx`/`payments.functions.ts`). Campaign checkout does the same: each `ad_placement_prices` row carries its own `stripe_payment_link`/`paypal_payment_link`, set by an admin exactly like a subscription plan's. `payments.campaign_id` (nullable, alongside the existing nullable `subscription_id`) records which kind of purchase a payment was — one shared `payments` table, not a second one.
+- **A campaign is created as `draft` *before* checkout, not after.** Static Payment Links have no channel to carry campaign creative (title/banner/link) through the payment provider, so `createDraftCampaign` stores the creative first; `createCampaignCheckoutReference` signs a reference carrying only `(user, app, campaign_id)` (a distinct, HMAC-signed shape from the subscription reference — see `payment-reference.server.ts` — so the two can never be confused). The Stripe/PayPal webhooks verify the signature, re-derive the expected price and any available credit discount fully server-side (never trusting the client or the reference for price/discount), and activate that same draft row — `resolveModerationMode`'s result at that moment decides whether it goes `pending` or straight to `active`. A redelivered webhook event is a no-op (the campaign is no longer `draft`).
+- **Advertising Credit is a discount mechanism only, not the primary billing model** (explicitly scoped this way): `ad_account_credits` is an append-only, signed-amount ledger (positive = a fulfilled Rewards redemption, negative = credit spent on a campaign purchase) — balance = `SUM(amount)`. At checkout, the full available balance (up to the price) is auto-applied as a discount; nothing about the discount is trusted from the client — the webhook recomputes the same balance and verifies the actually-paid amount against it.
+- **This is the concrete fulfillment side of Rewards & Loyalty's fulfillment abstraction** (see Rewards & Loyalty above): `adminFulfillAdvertisingCreditRedemption` is the Advertising-owned function that turns a `pending_fulfillment` `advertising_credit` redemption into a real `ad_account_credits` credit. Rewards itself never calls this — an admin does, today; a fully automatic version is a reasonable future improvement, not built now since this codebase has no trigger/cron infrastructure.
+- **Ad serving is a dedicated public function, not a public table.** `getActivePlacementAd`/`getActivePlacementCreative` return only the fields needed to render a creative (never the owner, moderation history, or pricing) — `ad_campaigns` itself is not publicly readable, matching the existing `has_any_active_premium()` precedent of never exposing a trust-sensitive table directly to `anon`.
+- **Banner upload uses the replaceable media-storage adapter** (`src/lib/media-storage.ts`, `MediaStorageProvider` interface) rather than calling Supabase Storage directly — today's only implementation still targets the existing `core` bucket (Tier 1) under a new `advertising/<user_id>/...` prefix, per the Phase 8.2 instruction that the still-undecided Tier-2 provider must never block CORE architecture. Swapping the backing provider later is a change to this one file.
+- **Dashboard/nav visibility** follows the same `advertising` capability + `advertising` dashboard-widget pattern as Rewards' `rewards` widget (Dashboard Widget Modularity) — disabling the capability removes the nav entry, the quick link, and the ability to browse placements or create a campaign, all from the same one flag.
+
+## Configuration-First Principle (Priority 8)
+
+**If a business rule may reasonably change in the future, it is not hardcoded.** Concretely: pricing, placements, limits, reward values, referral requirements, verification periods, upload restrictions, validation rules, display order, and capabilities all live in admin-editable database tables, never in a TypeScript constant or an environment variable — a value only belongs in code/env when it genuinely cannot differ by application, by time, or by admin decision (e.g. `SUPABASE_URL`). `TRIAL_DAYS = 7` (`trial.functions.ts`) and the `duration_months` default of `12` (`admin.functions.ts`, both webhook handlers) predate this principle and are known, tracked exceptions — see `PROJECT_AUDIT.md`, not silently fixed as a side effect of unrelated work.
+
+**Soft lifecycle** is the standing convention for every new configuration entity introduced from Priority 8 onward: `enabled` (is this currently active) and, where the entity might be superseded rather than merely toggled, `archived` (permanently retired, never resurrected) plus a `displayOrder` — never a hard `DELETE`, so historical references (a redemption against a since-retired reward, a campaign against a since-removed placement) never dangle. `capability_definitions` is the reference implementation this pattern follows.
+
+## Audit Strategy (Priority 8)
+
+Every configuration change is auditable: who, when, the previous value, the new value, and an optional reason — this was already substantially true (`writeAuditLog()`/`audit_logs` already captured who/when/old/new for every admin action), extended with an optional `reason` column so any config-mutating endpoint can record why, not just what changed. This applies uniformly to every configurable module (Applications, Premium/Billing, Capabilities, Dashboard Widgets, Rewards & Loyalty, Advertising) through the same one shared `writeAuditLog()` call, never a per-module bespoke audit mechanism.
+
+## Media Strategy (Priority 8)
+
+Two tiers. **Tier 1 — stays in the existing `core` Supabase Storage bucket, unchanged**: application logos, application covers, default/system assets, and (Priority 8.4) advertising campaign banners — CORE-owned or user-uploaded, all currently on the same working bucket. **Tier 2 — moves outside Supabase (planned, provider not yet chosen)**: avatars, profile covers, business/event images, documents — genuinely new user-generated-content infrastructure this codebase doesn't have yet. Campaign banners are Tier-2-*shaped* content (user-generated, not CORE-curated) temporarily running on Tier-1 infrastructure via the replaceable `MediaStorageProvider` adapter (`src/lib/media-storage.ts`, see Advertising above) — swapping the backing provider later touches only that one file, never campaign/business logic. Upload endpoints (`POST /v1/me/avatar`, the Advertising module's banner upload) are specified to have the same shape regardless of which tier backs them — the storage provider is an implementation detail the API hides, per the same "hide the internal structure" principle as everything else in this document.
+
 ---
 
 # Technical Appendix
@@ -426,10 +495,58 @@ The database schema is defined in `/supabase/migrations`.
   - one-on-one messaging threads: `id`, `user_a_id`, `user_b_id` (canonically ordered, `UNIQUE(user_a_id, user_b_id)`), `hidden_by_a_at`/`hidden_by_b_at` (nullable, per-user "hide from my inbox"), `last_message_at`, `created_at`. No `app_id` — see Premium Model → Text Messaging for why a conversation has no per-application identity.
 - `messages` (Priority 7)
   - `id`, `conversation_id`, `sender_id`, `body` (`CHECK` 1–2000 chars), `created_at`, `read_at` (nullable, set once by the recipient — messages are otherwise immutable, no edit/delete).
+- `capability_definitions` (Priority 8.1)
+  - the capability vocabulary: `id`, `key` (unique, e.g. `advertising`), `label`, `description`, `display_order`, `enabled`, `archived` (soft lifecycle — see Capabilities above).
+- `application_capabilities` (Priority 8.1)
+  - per-`(app, capability)` on/off switch: `id`, `app_id`, `capability_key`, `enabled`; `UNIQUE(app_id, capability_key)`.
+- `dashboard_widgets` (Priority 8.2)
+  - the dashboard widget registry: `id`, `key`, `label`, `description`, `requires_capability` (nullable FK to `capability_definitions.key`), `display_order`, `enabled`, `archived`.
+- `dashboard_widget_settings` (Priority 8.2)
+  - per-`(app, widget)` on/off switch: `id`, `widget_key`, `app_id`, `enabled`; `UNIQUE(widget_key, app_id)`.
+- `reward_action_rules` (Priority 8.3)
+  - the point-value lookup: `id`, `action` (unique), `label`, `points`, `cooldown_seconds`, `max_per_user` (nullable), `display_order`, `enabled`, `archived`.
+- `reward_levels` (Priority 8.3)
+  - `id`, `key` (unique, e.g. `gold`), `label`, `min_lifetime_points`, `display_order`, `enabled`, `archived`.
+- `reward_achievements` (Priority 8.3)
+  - `id`, `key` (unique), `label`, `description`, `trigger_action` (nullable FK to `reward_action_rules.action`), `trigger_count`, `display_order`, `enabled`, `archived`.
+- `reward_fulfillment_types` (Priority 8.3)
+  - the fulfillment-type vocabulary: `id`, `key` (unique, e.g. `advertising_credit`), `label`, `description`, `display_order`, `enabled`, `archived` — same shape as `capability_definitions`. Seeded with `premium_duration`, `advertising_credit`, `featured_slot`.
+- `reward_catalog` (Priority 8.3)
+  - redeemable rewards: `id`, `key` (unique), `label`, `description`, `points_cost`, `verified_referrals_required`, `grant_type` (FK to `reward_fulfillment_types.key` — the fulfillment type Rewards records but never itself acts on), `grant_value` (jsonb), `requires_capability` (nullable FK to `capability_definitions.key` — hides the reward when disabled for the caller's application), `display_order`, `enabled`, `archived`.
+- `reward_config` (Priority 8.3)
+  - free-form admin-editable settings, keyed by `key` (e.g. `referral_verification_days`), `value` (jsonb), `description`.
+- `reward_ledger` (Priority 8.3)
+  - append-only, non-negative points log: `id`, `user_id`, `action` (not FK'd — deliberately, so an unrecognized action still logs at 0 points), `points`, `resource_type`/`resource_id` (nullable), `source_app_id` (nullable FK to `applications`), `created_at`.
+- `user_achievements` (Priority 8.3)
+  - `id`, `user_id`, `achievement_key` (FK to `reward_achievements.key`), `earned_at`; `UNIQUE(user_id, achievement_key)`.
+- `premium_referrals` (Priority 8.3)
+  - `id`, `referrer_id`, `referred_user_id` (`UNIQUE`, one referral record per referred user), `subscription_id` (nullable), `verification_due_at`, `verified_at` (nullable).
+- `reward_redemptions` (Priority 8.3)
+  - `id`, `user_id`, `catalog_key` (FK to `reward_catalog.key`), `points_spent`, `verified_referrals_at_redemption` (audit snapshot, not a deduction), `grant_result` (jsonb — `{status, grantType, grantValue}`), `created_at`.
+- `profiles.referred_by_user_id` (Priority 8.3)
+  - nullable FK to `profiles.id`, set at most once, only by `linkReferral` (service-role) — not in the `authenticated` column grant (see Profiles RLS below).
+- `ad_placements` (Priority 8.4)
+  - the placement registry: `id`, `key` (unique, e.g. `hero_banner`), `label`, `description`, `display_order`, `enabled`, `archived`.
+- `ad_pricing_strategies` (Priority 8.4)
+  - the pricing-strategy vocabulary: `id`, `key` (unique — only `fixed_duration` has a resolver implemented), `label`, `description`, `display_order`, `enabled`, `archived`.
+- `ad_placement_prices` (Priority 8.4)
+  - the price list: `id`, `app_id` (nullable — `NULL` = global default), `placement_key` (FK), `pricing_strategy` (FK, default `fixed_duration`), `duration_days`, `price`, `currency`, `stripe_payment_link`/`paypal_payment_link` (nullable — admin-configured per row, exactly like `subscription_plans`), `display_order`, `enabled`, `archived`.
+- `ad_config` (Priority 8.4)
+  - global defaults, free-form key/value (jsonb) — seeded `moderation_mode` (`"manual"`), `eligibility_rule` (`"anyone"`), `draft_expiry_hours` (`48`).
+- `ad_application_settings` (Priority 8.4)
+  - per-application override: `id`, `app_id` (`UNIQUE`), `moderation_mode`/`eligibility_rule` (both nullable — `NULL` means "use the `ad_config` global default").
+- `ad_trusted_advertisers` (Priority 8.4)
+  - plain allow-list, same shape as `user_roles`, but **per-application**: `(user_id, app_id)` composite PK, `granted_by`, `granted_at`.
+- `ad_campaigns` (Priority 8.4)
+  - `id`, `user_id`, `app_id`, `placement_key`, `placement_price_id` (nullable — a snapshot of which price was purchased, kept even if the price list changes later), `title`, `image_url`, `link_url` (`CHECK` requires `NULL` or `http(s)://`), `starts_at`/`expires_at` (both `NULL` until activated), `status` (`draft`→`pending`/`active`→`rejected`/`ended`/`cancelled`), `moderation_note`.
+- `ad_account_credits` (Priority 8.4)
+  - append-only, signed-amount ledger: `id`, `user_id`, `amount` (positive = credited, negative = spent), `currency`, `source` (`reward_redemption`/`campaign_purchase`/`admin_adjustment`), `source_id`, `created_at`. Balance = `SUM(amount)`.
+- `payments.campaign_id` (Priority 8.4)
+  - nullable FK to `ad_campaigns.id`, alongside the existing nullable `subscription_id` — one shared `payments` table records both kinds of purchase, not a parallel `ad_payments` table.
 
 ### Storage
 
-- Single shared bucket, `core` (public), holds every upload — there is no per-purpose bucket. Purpose is distinguished by top-level folder prefix within it: `avatars/<user_id>/...` (user avatars) and `applications/<slug>/...` (application logos/favicons). URLs are permanent public URLs (`getPublicUrl`), not signed/expiring.
+- Single shared bucket, `core` (public), holds every upload — there is no per-purpose bucket. Purpose is distinguished by top-level folder prefix within it: `avatars/<user_id>/...` (user avatars), `applications/<slug>/...` (application logos/favicons), and (Priority 8.4) `advertising/<user_id>/...` (campaign banners, via the `MediaStorageProvider` adapter). URLs are permanent public URLs (`getPublicUrl`), not signed/expiring.
 
 ### Seed data
 
@@ -442,7 +559,7 @@ Row-level security is enabled for tables and storage policies.
 ### Profiles
 
 - `authenticated` users may `SELECT` their own profile and `INSERT` their own profile row.
-- `UPDATE` is column-restricted: `authenticated` only has column-level `UPDATE` privilege on `first_name`, `last_name`, `avatar_url`, `city`, `country`, `username`, `bio`, `language`, `email`, `profile_complete` — `id`, `user_type`, `is_verified`, `is_active`, and `identity_locked_at` are writable only by `service_role`.
+- `UPDATE` is column-restricted: `authenticated` only has column-level `UPDATE` privilege on `first_name`, `last_name`, `avatar_url`, `city`, `country`, `username`, `bio`, `language`, `email`, `profile_complete` — `id`, `user_type`, `is_verified`, `is_active`, `identity_locked_at`, and (Priority 8.3) `referred_by_user_id` are writable only by `service_role`. `referred_by_user_id` is excluded deliberately, not by oversight: a client-writable referrer would let a user fabricate a Premium Referral for reward fraud (see Rewards & Loyalty above) — it can only be set once, via the `linkReferral` server function.
 - **Identity Lock enforcement** (`first_name`/`last_name`/`avatar_url`) is a `BEFORE UPDATE` trigger (`enforce_identity_lock`), not a column-grant revoke like the columns above — deliberately, since these three columns are legitimately `authenticated`-writable up until the lock engages, unlike `user_type`/`is_verified`/`is_active`, which never are. The trigger compares `OLD`/`NEW` per update: it auto-sets `identity_locked_at` the instant `profile_complete` first becomes `true`, then rejects any further change to those three columns from non-`service_role` callers. `service_role` (Core) is exempt at every point, with no migration ever needed to "unlock" a user — a future admin-identity-change workflow uses the same exemption. An RLS predicate was deliberately not used for this: RLS cannot compare `OLD` vs `NEW` in one expression without an awkward self-join, and cannot derive/set a value at all, so it would still have needed a trigger for the auto-lock timestamp regardless.
 - Admins (`private.has_role(..., 'admin')`) may `SELECT` all profiles.
 - Public, unauthenticated access goes through the `profiles_public` view (masked columns only), not the base table.
@@ -499,12 +616,37 @@ Row-level security is enabled for tables and storage policies.
 ### Audit logs
 
 - Only `service_role` can access audit logs; no public/authenticated read policy is defined.
+- `reason` (Priority 8.1): nullable, optional on every `writeAuditLog()` call — not required, since not every audited change has (or needs) an explanation.
+
+### Capabilities (Priority 8.1)
+
+- `capability_definitions`: publicly readable (`anon`, `authenticated`); writable only by `service_role`.
+- `application_capabilities`: publicly readable; writable only by `service_role`. Deliberately not admin-only-*readable* — the calling application and cross-application UI both need to read this without a privileged session, matching the existing pattern for other public-but-not-publicly-writable tables (`applications`, `subscription_plans`).
+
+### Dashboard widgets (Priority 8.2)
+
+- `dashboard_widgets`/`dashboard_widget_settings`: same shape as Capabilities immediately above — publicly readable, writable only by `service_role`.
+
+### Rewards & Loyalty (Priority 8.3)
+
+- `reward_action_rules`, `reward_levels`, `reward_achievements`, `reward_catalog`, `reward_config`, `reward_fulfillment_types`: registry/configuration tables, same shape as Capabilities/Dashboard Widgets — publicly readable, writable only by `service_role`.
+- `reward_ledger`, `user_achievements`, `reward_redemptions`: `authenticated` may `SELECT` only their own rows (`user_id = auth.uid()`); all writes are `service_role`-only (no client-side insert path — every write goes through `grantRewardAction()`/`redeemReward`).
+- `premium_referrals`: the referrer may `SELECT` their own referrals (`referrer_id = auth.uid()`); writes are `service_role`-only.
+
+### Advertising (Priority 8.4)
+
+- `ad_placements`, `ad_pricing_strategies`, `ad_placement_prices`: registry/price-list tables — publicly readable (checkout UI needs to display prices without an admin session), writable only by `service_role`.
+- `ad_config`, `ad_application_settings`: not publicly readable at all — both are only ever consulted server-side (checkout/moderation logic), matching `audit_logs`' `service_role`-only precedent.
+- `ad_trusted_advertisers`: `authenticated` may `SELECT` only their own row; writes are `service_role`-only.
+- `ad_campaigns`: the owner may `SELECT` only their own rows (`user_id = auth.uid()`); not publicly readable at all — ad serving goes through `getActivePlacementAd` (service_role), not a direct table read.
+- `ad_account_credits`: `authenticated` may `SELECT` only their own rows; writes are `service_role`-only.
 
 ### Storage
 
 - All objects live in the one `core` bucket; RLS is scoped by top-level folder prefix (`storage.foldername(name)[1]`), not by bucket id.
 - `avatars/<user_id>/...`: publicly readable; only the owning user (via `foldername[2] = auth.uid()`) may insert/update/delete their own folder.
 - `applications/<slug>/...`: publicly readable; only admins may write.
+- `advertising/<user_id>/...` (Priority 8.4): publicly readable; only the owning user may insert/update/delete their own folder — same shape as `avatars/`.
 
 ## Server functions
 
@@ -568,6 +710,62 @@ Defined in `src/lib/message.functions.ts`:
 - `markConversationRead` — bulk-sets `read_at` for the caller's unread received messages in one conversation.
 
 Both files were renamed from the Priority 6 foundation's `conversation.service.ts`/`message.service.ts` to match this repository's `*.functions.ts` convention — every export in both is a `createServerFn`, none are plain client-side helpers.
+
+### Capabilities functions (Priority 8.1)
+
+Defined in `src/lib/capabilities.functions.ts`:
+- `getApplicationCapabilities` — public; the one and only place an enabled-capability set is read from. Excludes any capability whose *definition* is disabled/archived platform-wide, even if the per-application row says `enabled=true`.
+- `adminListCapabilityDefinitions`, `adminUpsertCapabilityDefinition` — the vocabulary itself; registering a new capability is a data write here, never a deployment.
+- `adminSetApplicationCapability` — the per-application on/off switch, audited with the previous and new `enabled` value.
+- `adminListApplicationCapabilities` — every non-archived definition joined with one application's current settings, for admin UI.
+
+### Dashboard widget functions (Priority 8.2)
+
+Defined in `src/lib/dashboard-widgets.functions.ts`:
+- `getDashboardWidgets` — public; the enabled widget keys for one application, in display order. Cross-references `getApplicationCapabilities` for any widget with a `requiresCapability` set.
+- `adminListDashboardWidgets`, `adminUpsertDashboardWidget` — the registry itself.
+- `adminSetDashboardWidgetAppSetting` — the per-application on/off switch, audited with the previous and new `enabled` value.
+- `adminListDashboardWidgetSettings` — every non-archived widget joined with one application's current settings, for admin UI.
+
+`DashboardPage.tsx` consumes `getDashboardWidgets` once, keyed on the application resolved via `useApplication()`, and conditionally renders each of the six seeded sections from that one result.
+
+### Rewards & Loyalty functions (Priority 8.3)
+
+Core business logic in `src/lib/rewards.server.ts` (plain server-only helpers, not `createServerFn`s — called from `rewards.functions.ts` and directly from the Stripe/PayPal webhooks and onboarding's completion flow):
+- `grantRewardAction({ userId, action, resourceType?, resourceId?, sourceAppId? })` — the only place points are ever decided; looks up `reward_action_rules`, checks `max_per_user`/`cooldown_seconds`, always writes a `reward_ledger` row (even at `0` points for an unconfigured action), then triggers achievement checks.
+- `recordPremiumReferralIfApplicable({ userId, subscriptionId })` — called from the Stripe/PayPal webhooks; records a pending `premium_referrals` row if the newly-Premium user was referred and doesn't already have one.
+- `promotePendingReferralVerifications(referrerId)` — lazily checked at the top of `getRewardsMe`; promotes any of this referrer's pending referrals whose verification period has elapsed and whose referred user's Premium is still active, granting `premium_referral_verified`.
+
+Public surface in `src/lib/rewards.functions.ts`:
+- `getRewardsMe({ appId? })` — the one aggregated Rewards Dashboard call: reward/lifetime points, current level, achievements, verified-referral count, the catalog (filtered by `requires_capability` when `appId` is given, annotated with per-item `canRedeem`), and redemption history. Runs `promotePendingReferralVerifications` as a side effect first.
+- `redeemReward({ catalogKey, appId? })` — validates the catalog item, its capability gate (if any — fails closed without `appId`), and both eligibility conditions (points balance AND verified-referral count), then records the redemption via a service-role write (`reward_redemptions` grants `authenticated` `SELECT` only) — see Rewards & Loyalty above for why fulfillment itself is deferred.
+- `linkReferral({ referrerUsername })` — service-role-only; sets `profiles.referred_by_user_id` once and grants `invite_registration` to the referrer. Called once from `onboarding.tsx` after profile completion, consuming the `?ref=` value captured by `src/lib/referral.ts`.
+- Admin CRUD, same pattern as Capabilities/Dashboard Widgets: `adminUpsertRewardActionRule`/`adminListRewardActionRules`, `adminUpsertRewardFulfillmentType`/`adminListRewardFulfillmentTypes`, `adminUpsertRewardCatalogItem`/`adminListRewardCatalog`, `adminSetRewardConfig` — each audited via `writeAuditLog()`.
+
+### Advertising functions (Priority 8.4)
+
+Core business logic in `src/lib/advertising.server.ts` (plain server-only helpers, called from `advertising.functions.ts` and directly from the Stripe/PayPal webhooks):
+- `resolveModerationMode(appId)` / `resolveEligibilityRule(appId)` — the two centralized config resolvers (per-application override in `ad_application_settings`, falling back to the `ad_config` global default).
+- `checkAdvertiserEligibility(userId, appId)` — evaluates the resolved eligibility rule against `hasAnyActivePremium()`, `profiles.is_verified`, or `ad_trusted_advertisers`, whichever the rule names.
+- `resolveInitialCampaignStatus(userId, appId)` — the resolved moderation mode decides `pending` vs. `active` at the moment a campaign is activated; a later admin change to the mode never retroactively changes campaigns already created.
+- `resolvePlacementPrices(appId, placementKey)` / `resolvePlacementPriceById(id)` — the global-vs-per-application price merge described in Advertising above.
+- `getAdAccountCreditBalance(userId)` — `SUM(ad_account_credits.amount)`.
+- `activateCampaignFromPurchase({ campaignId, userId, appId, paidAmount, paidCurrency })` — called only from the Stripe/PayPal webhooks; re-derives the expected price and available credit discount fully server-side, verifies the actually-paid amount, and activates the `draft` campaign row (idempotent against a redelivered webhook event).
+- `expireStaleDraftCampaigns(userId)` — lazily cancels this user's own `draft` campaigns older than `ad_config.draft_expiry_hours`; called from `getMyCampaigns`.
+- `isTrustedAdvertiser(userId, appId)` — per-application, not global (see Advertising above).
+- `getActivePlacementCreative(appId, placementKey)` — the ad-serving query, returning only what's needed to render a creative.
+
+Public surface in `src/lib/advertising.functions.ts`:
+- `getAdPlacementsForApp({ appId })` — public; placements + resolved prices, empty if the `advertising` capability is disabled for that application.
+- `getActivePlacementAd({ appId, placementKey })` — public ad serving, capability-gated the same way.
+- `getMyAdvertisingSummary({ appId })` — authenticated; eligibility + current credit balance, for the checkout UI.
+- `createDraftCampaign({ appId, placementPriceId, title, imageUrl?, linkUrl? })` — authenticated; validates capability + eligibility + that the price belongs to the application + URL schemes (`isSafeProfileUrl`), then inserts the campaign as `draft` (service-role write — `ad_campaigns` grants `authenticated` `SELECT` only, matching `reward_redemptions`' pattern; every write goes through a server-validated path, never a direct client-authenticated insert). Creative content is captured here, before checkout, because static Stripe/PayPal Payment Links have no metadata channel to carry it through the payment provider.
+- `createCampaignCheckoutReference({ campaignId })` — authenticated; signs the campaign reference (`signCampaignReference`) and returns the resolved price's Payment Links plus informational (never trusted) expected-amount/credit figures for the checkout page to display.
+- `updateCampaignCreative({ campaignId, title?, imageUrl?, linkUrl? })` — authenticated, owner-only; re-runs `resolveInitialCampaignStatus` for any non-`draft`, non-terminal campaign so an edit can never silently bypass moderation (see Advertising above). Service-role write, same reasoning as `createDraftCampaign` — campaign `status` is never authenticated-writable directly.
+- `getMyCampaigns()` — authenticated; the caller's own campaigns, running `expireStaleDraftCampaigns` as a side effect first.
+- Admin: `adminUpsertAdPlacement`/`adminListAdPlacements`, `adminUpsertAdPlacementPrice`/`adminListAdPlacementPrices`, `adminSetAdConfig`, `adminSetAdDraftExpiryHours`, `adminSetAdApplicationSettings`, `adminSetTrustedAdvertiser`/`adminListTrustedAdvertisers` (both `appId`-scoped), `adminListCampaigns`/`adminModerateCampaign` (the moderation queue), `adminListPendingAdvertisingCreditRedemptions`/`adminFulfillAdvertisingCreditRedemption` (the Rewards fulfillment bridge) — each audited via `writeAuditLog()`.
+
+`src/lib/media-storage.ts` — the replaceable upload adapter (`MediaStorageProvider` interface, `getMediaStorageProvider()`); today's only implementation targets the existing `core` Supabase Storage bucket. `src/lib/payment-reference.server.ts` gained `signCampaignReference`/`verifyCampaignReference`, a distinct HMAC-signed shape (leading `"campaign"` tag) from the subscription reference — the two can never be confused by either webhook, and the original `signPaymentReference`/`verifyPaymentReference` are untouched.
 
 ### Server helpers
 
@@ -790,7 +988,8 @@ All three locale files must be updated together for any new key — never one la
 
 - Payment intent flow is implemented via Stripe Checkout links stored on plans.
 - Webhook endpoint at `/api/public/webhooks/stripe` validates `stripe-signature` with `STRIPE_WEBHOOK_SECRET`.
-- On `checkout.session.completed`, webhook:
+- On `checkout.session.completed`, the webhook first tries `verifyCampaignReference` (Priority 8.4) against `client_reference_id`; if that matches, it branches into campaign activation (`activateCampaignFromPurchase`, idempotency by existing `stripe_payment_id`, inserts `payments` with `campaign_id` set, grants `advertising_purchase`) and returns early — the subscription flow below it is otherwise completely unchanged. Campaign refunds are handled in the `charge.refunded` branch below the same way subscriptions are (via `payments.campaign_id`).
+- On `checkout.session.completed` (subscription path), webhook:
   - requires `session.payment_status === "paid"`, rejecting sessions with unconfirmed payment
   - verifies `client_reference_id`'s HMAC signature (`verifyPaymentReference`); rejects if missing, malformed, or tampered
   - requires a resolvable `plan_id` segment (rejects if missing or unresolvable)
@@ -812,7 +1011,8 @@ All three locale files must be updated together for any new key — never one la
 ### PayPal
 
 - Webhook endpoint at `/api/public/webhooks/paypal` verifies signature against PayPal.
-- On `PAYMENT.CAPTURE.COMPLETED`, webhook:
+- On `PAYMENT.CAPTURE.COMPLETED`, the webhook first tries `verifyCampaignReference` (Priority 8.4) against `custom_id`, branching into the same campaign-activation path as Stripe above and returning early if it matches.
+- On `PAYMENT.CAPTURE.COMPLETED` (subscription path), webhook:
   - verifies `custom_id`'s HMAC signature (`verifyPaymentReference`, the same verifier Stripe uses); rejects if missing, malformed, or tampered
   - requires a resolvable `plan_id` segment (rejects if missing or unresolvable)
   - verifies plan amount and currency

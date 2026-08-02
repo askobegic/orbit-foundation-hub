@@ -14,6 +14,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as AdminAdvertisingRouteImport } from './routes/admin.advertising'
 import { Route as AdminApplicationsRouteImport } from './routes/admin.applications'
 import { Route as AdminCommunicationRouteImport } from './routes/admin.communication'
 import { Route as AdminPaymentsRouteImport } from './routes/admin.payments'
@@ -21,10 +22,12 @@ import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminVerificationRouteImport } from './routes/admin.verification'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
+import { Route as DashboardAdvertisingRouteImport } from './routes/dashboard.advertising'
 import { Route as DashboardHelpRouteImport } from './routes/dashboard.help'
 import { Route as DashboardMessagesRouteImport } from './routes/dashboard.messages'
 import { Route as DashboardNotificationsRouteImport } from './routes/dashboard.notifications'
 import { Route as DashboardProfileRouteImport } from './routes/dashboard.profile'
+import { Route as DashboardRewardsRouteImport } from './routes/dashboard.rewards'
 import { Route as DashboardSecurityRouteImport } from './routes/dashboard.security'
 import { Route as DashboardSettingsRouteImport } from './routes/dashboard.settings'
 import { Route as DashboardSubscriptionsRouteImport } from './routes/dashboard.subscriptions'
@@ -61,6 +64,11 @@ const PricingRoute = PricingRouteImport.update({
   path: '/pricing',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminAdvertisingRoute = AdminAdvertisingRouteImport.update({
+  id: '/advertising',
+  path: '/advertising',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminApplicationsRoute = AdminApplicationsRouteImport.update({
   id: '/applications',
   path: '/applications',
@@ -96,6 +104,11 @@ const DashboardIndexRoute = DashboardIndexRouteImport.update({
   path: '/dashboard/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardAdvertisingRoute = DashboardAdvertisingRouteImport.update({
+  id: '/dashboard/advertising',
+  path: '/dashboard/advertising',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardHelpRoute = DashboardHelpRouteImport.update({
   id: '/dashboard/help',
   path: '/dashboard/help',
@@ -114,6 +127,11 @@ const DashboardNotificationsRoute = DashboardNotificationsRouteImport.update({
 const DashboardProfileRoute = DashboardProfileRouteImport.update({
   id: '/dashboard/profile',
   path: '/dashboard/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRewardsRoute = DashboardRewardsRouteImport.update({
+  id: '/dashboard/rewards',
+  path: '/dashboard/rewards',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardSecurityRoute = DashboardSecurityRouteImport.update({
@@ -174,16 +192,19 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/pricing': typeof PricingRoute
+  '/admin/advertising': typeof AdminAdvertisingRoute
   '/admin/applications': typeof AdminApplicationsRoute
   '/admin/communication': typeof AdminCommunicationRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/dashboard/advertising': typeof DashboardAdvertisingRoute
   '/dashboard/help': typeof DashboardHelpRoute
   '/dashboard/messages': typeof DashboardMessagesRouteWithChildren
   '/dashboard/notifications': typeof DashboardNotificationsRoute
   '/dashboard/profile': typeof DashboardProfileRoute
+  '/dashboard/rewards': typeof DashboardRewardsRoute
   '/dashboard/security': typeof DashboardSecurityRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/subscriptions': typeof DashboardSubscriptionsRoute
@@ -202,16 +223,19 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/pricing': typeof PricingRoute
+  '/admin/advertising': typeof AdminAdvertisingRoute
   '/admin/applications': typeof AdminApplicationsRoute
   '/admin/communication': typeof AdminCommunicationRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/dashboard/advertising': typeof DashboardAdvertisingRoute
   '/dashboard/help': typeof DashboardHelpRoute
   '/dashboard/messages': typeof DashboardMessagesRouteWithChildren
   '/dashboard/notifications': typeof DashboardNotificationsRoute
   '/dashboard/profile': typeof DashboardProfileRoute
+  '/dashboard/rewards': typeof DashboardRewardsRoute
   '/dashboard/security': typeof DashboardSecurityRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/subscriptions': typeof DashboardSubscriptionsRoute
@@ -231,16 +255,19 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/pricing': typeof PricingRoute
+  '/admin/advertising': typeof AdminAdvertisingRoute
   '/admin/applications': typeof AdminApplicationsRoute
   '/admin/communication': typeof AdminCommunicationRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/dashboard/advertising': typeof DashboardAdvertisingRoute
   '/dashboard/help': typeof DashboardHelpRoute
   '/dashboard/messages': typeof DashboardMessagesRouteWithChildren
   '/dashboard/notifications': typeof DashboardNotificationsRoute
   '/dashboard/profile': typeof DashboardProfileRoute
+  '/dashboard/rewards': typeof DashboardRewardsRoute
   '/dashboard/security': typeof DashboardSecurityRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/subscriptions': typeof DashboardSubscriptionsRoute
@@ -261,16 +288,19 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/pricing'
+    | '/admin/advertising'
     | '/admin/applications'
     | '/admin/communication'
     | '/admin/payments'
     | '/admin/users'
     | '/admin/verification'
     | '/auth/callback'
+    | '/dashboard/advertising'
     | '/dashboard/help'
     | '/dashboard/messages'
     | '/dashboard/notifications'
     | '/dashboard/profile'
+    | '/dashboard/rewards'
     | '/dashboard/security'
     | '/dashboard/settings'
     | '/dashboard/subscriptions'
@@ -289,16 +319,19 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/pricing'
+    | '/admin/advertising'
     | '/admin/applications'
     | '/admin/communication'
     | '/admin/payments'
     | '/admin/users'
     | '/admin/verification'
     | '/auth/callback'
+    | '/dashboard/advertising'
     | '/dashboard/help'
     | '/dashboard/messages'
     | '/dashboard/notifications'
     | '/dashboard/profile'
+    | '/dashboard/rewards'
     | '/dashboard/security'
     | '/dashboard/settings'
     | '/dashboard/subscriptions'
@@ -317,16 +350,19 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/pricing'
+    | '/admin/advertising'
     | '/admin/applications'
     | '/admin/communication'
     | '/admin/payments'
     | '/admin/users'
     | '/admin/verification'
     | '/auth/callback'
+    | '/dashboard/advertising'
     | '/dashboard/help'
     | '/dashboard/messages'
     | '/dashboard/notifications'
     | '/dashboard/profile'
+    | '/dashboard/rewards'
     | '/dashboard/security'
     | '/dashboard/settings'
     | '/dashboard/subscriptions'
@@ -347,10 +383,12 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   PricingRoute: typeof PricingRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
+  DashboardAdvertisingRoute: typeof DashboardAdvertisingRoute
   DashboardHelpRoute: typeof DashboardHelpRoute
   DashboardMessagesRoute: typeof DashboardMessagesRouteWithChildren
   DashboardNotificationsRoute: typeof DashboardNotificationsRoute
   DashboardProfileRoute: typeof DashboardProfileRoute
+  DashboardRewardsRoute: typeof DashboardRewardsRoute
   DashboardSecurityRoute: typeof DashboardSecurityRoute
   DashboardSettingsRoute: typeof DashboardSettingsRoute
   DashboardSubscriptionsRoute: typeof DashboardSubscriptionsRoute
@@ -398,6 +436,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/pricing'
       preLoaderRoute: typeof PricingRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/admin/advertising': {
+      id: '/admin/advertising'
+      path: '/advertising'
+      fullPath: '/admin/advertising'
+      preLoaderRoute: typeof AdminAdvertisingRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/admin/applications': {
       id: '/admin/applications'
@@ -448,6 +493,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/advertising': {
+      id: '/dashboard/advertising'
+      path: '/dashboard/advertising'
+      fullPath: '/dashboard/advertising'
+      preLoaderRoute: typeof DashboardAdvertisingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard/help': {
       id: '/dashboard/help'
       path: '/dashboard/help'
@@ -474,6 +526,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard/profile'
       fullPath: '/dashboard/profile'
       preLoaderRoute: typeof DashboardProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/rewards': {
+      id: '/dashboard/rewards'
+      path: '/dashboard/rewards'
+      fullPath: '/dashboard/rewards'
+      preLoaderRoute: typeof DashboardRewardsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard/security': {
@@ -550,6 +609,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteChildren {
+  AdminAdvertisingRoute: typeof AdminAdvertisingRoute
   AdminApplicationsRoute: typeof AdminApplicationsRoute
   AdminCommunicationRoute: typeof AdminCommunicationRoute
   AdminPaymentsRoute: typeof AdminPaymentsRoute
@@ -558,6 +618,7 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAdvertisingRoute: AdminAdvertisingRoute,
   AdminApplicationsRoute: AdminApplicationsRoute,
   AdminCommunicationRoute: AdminCommunicationRoute,
   AdminPaymentsRoute: AdminPaymentsRoute,
@@ -597,10 +658,12 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRoute: OnboardingRoute,
   PricingRoute: PricingRoute,
   AuthCallbackRoute: AuthCallbackRoute,
+  DashboardAdvertisingRoute: DashboardAdvertisingRoute,
   DashboardHelpRoute: DashboardHelpRoute,
   DashboardMessagesRoute: DashboardMessagesRouteWithChildren,
   DashboardNotificationsRoute: DashboardNotificationsRoute,
   DashboardProfileRoute: DashboardProfileRoute,
+  DashboardRewardsRoute: DashboardRewardsRoute,
   DashboardSecurityRoute: DashboardSecurityRoute,
   DashboardSettingsRoute: DashboardSettingsRoute,
   DashboardSubscriptionsRoute: DashboardSubscriptionsRoute,

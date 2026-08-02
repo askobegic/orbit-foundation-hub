@@ -2,7 +2,17 @@ import { createFileRoute, Link, Outlet, useLocation, useNavigate } from "@tansta
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { BadgeCheck, CreditCard, LayoutGrid, MegaphoneIcon, TrendingUp, UserPlus, Users, Wallet } from "lucide-react";
+import {
+  BadgeCheck,
+  CreditCard,
+  Image,
+  LayoutGrid,
+  MegaphoneIcon,
+  TrendingUp,
+  UserPlus,
+  Users,
+  Wallet,
+} from "lucide-react";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { supabase } from "@/integrations/supabase/client";
@@ -121,6 +131,12 @@ function AdminGate() {
       icon: BadgeCheck,
       title: "Verification",
       desc: "Approve or reject user verification requests.",
+    },
+    {
+      to: "/admin/advertising",
+      icon: Image,
+      title: "Advertising",
+      desc: "Placements, pricing, moderation, and trusted advertisers.",
     },
   ] as const;
   return (

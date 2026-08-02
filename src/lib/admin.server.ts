@@ -19,6 +19,9 @@ export async function writeAuditLog(params: {
   entityId?: string | null;
   oldData?: unknown;
   newData?: unknown;
+  // Priority 8.1: every configuration change should optionally record why,
+  // alongside who/when/old/new (see PROJECT_KNOWLEDGE.md -> Audit Strategy).
+  reason?: string | null;
 }): Promise<void> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { error } = await supabaseAdmin.from("audit_logs").insert({
@@ -28,6 +31,7 @@ export async function writeAuditLog(params: {
     entity_id: params.entityId ?? null,
     old_data: (params.oldData ?? null) as Json,
     new_data: (params.newData ?? null) as Json,
+    reason: params.reason ?? null,
   });
   if (error) console.error("writeAuditLog: insert failed", params.action, error);
 }

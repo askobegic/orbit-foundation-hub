@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { addMonthsIso, writeAuditLog } from "@/lib/admin.server";
-import { verifyPaymentReference } from "@/lib/payment-reference.server";
+import { activateCampaignFromPurchase } from "@/lib/advertising.server";
+import { verifyCampaignReference, verifyPaymentReference } from "@/lib/payment-reference.server";
 
 // Verifies the HMAC signature created by createPaymentReference
 // (src/lib/payments.functions.ts) -- see PROJECT_AUDIT.md -> SE-7. A
@@ -79,6 +80,76 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
           amount?: { value?: string; currency_code?: string };
           invoice_id?: string;
         };
+        // Priority 8.4: Advertising campaign checkout uses its own signed
+        // reference shape -- see the matching branch in the Stripe webhook
+        // for the full rationale. Checked first and returns early; the
+        // subscription flow below is otherwise completely unchanged.
+        const campaignRef = verifyCampaignReference(resource.custom_id);
+        if (campaignRef) {
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+          const { data: existingCampaignPayment } = await supabaseAdmin
+            .from("payments")
+            .select("id")
+            .eq("paypal_payment_id", resource.id)
+            .maybeSingle();
+          if (existingCampaignPayment) {
+            return Response.json({ received: true, duplicate: true });
+          }
+
+          const amount = Number(resource.amount?.value ?? 0);
+          const currency = (resource.amount?.currency_code ?? "EUR").toUpperCase();
+
+          const result = await activateCampaignFromPurchase({
+            campaignId: campaignRef.campaign_id,
+            userId: campaignRef.user_id,
+            appId: campaignRef.app_id,
+            paidAmount: amount,
+            paidCurrency: currency,
+          });
+          if (!result.ok) {
+            console.warn("PayPal webhook: campaign activation failed", {
+              capture_id: resource.id,
+              reason: result.reason,
+            });
+            return Response.json({ received: true, ignored: result.reason });
+          }
+
+          const { error: campaignPaymentErr } = await supabaseAdmin.from("payments").insert({
+            user_id: campaignRef.user_id,
+            app_id: campaignRef.app_id,
+            campaign_id: campaignRef.campaign_id,
+            paypal_payment_id: resource.id,
+            amount,
+            currency,
+            status: "success",
+            payment_method: "paypal",
+          });
+          if (campaignPaymentErr) {
+            console.error("PayPal webhook: campaign payment insert failed", campaignPaymentErr);
+            return Response.json({ received: true, duplicate: true });
+          }
+
+          await writeAuditLog({
+            userId: campaignRef.user_id,
+            action: "payment.paypal.campaign_success",
+            entityType: "ad_campaign",
+            entityId: campaignRef.campaign_id,
+            newData: { paypal_id: resource.id, amount, currency, creditApplied: result.creditApplied },
+          });
+
+          const { grantRewardAction } = await import("@/lib/rewards.server");
+          await grantRewardAction({
+            userId: campaignRef.user_id,
+            action: "advertising_purchase",
+            resourceType: "ad_campaign",
+            resourceId: campaignRef.campaign_id,
+            sourceAppId: campaignRef.app_id,
+          });
+
+          return Response.json({ received: true });
+        }
+
         const ref = parseCustom(resource.custom_id);
         if (!ref.user_id || !ref.app_id) {
           console.warn("PayPal webhook: missing, malformed, or unsigned custom_id", {
@@ -168,6 +239,18 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
           }
         }
 
+        // Checked before the upsert below so we can tell first purchase
+        // apart from a renewal for Rewards & Loyalty (reward_action_rules
+        // has separate entries for premium_purchase/premium_renewal) --
+        // the upsert itself reuses the same row either way.
+        const { data: existingSub } = await supabaseAdmin
+          .from("subscriptions")
+          .select("id")
+          .eq("user_id", ref.user_id)
+          .eq("app_id", ref.app_id)
+          .maybeSingle();
+        const isRenewal = !!existingSub;
+
         const { data: sub, error } = await supabaseAdmin
           .from("subscriptions")
           .upsert(
@@ -233,6 +316,21 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
           entityType: "subscription",
           entityId: (sub as { id: string }).id,
           newData: { paypal_id: resource.id, amount, currency },
+        });
+
+        const { grantRewardAction, recordPremiumReferralIfApplicable } = await import(
+          "@/lib/rewards.server"
+        );
+        await grantRewardAction({
+          userId: ref.user_id,
+          action: isRenewal ? "premium_renewal" : "premium_purchase",
+          resourceType: "subscription",
+          resourceId: (sub as { id: string }).id,
+          sourceAppId: ref.app_id,
+        });
+        await recordPremiumReferralIfApplicable({
+          userId: ref.user_id,
+          subscriptionId: (sub as { id: string }).id,
         });
 
         const { sendN8nEvent } = await import("@/lib/n8n.server");

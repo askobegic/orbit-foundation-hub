@@ -39,6 +39,438 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_account_credits: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          source: string
+          source_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          id?: string
+          source: string
+          source_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          source?: string
+          source_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_account_credits_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_account_credits_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_application_settings: {
+        Row: {
+          app_id: string
+          created_at: string
+          eligibility_rule: string | null
+          id: string
+          moderation_mode: string | null
+          updated_at: string
+        }
+        Insert: {
+          app_id: string
+          created_at?: string
+          eligibility_rule?: string | null
+          id?: string
+          moderation_mode?: string | null
+          updated_at?: string
+        }
+        Update: {
+          app_id?: string
+          created_at?: string
+          eligibility_rule?: string | null
+          id?: string
+          moderation_mode?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_application_settings_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: true
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_campaigns: {
+        Row: {
+          app_id: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          image_url: string | null
+          link_url: string | null
+          moderation_note: string | null
+          placement_key: string
+          placement_price_id: string | null
+          starts_at: string | null
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          app_id: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          image_url?: string | null
+          link_url?: string | null
+          moderation_note?: string | null
+          placement_key: string
+          placement_price_id?: string | null
+          starts_at?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          app_id?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          image_url?: string | null
+          link_url?: string | null
+          moderation_note?: string | null
+          placement_key?: string
+          placement_price_id?: string | null
+          starts_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_campaigns_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_campaigns_placement_key_fkey"
+            columns: ["placement_key"]
+            isOneToOne: false
+            referencedRelation: "ad_placements"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "ad_campaigns_placement_price_id_fkey"
+            columns: ["placement_price_id"]
+            isOneToOne: false
+            referencedRelation: "ad_placement_prices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_campaigns_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_campaigns_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_config: {
+        Row: {
+          description: string | null
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          description?: string | null
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          description?: string | null
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      ad_placement_prices: {
+        Row: {
+          app_id: string | null
+          archived: boolean
+          created_at: string
+          currency: string
+          display_order: number
+          duration_days: number
+          enabled: boolean
+          id: string
+          paypal_payment_link: string | null
+          placement_key: string
+          price: number
+          pricing_strategy: string
+          stripe_payment_link: string | null
+          updated_at: string
+        }
+        Insert: {
+          app_id?: string | null
+          archived?: boolean
+          created_at?: string
+          currency?: string
+          display_order?: number
+          duration_days: number
+          enabled?: boolean
+          id?: string
+          paypal_payment_link?: string | null
+          placement_key: string
+          price: number
+          pricing_strategy?: string
+          stripe_payment_link?: string | null
+          updated_at?: string
+        }
+        Update: {
+          app_id?: string | null
+          archived?: boolean
+          created_at?: string
+          currency?: string
+          display_order?: number
+          duration_days?: number
+          enabled?: boolean
+          id?: string
+          paypal_payment_link?: string | null
+          placement_key?: string
+          price?: number
+          pricing_strategy?: string
+          stripe_payment_link?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_placement_prices_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_placement_prices_placement_key_fkey"
+            columns: ["placement_key"]
+            isOneToOne: false
+            referencedRelation: "ad_placements"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "ad_placement_prices_pricing_strategy_fkey"
+            columns: ["pricing_strategy"]
+            isOneToOne: false
+            referencedRelation: "ad_pricing_strategies"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      ad_placements: {
+        Row: {
+          archived: boolean
+          created_at: string
+          description: string | null
+          display_order: number
+          enabled: boolean
+          id: string
+          key: string
+          label: string
+          updated_at: string
+        }
+        Insert: {
+          archived?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          enabled?: boolean
+          id?: string
+          key: string
+          label: string
+          updated_at?: string
+        }
+        Update: {
+          archived?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          enabled?: boolean
+          id?: string
+          key?: string
+          label?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ad_pricing_strategies: {
+        Row: {
+          archived: boolean
+          created_at: string
+          description: string | null
+          display_order: number
+          enabled: boolean
+          id: string
+          key: string
+          label: string
+          updated_at: string
+        }
+        Insert: {
+          archived?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          enabled?: boolean
+          id?: string
+          key: string
+          label: string
+          updated_at?: string
+        }
+        Update: {
+          archived?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          enabled?: boolean
+          id?: string
+          key?: string
+          label?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ad_trusted_advertisers: {
+        Row: {
+          app_id: string
+          granted_at: string
+          granted_by: string | null
+          user_id: string
+        }
+        Insert: {
+          app_id: string
+          granted_at?: string
+          granted_by?: string | null
+          user_id: string
+        }
+        Update: {
+          app_id?: string
+          granted_at?: string
+          granted_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_trusted_advertisers_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_trusted_advertisers_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_trusted_advertisers_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_trusted_advertisers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_trusted_advertisers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      application_capabilities: {
+        Row: {
+          app_id: string
+          capability_key: string
+          created_at: string
+          enabled: boolean
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          app_id: string
+          capability_key: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          app_id?: string
+          capability_key?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_capabilities_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_capabilities_capability_key_fkey"
+            columns: ["capability_key"]
+            isOneToOne: false
+            referencedRelation: "capability_definitions"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
       applications: {
         Row: {
           cover_image_url: string | null
@@ -112,6 +544,7 @@ export type Database = {
           ip_address: string | null
           new_data: Json | null
           old_data: Json | null
+          reason: string | null
           user_id: string | null
         }
         Insert: {
@@ -123,6 +556,7 @@ export type Database = {
           ip_address?: string | null
           new_data?: Json | null
           old_data?: Json | null
+          reason?: string | null
           user_id?: string | null
         }
         Update: {
@@ -134,6 +568,7 @@ export type Database = {
           ip_address?: string | null
           new_data?: Json | null
           old_data?: Json | null
+          reason?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -152,6 +587,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      capability_definitions: {
+        Row: {
+          archived: boolean
+          created_at: string
+          description: string | null
+          display_order: number
+          enabled: boolean
+          id: string
+          key: string
+          label: string
+          updated_at: string
+        }
+        Insert: {
+          archived?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          enabled?: boolean
+          id?: string
+          key: string
+          label: string
+          updated_at?: string
+        }
+        Update: {
+          archived?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          enabled?: boolean
+          id?: string
+          key?: string
+          label?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       conversations: {
         Row: {
@@ -209,6 +680,95 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles_public"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      dashboard_widget_settings: {
+        Row: {
+          app_id: string
+          created_at: string
+          enabled: boolean
+          id: string
+          updated_at: string
+          widget_key: string
+        }
+        Insert: {
+          app_id: string
+          created_at?: string
+          enabled: boolean
+          id?: string
+          updated_at?: string
+          widget_key: string
+        }
+        Update: {
+          app_id?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          updated_at?: string
+          widget_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_widget_settings_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dashboard_widget_settings_widget_key_fkey"
+            columns: ["widget_key"]
+            isOneToOne: false
+            referencedRelation: "dashboard_widgets"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      dashboard_widgets: {
+        Row: {
+          archived: boolean
+          created_at: string
+          description: string | null
+          display_order: number
+          enabled: boolean
+          id: string
+          key: string
+          label: string
+          requires_capability: string | null
+          updated_at: string
+        }
+        Insert: {
+          archived?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          enabled?: boolean
+          id?: string
+          key: string
+          label: string
+          requires_capability?: string | null
+          updated_at?: string
+        }
+        Update: {
+          archived?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          enabled?: boolean
+          id?: string
+          key?: string
+          label?: string
+          requires_capability?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_widgets_requires_capability_fkey"
+            columns: ["requires_capability"]
+            isOneToOne: false
+            referencedRelation: "capability_definitions"
+            referencedColumns: ["key"]
           },
         ]
       }
@@ -332,6 +892,7 @@ export type Database = {
         Row: {
           amount: number
           app_id: string | null
+          campaign_id: string | null
           created_at: string | null
           currency: string | null
           id: string
@@ -347,6 +908,7 @@ export type Database = {
         Insert: {
           amount: number
           app_id?: string | null
+          campaign_id?: string | null
           created_at?: string | null
           currency?: string | null
           id?: string
@@ -362,6 +924,7 @@ export type Database = {
         Update: {
           amount?: number
           app_id?: string | null
+          campaign_id?: string | null
           created_at?: string | null
           currency?: string | null
           id?: string
@@ -380,6 +943,13 @@ export type Database = {
             columns: ["app_id"]
             isOneToOne: false
             referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "ad_campaigns"
             referencedColumns: ["id"]
           },
           {
@@ -489,6 +1059,72 @@ export type Database = {
           },
         ]
       }
+      premium_referrals: {
+        Row: {
+          created_at: string
+          id: string
+          referred_user_id: string
+          referrer_id: string
+          subscription_id: string | null
+          verification_due_at: string
+          verified_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          referred_user_id: string
+          referrer_id: string
+          subscription_id?: string | null
+          verification_due_at: string
+          verified_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          referred_user_id?: string
+          referrer_id?: string
+          subscription_id?: string | null
+          verification_due_at?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "premium_referrals_referred_user_id_fkey"
+            columns: ["referred_user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "premium_referrals_referred_user_id_fkey"
+            columns: ["referred_user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "premium_referrals_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "premium_referrals_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "premium_referrals_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -508,6 +1144,7 @@ export type Database = {
           notify_in_app: boolean
           notify_marketing: boolean
           profile_complete: boolean | null
+          referred_by_user_id: string | null
           updated_at: string | null
           user_type: string | null
           username: string | null
@@ -530,6 +1167,7 @@ export type Database = {
           notify_in_app?: boolean
           notify_marketing?: boolean
           profile_complete?: boolean | null
+          referred_by_user_id?: string | null
           updated_at?: string | null
           user_type?: string | null
           username?: string | null
@@ -552,11 +1190,385 @@ export type Database = {
           notify_in_app?: boolean
           notify_marketing?: boolean
           profile_complete?: boolean | null
+          referred_by_user_id?: string | null
           updated_at?: string | null
           user_type?: string | null
           username?: string | null
         }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_referred_by_user_id_fkey"
+            columns: ["referred_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_referred_by_user_id_fkey"
+            columns: ["referred_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reward_achievements: {
+        Row: {
+          archived: boolean
+          created_at: string
+          description: string | null
+          display_order: number
+          enabled: boolean
+          id: string
+          key: string
+          label: string
+          trigger_action: string | null
+          trigger_count: number
+          updated_at: string
+        }
+        Insert: {
+          archived?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          enabled?: boolean
+          id?: string
+          key: string
+          label: string
+          trigger_action?: string | null
+          trigger_count?: number
+          updated_at?: string
+        }
+        Update: {
+          archived?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          enabled?: boolean
+          id?: string
+          key?: string
+          label?: string
+          trigger_action?: string | null
+          trigger_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reward_achievements_trigger_action_fkey"
+            columns: ["trigger_action"]
+            isOneToOne: false
+            referencedRelation: "reward_action_rules"
+            referencedColumns: ["action"]
+          },
+        ]
+      }
+      reward_action_rules: {
+        Row: {
+          action: string
+          archived: boolean
+          cooldown_seconds: number
+          created_at: string
+          display_order: number
+          enabled: boolean
+          id: string
+          label: string
+          max_per_user: number | null
+          points: number
+          updated_at: string
+        }
+        Insert: {
+          action: string
+          archived?: boolean
+          cooldown_seconds?: number
+          created_at?: string
+          display_order?: number
+          enabled?: boolean
+          id?: string
+          label: string
+          max_per_user?: number | null
+          points?: number
+          updated_at?: string
+        }
+        Update: {
+          action?: string
+          archived?: boolean
+          cooldown_seconds?: number
+          created_at?: string
+          display_order?: number
+          enabled?: boolean
+          id?: string
+          label?: string
+          max_per_user?: number | null
+          points?: number
+          updated_at?: string
+        }
         Relationships: []
+      }
+      reward_catalog: {
+        Row: {
+          archived: boolean
+          created_at: string
+          description: string | null
+          display_order: number
+          enabled: boolean
+          grant_type: string
+          grant_value: Json
+          id: string
+          key: string
+          label: string
+          points_cost: number
+          requires_capability: string | null
+          updated_at: string
+          verified_referrals_required: number
+        }
+        Insert: {
+          archived?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          enabled?: boolean
+          grant_type: string
+          grant_value?: Json
+          id?: string
+          key: string
+          label: string
+          points_cost: number
+          requires_capability?: string | null
+          updated_at?: string
+          verified_referrals_required?: number
+        }
+        Update: {
+          archived?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          enabled?: boolean
+          grant_type?: string
+          grant_value?: Json
+          id?: string
+          key?: string
+          label?: string
+          points_cost?: number
+          requires_capability?: string | null
+          updated_at?: string
+          verified_referrals_required?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reward_catalog_grant_type_fkey"
+            columns: ["grant_type"]
+            isOneToOne: false
+            referencedRelation: "reward_fulfillment_types"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "reward_catalog_requires_capability_fkey"
+            columns: ["requires_capability"]
+            isOneToOne: false
+            referencedRelation: "capability_definitions"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      reward_config: {
+        Row: {
+          description: string | null
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          description?: string | null
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          description?: string | null
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      reward_fulfillment_types: {
+        Row: {
+          archived: boolean
+          created_at: string
+          description: string | null
+          display_order: number
+          enabled: boolean
+          id: string
+          key: string
+          label: string
+          updated_at: string
+        }
+        Insert: {
+          archived?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          enabled?: boolean
+          id?: string
+          key: string
+          label: string
+          updated_at?: string
+        }
+        Update: {
+          archived?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          enabled?: boolean
+          id?: string
+          key?: string
+          label?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      reward_ledger: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          points: number
+          resource_id: string | null
+          resource_type: string | null
+          source_app_id: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          points: number
+          resource_id?: string | null
+          resource_type?: string | null
+          source_app_id?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          points?: number
+          resource_id?: string | null
+          resource_type?: string | null
+          source_app_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reward_ledger_source_app_id_fkey"
+            columns: ["source_app_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reward_ledger_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reward_ledger_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reward_levels: {
+        Row: {
+          archived: boolean
+          created_at: string
+          display_order: number
+          enabled: boolean
+          id: string
+          key: string
+          label: string
+          min_lifetime_points: number
+          updated_at: string
+        }
+        Insert: {
+          archived?: boolean
+          created_at?: string
+          display_order?: number
+          enabled?: boolean
+          id?: string
+          key: string
+          label: string
+          min_lifetime_points?: number
+          updated_at?: string
+        }
+        Update: {
+          archived?: boolean
+          created_at?: string
+          display_order?: number
+          enabled?: boolean
+          id?: string
+          key?: string
+          label?: string
+          min_lifetime_points?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      reward_redemptions: {
+        Row: {
+          catalog_key: string
+          created_at: string
+          grant_result: Json | null
+          id: string
+          points_spent: number
+          user_id: string
+          verified_referrals_at_redemption: number
+        }
+        Insert: {
+          catalog_key: string
+          created_at?: string
+          grant_result?: Json | null
+          id?: string
+          points_spent: number
+          user_id: string
+          verified_referrals_at_redemption: number
+        }
+        Update: {
+          catalog_key?: string
+          created_at?: string
+          grant_result?: Json | null
+          id?: string
+          points_spent?: number
+          user_id?: string
+          verified_referrals_at_redemption?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reward_redemptions_catalog_key_fkey"
+            columns: ["catalog_key"]
+            isOneToOne: false
+            referencedRelation: "reward_catalog"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "reward_redemptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reward_redemptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscription_plans: {
         Row: {
@@ -681,6 +1693,49 @@ export type Database = {
           },
           {
             foreignKeyName: "subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_achievements: {
+        Row: {
+          achievement_key: string
+          earned_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          achievement_key: string
+          earned_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          achievement_key?: string
+          earned_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_achievements_achievement_key_fkey"
+            columns: ["achievement_key"]
+            isOneToOne: false
+            referencedRelation: "reward_achievements"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "user_achievements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_achievements_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles_public"

@@ -23,11 +23,15 @@ import {
   Lock,
   BadgeCheck,
   MessageSquare,
+  Gift,
+  Megaphone,
 } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
+import { useApplication } from "@/context/ApplicationContext";
 import { supabase } from "@/integrations/supabase/client";
 import { hasAnyActivePremium } from "@/lib/premium";
+import { getDashboardWidgets } from "@/lib/dashboard-widgets.functions";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrialBanner } from "@/components/dashboard/TrialBanner";
@@ -45,10 +49,26 @@ type SubscriptionWithPlan = SubscriptionRow & { plan: SubscriptionPlanRow | null
 export function DashboardPage() {
   const { t, i18n } = useTranslation();
   const { user, profile, signOut } = useAuth();
+  const { application } = useApplication();
   const lang = (i18n.language?.slice(0, 2) ?? "bs") as "bs" | "en" | "de";
   const queryClient = useQueryClient();
   const activateTrial = useServerFn(activateTrialIfEligible);
+  const getDashboardWidgetsFn = useServerFn(getDashboardWidgets);
   const triedTrialRef = useRef(false);
+
+  // Priority 8.2: Dashboard Widget Modularity -- which of this page's
+  // sections are enabled, globally or overridden for the application
+  // currently being browsed (see PROJECT_KNOWLEDGE.md -> Dashboard Widget
+  // Modularity). Defaults to "all enabled" while loading/unresolved rather
+  // than flashing an empty dashboard.
+  const widgetsQuery = useQuery({
+    queryKey: ["dashboard-widgets", application?.id],
+    enabled: !!application?.id,
+    queryFn: () => getDashboardWidgetsFn({ data: { appId: application!.id } }),
+  });
+  const isWidgetEnabled = (key: string) => !application || (widgetsQuery.data?.includes(key) ?? true);
+  const rewardsEnabled = isWidgetEnabled("rewards");
+  const advertisingEnabled = isWidgetEnabled("advertising");
 
   const appsQuery = useQuery({
     queryKey: ["dashboard", "applications"],
@@ -168,7 +188,11 @@ export function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-[#F7F8FA] text-gray-900">
-      <Sidebar onSignOut={() => void signOut()} />
+      <Sidebar
+        onSignOut={() => void signOut()}
+        rewardsEnabled={rewardsEnabled}
+        advertisingEnabled={advertisingEnabled}
+      />
 
       <div className="lg:pl-64">
         <InstallPrompt />
@@ -202,7 +226,9 @@ export function DashboardPage() {
         <main className="grid gap-6 p-4 lg:grid-cols-3 lg:p-8">
           {/* LEFT (2 cols) */}
           <div className="flex flex-col gap-6 lg:col-span-2">
-            <TrialBanner subscriptions={allSubsQuery.data ?? []} />
+            {isWidgetEnabled("trial_banner") && (
+              <TrialBanner subscriptions={allSubsQuery.data ?? []} />
+            )}
             {/* Profile card */}
             <section className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-100">
               <div className="h-24 bg-gradient-to-r from-[#1D6BF3] via-[#6366F1] to-[#8B5CF6]" />
@@ -276,6 +302,7 @@ export function DashboardPage() {
             </section>
 
             {/* Applications */}
+            {isWidgetEnabled("my_applications") && (
             <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-base font-semibold">{t("dashboard.myApps")}</h3>
@@ -430,11 +457,13 @@ export function DashboardPage() {
                 </div>
               )}
             </section>
+            )}
           </div>
 
           {/* RIGHT column */}
           <div className="flex flex-col gap-6">
             {/* Active subscription */}
+            {isWidgetEnabled("active_subscription") && (
             <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-[#1D6BF3] to-[#6366F1] p-6 text-white shadow-sm">
               <div className="mb-2 flex items-center justify-between">
                 <h3 className="text-sm font-semibold uppercase tracking-wide opacity-80">
@@ -472,8 +501,10 @@ export function DashboardPage() {
                 </div>
               )}
             </section>
+            )}
 
             {/* Payment history */}
+            {isWidgetEnabled("payment_history") && (
             <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="text-sm font-semibold">{t("dashboard.paymentHistory")}</h3>
@@ -519,8 +550,10 @@ export function DashboardPage() {
                 </ul>
               )}
             </section>
+            )}
 
           {/* Quick links */}
+          {isWidgetEnabled("quick_links") && (
 <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
   <h3 className="mb-3 text-sm font-semibold">{t("dashboard.quickLinks")}</h3>
   <div className="grid grid-cols-2 gap-2">
@@ -528,6 +561,10 @@ export function DashboardPage() {
       { to: "/dashboard/profile", icon: User, label: t("nav.profile") },
       { to: "/dashboard/settings", icon: Settings, label: t("nav.settings") },
       { to: "/dashboard/security", icon: Shield, label: t("nav.security") },
+      ...(rewardsEnabled ? [{ to: "/dashboard/rewards" as const, icon: Gift, label: t("nav.rewards") }] : []),
+      ...(advertisingEnabled
+        ? [{ to: "/dashboard/advertising" as const, icon: Megaphone, label: t("nav.advertising") }]
+        : []),
       { to: "/dashboard/help", icon: HelpCircle, label: t("nav.help") },
     ].map((q) => (
       <Link
@@ -542,11 +579,14 @@ export function DashboardPage() {
     ))}
   </div>
 </section>
+          )}
 
+{isWidgetEnabled("share_and_invite") && (
 <ShareAndInvite
   username={profile?.username ?? null}
   firstName={profile?.first_name ?? null}
 />
+)}
           </div>
 
           {/* Footer */}
@@ -575,7 +615,15 @@ export function DashboardPage() {
   );
 }
 
-function Sidebar({ onSignOut }: { onSignOut: () => void }) {
+function Sidebar({
+  onSignOut,
+  rewardsEnabled,
+  advertisingEnabled,
+}: {
+  onSignOut: () => void;
+  rewardsEnabled: boolean;
+  advertisingEnabled: boolean;
+}) {
   const { t } = useTranslation();
   const items = [
     { to: "/dashboard", icon: Home, label: t("nav.home") },
@@ -583,6 +631,12 @@ function Sidebar({ onSignOut }: { onSignOut: () => void }) {
     { to: "/dashboard", icon: LayoutGrid, label: t("nav.applications") },
     { to: "/dashboard/subscriptions", icon: CreditCard, label: t("nav.subscriptions") },
     { to: "/dashboard", icon: Receipt, label: t("nav.payments") },
+    ...(rewardsEnabled
+      ? [{ to: "/dashboard/rewards" as const, icon: Gift, label: t("nav.rewards") }]
+      : []),
+    ...(advertisingEnabled
+      ? [{ to: "/dashboard/advertising" as const, icon: Megaphone, label: t("nav.advertising") }]
+      : []),
     { to: "/dashboard/settings", icon: Settings, label: t("nav.settings") },
     { to: "/dashboard/security", icon: Shield, label: t("nav.security") },
     { to: "/dashboard/notifications", icon: Bell, label: t("nav.notifications") },

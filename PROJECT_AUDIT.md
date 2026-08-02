@@ -542,6 +542,16 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 - **Commit:** —
 - **Date:** 2026-07-26
 
+**RT-3 — `Link to="/pricing"` missing required `search` prop fails `tsc --noEmit`**
+- **Status:** Open
+- **Files:** `src/components/dashboard/DashboardPage.tsx:489`, `src/components/dashboard/TrialBanner.tsx:48,67`, `src/routes/dashboard.subscriptions.tsx:73`
+- **Description:** `/pricing`'s route declares a required `search.app` param (see the working call site at `DashboardPage.tsx:423-424`, which passes `search={{ app: app.slug }}`), but these four call sites link to `/pricing` with no `search` prop at all. `tsc --noEmit` fails on all four with `TS2741: Property 'search' is missing`. Predates Priority 8.3 (Rewards & Loyalty) — noticed incidentally while typechecking that phase's changes, not introduced by them.
+- **Risk:** Currently a type-check-only failure (Vite's dev/build transform doesn't appear to enforce it, so the app still runs), but it means `npx tsc --noEmit` cannot be used as a clean gate for this repo until fixed, and any of these links may pass `undefined` for `app` at runtime depending on how `/pricing` handles a missing param.
+- **Recommendation:** Either pass an explicit `search` (e.g. omit `app` deliberately via `search={{}}` if `/pricing` treats it as optional) at all four call sites, or make `search.app` optional on the `/pricing` route if "no specific app" is a legitimate, supported entry point.
+- **Resolution:** —
+- **Commit:** —
+- **Date:** 2026-08-01
+
 **Note (strength):** Admin route authorization is correctly layered — client-side `AdminGate` blocks the `<Outlet/>` and every admin server function independently re-verifies via `assertAdmin()`. No IDOR was found on `$username`/`$id`-parameterized routes; public profile pages correctly gate private contact fields behind both owner opt-in flags and viewer/owner state, and never render email addresses.
 
 ---
