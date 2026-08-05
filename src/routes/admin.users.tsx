@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
   BadgeCheck,
@@ -64,6 +65,7 @@ type UserRow = {
 const PAGE_SIZE = 25;
 
 function AdminUsers() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const isAdminFn = useServerFn(getMyIsAdmin);
@@ -146,7 +148,7 @@ function AdminUsers() {
         },
       }),
     onSuccess: () => {
-      toast.success("Premium granted");
+      toast.success(t("admin.users.premiumGranted"));
       setModal(null);
       qc.invalidateQueries({ queryKey: ["admin-audit"] });
     },
@@ -169,7 +171,7 @@ function AdminUsers() {
     mutationFn: (id: string) =>
       revoke({ data: { subscription_id: id, reason: reason || undefined } }),
     onSuccess: () => {
-      toast.success("Revoked");
+      toast.success(t("admin.users.subscriptionRevoked"));
       qc.invalidateQueries({ queryKey: ["admin-user-subs"] });
       qc.invalidateQueries({ queryKey: ["admin-audit"] });
     },
@@ -187,7 +189,7 @@ function AdminUsers() {
         },
       }),
     onSuccess: (row) => {
-      toast.success("User updated");
+      toast.success(t("admin.users.userUpdated"));
       setEditing(false);
       // adminUpdateUser returns the raw profiles row -- it never touches
       // Premium status, so carry the modal's existing is_premium forward
@@ -204,7 +206,7 @@ function AdminUsers() {
   const doSetActive = useMutation({
     mutationFn: (is_active: boolean) => setActive({ data: { user_id: modal!.id, is_active } }),
     onSuccess: (_row, is_active) => {
-      toast.success(is_active ? "User reactivated" : "User suspended");
+      toast.success(is_active ? t("admin.users.userReactivated") : t("admin.users.userSuspended"));
       setModal((m) => (m ? { ...m, is_active } : m));
       invalidateUsers();
       qc.invalidateQueries({ queryKey: ["admin-audit"] });
@@ -215,7 +217,7 @@ function AdminUsers() {
   const doVerify = useMutation({
     mutationFn: (verified: boolean) => setVerified({ data: { user_id: modal!.id, verified } }),
     onSuccess: (_r, verified) => {
-      toast.success(verified ? "User verified" : "Verification revoked");
+      toast.success(verified ? t("admin.users.userVerified") : t("admin.users.verificationRevoked"));
       setModal((m) => (m ? { ...m, is_verified: verified } : m));
       invalidateUsers();
     },
@@ -225,7 +227,7 @@ function AdminUsers() {
   const doDelete = useMutation({
     mutationFn: () => deleteUser({ data: { user_id: modal!.id } }),
     onSuccess: () => {
-      toast.success("User deleted");
+      toast.success(t("admin.users.userDeleted"));
       setModal(null);
       invalidateUsers();
       qc.invalidateQueries({ queryKey: ["admin-audit"] });
@@ -235,11 +237,7 @@ function AdminUsers() {
 
   function handleDelete() {
     if (!modal) return;
-    if (
-      !window.confirm(
-        `Delete ${modal.email ?? modal.id}? This permanently removes their account, subscriptions, payments, and profile data. This cannot be undone.`,
-      )
-    ) {
+    if (!window.confirm(t("admin.users.deleteConfirm", { who: modal.email ?? modal.id }))) {
       return;
     }
     doDelete.mutate();
@@ -255,9 +253,9 @@ function AdminUsers() {
           className="mb-4 inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
         >
           <ArrowLeft className="h-4 w-4" />
-          Admin
+          {t("admin.hub.title")}
         </Link>
-        <h1 className="mb-6 text-2xl font-semibold text-gray-900">Users</h1>
+        <h1 className="mb-6 text-2xl font-semibold text-gray-900">{t("admin.users.title")}</h1>
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <div className="flex flex-1 min-w-[200px] items-center gap-2 rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-gray-100">
@@ -268,7 +266,7 @@ function AdminUsers() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              placeholder="Search email, username, name…"
+              placeholder={t("admin.users.searchPlaceholder")}
               className="w-full bg-transparent text-sm focus:outline-none"
             />
           </div>
@@ -280,9 +278,9 @@ function AdminUsers() {
             }}
             className="rounded-xl bg-white px-3 py-2 text-sm shadow-sm ring-1 ring-gray-100"
           >
-            <option value="">All types</option>
-            <option value="standard">Standard</option>
-            <option value="premium">Premium</option>
+            <option value="">{t("admin.users.allTypes")}</option>
+            <option value="standard">{t("admin.users.standard")}</option>
+            <option value="premium">{t("admin.users.premium")}</option>
           </select>
           <select
             value={verifiedFilter}
@@ -292,9 +290,9 @@ function AdminUsers() {
             }}
             className="rounded-xl bg-white px-3 py-2 text-sm shadow-sm ring-1 ring-gray-100"
           >
-            <option value="">Any verification</option>
-            <option value="true">Verified</option>
-            <option value="false">Not verified</option>
+            <option value="">{t("admin.users.anyVerification")}</option>
+            <option value="true">{t("admin.users.verified")}</option>
+            <option value="false">{t("admin.users.notVerified")}</option>
           </select>
           <select
             value={activeFilter}
@@ -304,9 +302,9 @@ function AdminUsers() {
             }}
             className="rounded-xl bg-white px-3 py-2 text-sm shadow-sm ring-1 ring-gray-100"
           >
-            <option value="">Active + suspended</option>
-            <option value="true">Active only</option>
-            <option value="false">Suspended only</option>
+            <option value="">{t("admin.users.activeAndSuspended")}</option>
+            <option value="true">{t("admin.users.activeOnly")}</option>
+            <option value="false">{t("admin.users.suspendedOnly")}</option>
           </select>
         </div>
 
@@ -314,12 +312,12 @@ function AdminUsers() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
               <tr>
-                <th className="px-4 py-2">Name</th>
-                <th className="px-4 py-2">Email</th>
-                <th className="px-4 py-2">Type</th>
-                <th className="px-4 py-2">Verified</th>
-                <th className="px-4 py-2">Status</th>
-                <th className="px-4 py-2">City</th>
+                <th className="px-4 py-2">{t("admin.users.colName")}</th>
+                <th className="px-4 py-2">{t("admin.users.colEmail")}</th>
+                <th className="px-4 py-2">{t("admin.users.colType")}</th>
+                <th className="px-4 py-2">{t("admin.users.colVerified")}</th>
+                <th className="px-4 py-2">{t("admin.users.colStatus")}</th>
+                <th className="px-4 py-2">{t("admin.users.colCity")}</th>
                 <th className="px-4 py-2"></th>
               </tr>
             </thead>
@@ -327,14 +325,14 @@ function AdminUsers() {
               {usersQ.isLoading && (
                 <tr>
                   <td className="px-4 py-6 text-center text-gray-500" colSpan={7}>
-                    Loading…
+                    {t("common.loading")}
                   </td>
                 </tr>
               )}
               {!usersQ.isLoading && rows.length === 0 && (
                 <tr>
                   <td className="px-4 py-6 text-center text-gray-500" colSpan={7}>
-                    No users match these filters.
+                    {t("admin.users.noMatch")}
                   </td>
                 </tr>
               )}
@@ -352,7 +350,7 @@ function AdminUsers() {
                           : "bg-gray-100 text-gray-600"
                       }`}
                     >
-                      {r.is_premium ? "premium" : "standard"}
+                      {r.is_premium ? t("admin.users.typePremium") : t("admin.users.typeStandard")}
                     </span>
                   </td>
                   <td className="px-4 py-2">
@@ -365,11 +363,11 @@ function AdminUsers() {
                   <td className="px-4 py-2">
                     {r.is_active === false ? (
                       <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">
-                        Suspended
+                        {t("admin.users.suspended")}
                       </span>
                     ) : (
                       <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
-                        Active
+                        {t("admin.users.active")}
                       </span>
                     )}
                   </td>
@@ -379,7 +377,7 @@ function AdminUsers() {
                       onClick={() => openModal(r)}
                       className="rounded-lg bg-[#1D6BF3] px-3 py-1 text-xs font-medium text-white hover:bg-[#1858cf]"
                     >
-                      Manage
+                      {t("admin.users.manage")}
                     </button>
                   </td>
                 </tr>
@@ -391,8 +389,12 @@ function AdminUsers() {
         <div className="mt-3 flex items-center justify-between text-sm text-gray-500">
           <span>
             {total === 0
-              ? "0 users"
-              : `${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, total)} of ${total}`}
+              ? t("admin.users.zeroUsers")
+              : t("admin.users.rangeOfTotal", {
+                  from: (page - 1) * PAGE_SIZE + 1,
+                  to: Math.min(page * PAGE_SIZE, total),
+                  total,
+                })}
           </span>
           <div className="flex items-center gap-2">
             <button
@@ -400,30 +402,30 @@ function AdminUsers() {
               disabled={page <= 1}
               className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
             >
-              Prev
+              {t("admin.users.prev")}
             </button>
             <span className="text-xs">
-              Page {page} / {totalPages}
+              {t("admin.users.pageOf", { page, totalPages })}
             </span>
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages}
               className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
             >
-              Next
+              {t("admin.users.next")}
             </button>
           </div>
         </div>
 
-        <h2 className="mb-3 mt-8 text-lg font-semibold">Audit log</h2>
+        <h2 className="mb-3 mt-8 text-lg font-semibold">{t("admin.users.auditLogTitle")}</h2>
         <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-100">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
               <tr>
-                <th className="px-4 py-2">When</th>
-                <th className="px-4 py-2">Action</th>
-                <th className="px-4 py-2">Entity</th>
-                <th className="px-4 py-2">User</th>
+                <th className="px-4 py-2">{t("admin.users.colWhen")}</th>
+                <th className="px-4 py-2">{t("admin.users.colAction")}</th>
+                <th className="px-4 py-2">{t("admin.users.colEntity")}</th>
+                <th className="px-4 py-2">{t("admin.users.colUser")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -458,7 +460,7 @@ function AdminUsers() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-lg">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Manage {modal.email}</h3>
+              <h3 className="text-lg font-semibold">{t("admin.users.manageModalTitle", { email: modal.email })}</h3>
               <button onClick={() => setModal(null)} className="rounded-lg p-1 hover:bg-gray-100">
                 <X className="h-4 w-4" />
               </button>
@@ -467,51 +469,50 @@ function AdminUsers() {
             {/* User details */}
             <div className="mb-4 rounded-xl border border-gray-100 p-3">
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase text-gray-500">User details</p>
+                <p className="text-xs font-semibold uppercase text-gray-500">{t("admin.users.userDetailsTitle")}</p>
                 <button
                   onClick={() => setEditing((v) => !v)}
                   className="inline-flex items-center gap-1 text-xs font-medium text-[#1D6BF3] hover:underline"
                 >
-                  <Pencil className="h-3 w-3" /> {editing ? "Cancel" : "Edit"}
+                  <Pencil className="h-3 w-3" /> {editing ? t("common.cancel") : t("common.edit")}
                 </button>
               </div>
 
               {!editing ? (
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                   <Field
-                    label="Name"
+                    label={t("admin.users.fieldName")}
                     value={[modal.first_name, modal.last_name].filter(Boolean).join(" ") || "—"}
                   />
-                  <Field label="Email" value={modal.email ?? "—"} />
-                  <Field label="User type" value={modal.is_premium ? "premium" : "standard"} />
-                  <Field label="Verified" value={modal.is_verified ? "Yes" : "No"} />
-                  <Field label="Country" value={modal.country ?? "—"} />
-                  <Field label="City" value={modal.city ?? "—"} />
+                  <Field label={t("admin.users.colEmail")} value={modal.email ?? "—"} />
+                  <Field label={t("admin.users.fieldUserType")} value={modal.is_premium ? t("admin.users.typePremium") : t("admin.users.typeStandard")} />
+                  <Field label={t("admin.users.fieldVerified")} value={modal.is_verified ? t("admin.users.yes") : t("admin.users.no")} />
+                  <Field label={t("admin.users.fieldCountry")} value={modal.country ?? "—"} />
+                  <Field label={t("admin.users.colCity")} value={modal.city ?? "—"} />
                   <Field
-                    label="Registered"
+                    label={t("admin.users.fieldRegistered")}
                     value={modal.created_at ? new Date(modal.created_at).toLocaleDateString() : "—"}
                   />
                   <Field
-                    label="Last update"
+                    label={t("admin.users.fieldLastUpdate")}
                     value={modal.updated_at ? new Date(modal.updated_at).toLocaleDateString() : "—"}
                   />
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="Email" value={modal.email ?? "—"} />
-                  <EditField label="Username" value={editUsername} onChange={setEditUsername} />
-                  <EditField label="City" value={editCity} onChange={setEditCity} />
-                  <EditField label="Country" value={editCountry} onChange={setEditCountry} />
+                  <Field label={t("admin.users.colEmail")} value={modal.email ?? "—"} />
+                  <EditField label={t("admin.users.fieldUsername")} value={editUsername} onChange={setEditUsername} />
+                  <EditField label={t("admin.users.colCity")} value={editCity} onChange={setEditCity} />
+                  <EditField label={t("admin.users.fieldCountry")} value={editCountry} onChange={setEditCountry} />
                   <p className="col-span-2 text-[11px] text-gray-400">
-                    Name, profile photo, and email come from the user's identity provider and are
-                    locked — not editable here. Email is kept in sync automatically on every sign-in.
+                    {t("admin.users.identityLockedNote")}
                   </p>
                   <button
                     onClick={() => doUpdate.mutate()}
                     disabled={doUpdate.isPending}
                     className="col-span-2 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#1858cf] disabled:opacity-60"
                   >
-                    {doUpdate.isPending ? "Saving…" : "Save changes"}
+                    {doUpdate.isPending ? t("common.saving") : t("admin.users.saveChanges")}
                   </button>
                 </div>
               )}
@@ -525,7 +526,7 @@ function AdminUsers() {
                   disabled={doSetActive.isPending}
                   className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-60"
                 >
-                  <UserCheck className="h-3.5 w-3.5" /> Reactivate
+                  <UserCheck className="h-3.5 w-3.5" /> {t("admin.users.reactivate")}
                 </button>
               ) : (
                 <button
@@ -533,7 +534,7 @@ function AdminUsers() {
                   disabled={doSetActive.isPending}
                   className="inline-flex items-center gap-1 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-60"
                 >
-                  <UserX className="h-3.5 w-3.5" /> Suspend
+                  <UserX className="h-3.5 w-3.5" /> {t("admin.users.suspend")}
                 </button>
               )}
               {modal.is_verified ? (
@@ -542,7 +543,7 @@ function AdminUsers() {
                   disabled={doVerify.isPending}
                   className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
                 >
-                  <X className="h-3.5 w-3.5" /> Revoke verification
+                  <X className="h-3.5 w-3.5" /> {t("admin.users.revokeVerification")}
                 </button>
               ) : (
                 <button
@@ -550,7 +551,7 @@ function AdminUsers() {
                   disabled={doVerify.isPending}
                   className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#1858cf] disabled:opacity-60"
                 >
-                  <BadgeCheck className="h-3.5 w-3.5" /> Approve verification
+                  <BadgeCheck className="h-3.5 w-3.5" /> {t("admin.users.approveVerification")}
                 </button>
               )}
               <button
@@ -558,15 +559,15 @@ function AdminUsers() {
                 disabled={doDelete.isPending}
                 className="ml-auto inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 disabled:opacity-60"
               >
-                <Trash2 className="h-3.5 w-3.5" /> Delete user
+                <Trash2 className="h-3.5 w-3.5" /> {t("admin.users.deleteUser")}
               </button>
             </div>
 
             {/* Premium */}
             <div className="mb-4 space-y-2">
-              <p className="text-xs font-semibold uppercase text-gray-500">Active subscriptions</p>
+              <p className="text-xs font-semibold uppercase text-gray-500">{t("admin.users.activeSubscriptionsTitle")}</p>
               {(userSubsQ.data ?? []).length === 0 ? (
-                <p className="text-sm text-gray-500">None</p>
+                <p className="text-sm text-gray-500">{t("admin.common.none")}</p>
               ) : (
                 <ul className="space-y-1">
                   {(userSubsQ.data ?? []).map((s) => {
@@ -590,7 +591,7 @@ function AdminUsers() {
                             onClick={() => doRevoke.mutate(r.id)}
                             className="rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-100"
                           >
-                            Revoke
+                            {t("admin.common.revoke")}
                           </button>
                         )}
                       </li>
@@ -601,10 +602,10 @@ function AdminUsers() {
             </div>
 
             <div className="mb-3 border-t border-gray-100 pt-4">
-              <p className="mb-2 text-xs font-semibold uppercase text-gray-500">Grant premium</p>
+              <p className="mb-2 text-xs font-semibold uppercase text-gray-500">{t("admin.users.grantPremiumTitle")}</p>
               <div className="grid grid-cols-2 gap-3">
                 <label className="flex flex-col gap-1 text-xs">
-                  App
+                  {t("admin.users.app")}
                   <select
                     value={selApp}
                     onChange={(e) => setSelApp(e.target.value)}
@@ -618,7 +619,7 @@ function AdminUsers() {
                   </select>
                 </label>
                 <label className="flex flex-col gap-1 text-xs">
-                  Months
+                  {t("admin.users.months")}
                   <input
                     type="number"
                     min={1}
@@ -629,12 +630,12 @@ function AdminUsers() {
                   />
                 </label>
                 <label className="col-span-2 flex flex-col gap-1 text-xs">
-                  Reason
+                  {t("admin.common.reason")}
                   <input
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                     className="rounded-lg border border-gray-200 px-2 py-1 text-sm"
-                    placeholder="Optional note logged in audit"
+                    placeholder={t("admin.users.reasonOptionalNote")}
                   />
                 </label>
               </div>
@@ -645,7 +646,7 @@ function AdminUsers() {
                 onClick={() => setModal(null)}
                 className="rounded-lg px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
               >
-                Close
+                {t("common.close")}
               </button>
               <button
                 onClick={() => doGrant.mutate()}
@@ -653,7 +654,7 @@ function AdminUsers() {
                 className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-[#F59E0B] to-[#EF4444] px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50"
               >
                 <Crown className="h-4 w-4" />
-                Grant Premium
+                {t("admin.users.grantPremium")}
               </button>
             </div>
           </div>

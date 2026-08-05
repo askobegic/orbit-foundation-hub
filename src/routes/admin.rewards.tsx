@@ -11,6 +11,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { ArrowLeft, Plus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -47,6 +48,7 @@ export const Route = createFileRoute("/admin/rewards")({
 });
 
 function AdminRewards() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const isAdminFn = useServerFn(getMyIsAdmin);
   const adminQ = useQuery({ queryKey: ["is-admin"], queryFn: () => isAdminFn() });
@@ -58,12 +60,10 @@ function AdminRewards() {
     <main className="min-h-screen bg-[#F7F8FA] px-6 py-10">
       <div className="mx-auto max-w-5xl">
         <Link to="/admin" className="mb-4 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900">
-          <ArrowLeft className="h-4 w-4" /> Back
+          <ArrowLeft className="h-4 w-4" /> {t("admin.common.back")}
         </Link>
-        <h1 className="text-2xl font-semibold text-gray-900">Rewards & Loyalty</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Action rules, levels, achievements, the redemption catalog, fulfillment types, and configuration.
-        </p>
+        <h1 className="text-2xl font-semibold text-gray-900">{t("admin.rewards.title")}</h1>
+        <p className="mt-1 text-sm text-gray-500">{t("admin.rewards.subtitle")}</p>
 
         <ActionRulesSection />
         <LevelsSection />
@@ -86,6 +86,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 }
 
 function ActionRulesSection() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const listFn = useServerFn(adminListRewardActionRules);
   const upsertFn = useServerFn(adminUpsertRewardActionRule);
@@ -101,7 +102,7 @@ function ActionRulesSection() {
         data: { action, label, points, cooldownSeconds, displayOrder: 0, enabled: true, archived: false },
       }),
     onSuccess: () => {
-      toast.success("Action rule created");
+      toast.success(t("admin.rewards.actionRuleCreated"));
       setAction("");
       setLabel("");
       setPoints(0);
@@ -131,22 +132,20 @@ function ActionRulesSection() {
   });
 
   return (
-    <Card title="Action rules">
-      <p className="mb-3 text-xs text-gray-500">
-        The sole lookup for how many points each action grants -- no action is ever hardcoded elsewhere.
-      </p>
+    <Card title={t("admin.rewards.actionRulesTitle")}>
+      <p className="mb-3 text-xs text-gray-500">{t("admin.rewards.actionRulesHint")}</p>
       <div className="flex flex-wrap items-end gap-2">
         <label className="text-sm">
-          Action
+          {t("admin.rewards.action")}
           <input
             value={action}
             onChange={(e) => setAction(e.target.value)}
-            placeholder="e.g. profile_completed"
+            placeholder={t("admin.rewards.actionPlaceholder")}
             className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
           />
         </label>
         <label className="text-sm">
-          Label
+          {t("admin.common.label")}
           <input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
@@ -154,7 +153,7 @@ function ActionRulesSection() {
           />
         </label>
         <label className="text-sm">
-          Points
+          {t("admin.rewards.points")}
           <input
             type="number"
             value={points}
@@ -163,7 +162,7 @@ function ActionRulesSection() {
           />
         </label>
         <label className="text-sm">
-          Cooldown (s)
+          {t("admin.rewards.cooldownSeconds")}
           <input
             type="number"
             value={cooldownSeconds}
@@ -176,7 +175,7 @@ function ActionRulesSection() {
           disabled={!action.trim() || !label.trim() || create.isPending}
           className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
         >
-          <Plus className="h-4 w-4" /> Add
+          <Plus className="h-4 w-4" /> {t("admin.common.add")}
         </button>
       </div>
       <ul className="mt-4 divide-y divide-gray-100">
@@ -185,8 +184,8 @@ function ActionRulesSection() {
             <span>
               <span className="font-medium">{r.label}</span>{" "}
               <span className="text-gray-400">
-                ({r.action}) -- {r.points} pts
-                {r.cooldown_seconds > 0 ? `, ${r.cooldown_seconds}s cooldown` : ""}
+                ({r.action}) — {r.points} {t("admin.rewards.pts")}
+                {r.cooldown_seconds > 0 ? t("admin.rewards.cooldownPhrase", { seconds: r.cooldown_seconds }) : ""}
               </span>
             </span>
             <button
@@ -195,7 +194,7 @@ function ActionRulesSection() {
                 r.enabled ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
               }`}
             >
-              {r.enabled ? "Enabled" : "Disabled"}
+              {r.enabled ? t("admin.common.enabled") : t("admin.common.disabled")}
             </button>
           </li>
         ))}
@@ -205,6 +204,7 @@ function ActionRulesSection() {
 }
 
 function LevelsSection() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const listFn = useServerFn(adminListRewardLevels);
   const upsertFn = useServerFn(adminUpsertRewardLevel);
@@ -217,7 +217,7 @@ function LevelsSection() {
     mutationFn: () =>
       upsertFn({ data: { key, label, minLifetimePoints, displayOrder: 0, enabled: true, archived: false } }),
     onSuccess: () => {
-      toast.success("Level created");
+      toast.success(t("admin.rewards.levelCreated"));
       setKey("");
       setLabel("");
       setMinLifetimePoints(0);
@@ -244,23 +244,20 @@ function LevelsSection() {
   });
 
   return (
-    <Card title="Levels">
-      <p className="mb-3 text-xs text-gray-500">
-        A user's level is whichever level's threshold their Lifetime Points currently clear -- resolved
-        generically, not hardcoded.
-      </p>
+    <Card title={t("admin.rewards.levelsTitle")}>
+      <p className="mb-3 text-xs text-gray-500">{t("admin.rewards.levelsHint")}</p>
       <div className="flex flex-wrap items-end gap-2">
         <label className="text-sm">
-          Key
+          {t("admin.common.key")}
           <input
             value={key}
             onChange={(e) => setKey(e.target.value)}
-            placeholder="e.g. gold"
+            placeholder={t("admin.rewards.keyPlaceholderLevel")}
             className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
           />
         </label>
         <label className="text-sm">
-          Label
+          {t("admin.common.label")}
           <input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
@@ -268,7 +265,7 @@ function LevelsSection() {
           />
         </label>
         <label className="text-sm">
-          Min lifetime points
+          {t("admin.rewards.minLifetimePoints")}
           <input
             type="number"
             value={minLifetimePoints}
@@ -281,7 +278,7 @@ function LevelsSection() {
           disabled={!key.trim() || !label.trim() || create.isPending}
           className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
         >
-          <Plus className="h-4 w-4" /> Add
+          <Plus className="h-4 w-4" /> {t("admin.common.add")}
         </button>
       </div>
       <ul className="mt-4 divide-y divide-gray-100">
@@ -290,7 +287,7 @@ function LevelsSection() {
             <span>
               <span className="font-medium">{l.label}</span>{" "}
               <span className="text-gray-400">
-                ({l.key}) -- from {l.min_lifetime_points} pts
+                ({l.key}) — {t("admin.rewards.fromPts", { points: l.min_lifetime_points })}
               </span>
             </span>
             <button
@@ -299,7 +296,7 @@ function LevelsSection() {
                 l.enabled ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
               }`}
             >
-              {l.enabled ? "Enabled" : "Disabled"}
+              {l.enabled ? t("admin.common.enabled") : t("admin.common.disabled")}
             </button>
           </li>
         ))}
@@ -309,6 +306,7 @@ function LevelsSection() {
 }
 
 function AchievementsSection() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const listFn = useServerFn(adminListRewardAchievements);
   const upsertFn = useServerFn(adminUpsertRewardAchievement);
@@ -334,7 +332,7 @@ function AchievementsSection() {
         },
       }),
     onSuccess: () => {
-      toast.success("Achievement created");
+      toast.success(t("admin.rewards.achievementCreated"));
       setKey("");
       setLabel("");
       setTriggerAction("");
@@ -364,19 +362,19 @@ function AchievementsSection() {
   });
 
   return (
-    <Card title="Achievements">
+    <Card title={t("admin.rewards.achievementsTitle")}>
       <div className="flex flex-wrap items-end gap-2">
         <label className="text-sm">
-          Key
+          {t("admin.common.key")}
           <input
             value={key}
             onChange={(e) => setKey(e.target.value)}
-            placeholder="e.g. five_referrals"
+            placeholder={t("admin.rewards.keyPlaceholderAchievement")}
             className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
           />
         </label>
         <label className="text-sm">
-          Label
+          {t("admin.common.label")}
           <input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
@@ -384,13 +382,13 @@ function AchievementsSection() {
           />
         </label>
         <label className="text-sm">
-          Trigger action
+          {t("admin.rewards.triggerAction")}
           <select
             value={triggerAction}
             onChange={(e) => setTriggerAction(e.target.value)}
             className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
           >
-            <option value="">None (manual only)</option>
+            <option value="">{t("admin.rewards.noneManualOnly")}</option>
             {(actionsQ.data ?? []).map((a) => (
               <option key={a.action} value={a.action}>
                 {a.label}
@@ -399,7 +397,7 @@ function AchievementsSection() {
           </select>
         </label>
         <label className="text-sm">
-          Trigger count
+          {t("admin.rewards.triggerCount")}
           <input
             type="number"
             min={1}
@@ -413,7 +411,7 @@ function AchievementsSection() {
           disabled={!key.trim() || !label.trim() || create.isPending}
           className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
         >
-          <Plus className="h-4 w-4" /> Add
+          <Plus className="h-4 w-4" /> {t("admin.common.add")}
         </button>
       </div>
       <ul className="mt-4 divide-y divide-gray-100">
@@ -422,7 +420,10 @@ function AchievementsSection() {
             <span>
               <span className="font-medium">{a.label}</span>{" "}
               <span className="text-gray-400">
-                ({a.key}){a.trigger_action ? ` -- ${a.trigger_count}x ${a.trigger_action}` : " -- manual"}
+                ({a.key}){" "}
+                {a.trigger_action
+                  ? `— ${t("admin.rewards.triggerSummary", { count: a.trigger_count, action: a.trigger_action })}`
+                  : `— ${t("admin.rewards.manual")}`}
               </span>
             </span>
             <button
@@ -431,7 +432,7 @@ function AchievementsSection() {
                 a.enabled ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
               }`}
             >
-              {a.enabled ? "Enabled" : "Disabled"}
+              {a.enabled ? t("admin.common.enabled") : t("admin.common.disabled")}
             </button>
           </li>
         ))}
@@ -441,6 +442,7 @@ function AchievementsSection() {
 }
 
 function CatalogSection() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const listFn = useServerFn(adminListRewardCatalog);
   const upsertFn = useServerFn(adminUpsertRewardCatalogItem);
@@ -479,7 +481,7 @@ function CatalogSection() {
         },
       }),
     onSuccess: () => {
-      toast.success("Catalog item created");
+      toast.success(t("admin.rewards.catalogItemCreated"));
       setKey("");
       setLabel("");
       setPointsCost(0);
@@ -514,23 +516,20 @@ function CatalogSection() {
   });
 
   return (
-    <Card title="Redemption catalog">
-      <p className="mb-3 text-xs text-gray-500">
-        Redeeming requires both the points threshold and the verified-referrals threshold. Fulfillment is
-        recorded as pending -- see Fulfillment Types below.
-      </p>
+    <Card title={t("admin.rewards.catalogTitle")}>
+      <p className="mb-3 text-xs text-gray-500">{t("admin.rewards.catalogHint")}</p>
       <div className="flex flex-wrap items-end gap-2">
         <label className="text-sm">
-          Key
+          {t("admin.common.key")}
           <input
             value={key}
             onChange={(e) => setKey(e.target.value)}
-            placeholder="e.g. one_month_premium"
+            placeholder={t("admin.rewards.keyPlaceholderCatalog")}
             className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
           />
         </label>
         <label className="text-sm">
-          Label
+          {t("admin.common.label")}
           <input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
@@ -538,7 +537,7 @@ function CatalogSection() {
           />
         </label>
         <label className="text-sm">
-          Points cost
+          {t("admin.rewards.pointsCost")}
           <input
             type="number"
             value={pointsCost}
@@ -547,7 +546,7 @@ function CatalogSection() {
           />
         </label>
         <label className="text-sm">
-          Verified referrals req.
+          {t("admin.rewards.verifiedReferralsReq")}
           <input
             type="number"
             value={verifiedReferralsRequired}
@@ -556,13 +555,13 @@ function CatalogSection() {
           />
         </label>
         <label className="text-sm">
-          Grant type
+          {t("admin.rewards.grantType")}
           <select
             value={grantType}
             onChange={(e) => setGrantType(e.target.value)}
             className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
           >
-            <option value="">Select...</option>
+            <option value="">{t("admin.common.select")}</option>
             {(fulfillmentQ.data ?? []).map((f) => (
               <option key={f.key} value={f.key}>
                 {f.label}
@@ -571,13 +570,13 @@ function CatalogSection() {
           </select>
         </label>
         <label className="text-sm">
-          Requires capability
+          {t("admin.dashboardWidgets.requiresCapability")}
           <select
             value={requiresCapability}
             onChange={(e) => setRequiresCapability(e.target.value)}
             className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
           >
-            <option value="">None</option>
+            <option value="">{t("admin.common.none")}</option>
             {(capabilitiesQ.data ?? []).map((c) => (
               <option key={c.key} value={c.key}>
                 {c.label}
@@ -590,7 +589,7 @@ function CatalogSection() {
           disabled={!key.trim() || !label.trim() || !grantType || create.isPending}
           className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
         >
-          <Plus className="h-4 w-4" /> Add
+          <Plus className="h-4 w-4" /> {t("admin.common.add")}
         </button>
       </div>
       <ul className="mt-4 divide-y divide-gray-100">
@@ -599,9 +598,11 @@ function CatalogSection() {
             <span>
               <span className="font-medium">{c.label}</span>{" "}
               <span className="text-gray-400">
-                ({c.key}) -- {c.points_cost} pts
-                {c.verified_referrals_required > 0 ? `, ${c.verified_referrals_required} verified referrals` : ""}
-                {" -- "}
+                ({c.key}) — {c.points_cost} {t("admin.rewards.pts")}
+                {c.verified_referrals_required > 0
+                  ? t("admin.rewards.verifiedReferralsSuffix", { count: c.verified_referrals_required })
+                  : ""}
+                {" — "}
                 {c.grant_type}
               </span>
             </span>
@@ -611,7 +612,7 @@ function CatalogSection() {
                 c.enabled ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
               }`}
             >
-              {c.enabled ? "Enabled" : "Disabled"}
+              {c.enabled ? t("admin.common.enabled") : t("admin.common.disabled")}
             </button>
           </li>
         ))}
@@ -621,6 +622,7 @@ function CatalogSection() {
 }
 
 function FulfillmentTypesSection() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const listFn = useServerFn(adminListRewardFulfillmentTypes);
   const upsertFn = useServerFn(adminUpsertRewardFulfillmentType);
@@ -631,7 +633,7 @@ function FulfillmentTypesSection() {
   const create = useMutation({
     mutationFn: () => upsertFn({ data: { key, label, enabled: true, archived: false, displayOrder: 0 } }),
     onSuccess: () => {
-      toast.success("Fulfillment type created");
+      toast.success(t("admin.rewards.fulfillmentTypeCreated"));
       setKey("");
       setLabel("");
       void qc.invalidateQueries({ queryKey: ["admin-reward-fulfillment-types"] });
@@ -657,24 +659,20 @@ function FulfillmentTypesSection() {
   });
 
   return (
-    <Card title="Fulfillment types">
-      <p className="mb-3 text-xs text-gray-500">
-        A registry, not a fixed enum -- a future module can register its own fulfillment type without a
-        deployment. Rewards only records which type a redemption needs; acting on it stays with the owning
-        module.
-      </p>
+    <Card title={t("admin.rewards.fulfillmentTypesTitle")}>
+      <p className="mb-3 text-xs text-gray-500">{t("admin.rewards.fulfillmentTypesHint")}</p>
       <div className="flex flex-wrap items-end gap-2">
         <label className="text-sm">
-          Key
+          {t("admin.common.key")}
           <input
             value={key}
             onChange={(e) => setKey(e.target.value)}
-            placeholder="e.g. extend_premium"
+            placeholder={t("admin.rewards.keyPlaceholderFulfillment")}
             className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
           />
         </label>
         <label className="text-sm">
-          Label
+          {t("admin.common.label")}
           <input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
@@ -686,7 +684,7 @@ function FulfillmentTypesSection() {
           disabled={!key.trim() || !label.trim() || create.isPending}
           className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
         >
-          <Plus className="h-4 w-4" /> Add
+          <Plus className="h-4 w-4" /> {t("admin.common.add")}
         </button>
       </div>
       <ul className="mt-4 divide-y divide-gray-100">
@@ -702,7 +700,7 @@ function FulfillmentTypesSection() {
                 f.enabled ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
               }`}
             >
-              {f.enabled ? "Enabled" : "Disabled"}
+              {f.enabled ? t("admin.common.enabled") : t("admin.common.disabled")}
             </button>
           </li>
         ))}
@@ -712,6 +710,7 @@ function FulfillmentTypesSection() {
 }
 
 function ConfigSection() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const listFn = useServerFn(adminListRewardConfig);
   const setFn = useServerFn(adminSetRewardConfig);
@@ -729,16 +728,16 @@ function ConfigSection() {
   const save = useMutation({
     mutationFn: () => setFn({ data: { key: "referral_verification_days", value: verificationDays } }),
     onSuccess: () => {
-      toast.success("Config saved");
+      toast.success(t("admin.rewards.configSaved"));
       void qc.invalidateQueries({ queryKey: ["admin-reward-config"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   return (
-    <Card title="Configuration">
+    <Card title={t("admin.rewards.configTitle")}>
       <label className="text-sm">
-        Referral verification period (days)
+        {t("admin.rewards.referralVerificationDays")}
         <input
           type="number"
           min={1}
@@ -747,15 +746,13 @@ function ConfigSection() {
           className="mt-1 block w-32 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
         />
       </label>
-      <p className="mt-1 text-xs text-gray-500">
-        How long a Premium Referral must stay verified-Premium before it counts toward catalog thresholds.
-      </p>
+      <p className="mt-1 text-xs text-gray-500">{t("admin.rewards.referralVerificationHint")}</p>
       <button
         onClick={() => save.mutate()}
         disabled={save.isPending}
         className="mt-2 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
       >
-        Save
+        {t("common.save")}
       </button>
 
       <ul className="mt-6 divide-y divide-gray-100 border-t border-gray-100 pt-4">

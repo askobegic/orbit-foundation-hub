@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { ArrowLeft, Ban, Save, Square, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -33,6 +34,7 @@ export const Route = createFileRoute("/admin/trials")({
 });
 
 function AdminTrials() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const isAdminFn = useServerFn(getMyIsAdmin);
   const adminQ = useQuery({ queryKey: ["is-admin"], queryFn: () => isAdminFn() });
@@ -44,13 +46,10 @@ function AdminTrials() {
     <main className="min-h-screen bg-[#F7F8FA] px-6 py-10">
       <div className="mx-auto max-w-5xl">
         <Link to="/admin" className="mb-4 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900">
-          <ArrowLeft className="h-4 w-4" /> Back
+          <ArrowLeft className="h-4 w-4" /> {t("admin.common.back")}
         </Link>
-        <h1 className="text-2xl font-semibold text-gray-900">Promotional Trials</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          There is no automatic Trial. Registration always creates a Standard account; a Trial only
-          ever exists because it was explicitly granted below.
-        </p>
+        <h1 className="text-2xl font-semibold text-gray-900">{t("admin.trials.title")}</h1>
+        <p className="mt-1 text-sm text-gray-500">{t("admin.trials.subtitle")}</p>
 
         <GrantSection />
         <PolicySection />
@@ -70,6 +69,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 }
 
 function GrantSection() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const getPolicyFn = useServerFn(getTrialPolicy);
   const grantFn = useServerFn(adminGrantPromotionalTrial);
@@ -87,11 +87,11 @@ function GrantSection() {
         .eq("username", username.trim())
         .maybeSingle();
       if (error) throw error;
-      if (!profile) throw new Error("User not found");
+      if (!profile) throw new Error(t("admin.trials.userNotFound"));
       return grantFn({ data: { userId: profile.id, days, reason: reason.trim() || undefined } });
     },
     onSuccess: () => {
-      toast.success("Promotional Trial granted");
+      toast.success(t("admin.trials.granted"));
       setUsername("");
       setReason("");
       void qc.invalidateQueries({ queryKey: ["admin-trial-history"] });
@@ -103,10 +103,10 @@ function GrantSection() {
   const maxDays = policyQ.data?.maxDurationDays ?? 90;
 
   return (
-    <Card title="Grant a Promotional Trial">
+    <Card title={t("admin.trials.grantTitle")}>
       <div className="flex flex-wrap items-end gap-2">
         <label className="text-sm">
-          Username
+          {t("admin.trials.username")}
           <input
             value={username}
             onChange={(e) => setUsername(e.target.value)}
@@ -114,7 +114,7 @@ function GrantSection() {
           />
         </label>
         <div className="text-sm">
-          <span className="mb-1 block text-xs font-medium text-gray-600">Duration</span>
+          <span className="mb-1 block text-xs font-medium text-gray-600">{t("admin.trials.duration")}</span>
           <div className="flex flex-wrap gap-1">
             {presets.map((p) => (
               <button
@@ -131,7 +131,7 @@ function GrantSection() {
           </div>
         </div>
         <label className="text-sm">
-          Custom days (max {maxDays})
+          {t("admin.trials.customDays", { max: maxDays })}
           <input
             type="number"
             min={1}
@@ -142,7 +142,7 @@ function GrantSection() {
           />
         </label>
         <label className="text-sm">
-          Reason (optional)
+          {t("admin.trials.reasonOptional")}
           <input
             value={reason}
             onChange={(e) => setReason(e.target.value)}
@@ -154,7 +154,7 @@ function GrantSection() {
           disabled={!username.trim() || days < 1 || grant.isPending}
           className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
         >
-          <UserPlus className="h-4 w-4" /> Grant
+          <UserPlus className="h-4 w-4" /> {t("admin.trials.grant")}
         </button>
       </div>
     </Card>
@@ -162,6 +162,7 @@ function GrantSection() {
 }
 
 function PolicySection() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const getPolicyFn = useServerFn(getTrialPolicy);
   const setPolicyFn = useServerFn(adminSetTrialPolicy);
@@ -189,17 +190,17 @@ function PolicySection() {
         },
       }),
     onSuccess: () => {
-      toast.success("Trial policy saved");
+      toast.success(t("admin.trials.policySaved"));
       void qc.invalidateQueries({ queryKey: ["trial-policy"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   return (
-    <Card title="Trial policy">
+    <Card title={t("admin.trials.policyTitle")}>
       <div className="flex flex-wrap items-end gap-2">
         <label className="text-sm">
-          Preset durations (days, comma-separated)
+          {t("admin.trials.presetDurations")}
           <input
             value={presetDays}
             onChange={(e) => setPresetDays(e.target.value)}
@@ -208,7 +209,7 @@ function PolicySection() {
           />
         </label>
         <label className="text-sm">
-          Maximum trial duration (days)
+          {t("admin.trials.maxDuration")}
           <input
             type="number"
             min={1}
@@ -222,7 +223,7 @@ function PolicySection() {
           disabled={save.isPending}
           className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
         >
-          <Save className="h-4 w-4" /> Save
+          <Save className="h-4 w-4" /> {t("common.save")}
         </button>
       </div>
     </Card>
@@ -230,6 +231,7 @@ function PolicySection() {
 }
 
 function HistorySection() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const listFn = useServerFn(adminListTrialHistory);
   const endFn = useServerFn(adminEndTrial);
@@ -242,7 +244,7 @@ function HistorySection() {
   const end = useMutation({
     mutationFn: (trialId: string) => endFn({ data: { trialId } }),
     onSuccess: () => {
-      toast.success("Trial ended");
+      toast.success(t("admin.trials.ended"));
       void qc.invalidateQueries({ queryKey: ["admin-trial-history"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -251,16 +253,16 @@ function HistorySection() {
   const revoke = useMutation({
     mutationFn: (trialId: string) => revokeFn({ data: { trialId } }),
     onSuccess: () => {
-      toast.success("Trial revoked");
+      toast.success(t("admin.trials.revoked"));
       void qc.invalidateQueries({ queryKey: ["admin-trial-history"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   return (
-    <Card title="Trial history">
+    <Card title={t("admin.trials.historyTitle")}>
       {(historyQ.data ?? []).length === 0 ? (
-        <p className="text-sm text-gray-500">No Promotional Trials have been granted yet.</p>
+        <p className="text-sm text-gray-500">{t("admin.trials.noHistory")}</p>
       ) : (
         <ul className="divide-y divide-gray-100">
           {historyQ.data!.map((row) => {
@@ -277,7 +279,7 @@ function HistorySection() {
                     {row.source} · {new Date(row.starts_at).toLocaleDateString()} –{" "}
                     {new Date(row.expires_at).toLocaleDateString()}
                     {grantedBy &&
-                      ` · granted by ${[grantedBy.first_name, grantedBy.last_name].filter(Boolean).join(" ") || grantedBy.username}`}
+                      ` · ${t("admin.trials.grantedBy", { name: [grantedBy.first_name, grantedBy.last_name].filter(Boolean).join(" ") || grantedBy.username })}`}
                     {row.reason && ` · "${row.reason}"`}
                   </p>
                 </div>
@@ -291,23 +293,23 @@ function HistorySection() {
                           : "bg-gray-100 text-gray-600"
                     }`}
                   >
-                    {isActive ? "active" : row.status}
+                    {t(`admin.trials.status.${isActive ? "active" : row.status}`, isActive ? "active" : row.status)}
                   </span>
                   {row.status === "active" && (
                     <>
                       <button
                         onClick={() => end.mutate(row.id)}
                         className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
-                        title="End trial immediately"
+                        title={t("admin.trials.endTitle")}
                       >
-                        <Square className="h-3 w-3" /> End
+                        <Square className="h-3 w-3" /> {t("admin.trials.end")}
                       </button>
                       <button
                         onClick={() => revoke.mutate(row.id)}
                         className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50"
-                        title="Revoke trial"
+                        title={t("admin.trials.revokeTitle")}
                       >
-                        <Ban className="h-3 w-3" /> Revoke
+                        <Ban className="h-3 w-3" /> {t("admin.trials.revoke")}
                       </button>
                     </>
                   )}

@@ -11,6 +11,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { ArrowLeft, Archive, Plus, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
@@ -41,6 +42,7 @@ export const Route = createFileRoute("/admin/capabilities")({
 });
 
 function AdminCapabilities() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const isAdminFn = useServerFn(getMyIsAdmin);
   const adminQ = useQuery({ queryKey: ["is-admin"], queryFn: () => isAdminFn() });
@@ -61,13 +63,10 @@ function AdminCapabilities() {
     <main className="min-h-screen bg-[#F7F8FA] px-6 py-10">
       <div className="mx-auto max-w-5xl">
         <Link to="/admin" className="mb-4 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900">
-          <ArrowLeft className="h-4 w-4" /> Back
+          <ArrowLeft className="h-4 w-4" /> {t("admin.common.back")}
         </Link>
-        <h1 className="text-2xl font-semibold text-gray-900">Capabilities</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          The vocabulary every module (Rewards, Advertising, Messaging, Dashboard widgets) gates itself on --
-          register new capabilities here, then enable them per application.
-        </p>
+        <h1 className="text-2xl font-semibold text-gray-900">{t("admin.capabilities.title")}</h1>
+        <p className="mt-1 text-sm text-gray-500">{t("admin.capabilities.subtitle")}</p>
 
         <DefinitionsSection />
         <ApplicationCapabilitiesSection apps={appsQ.data ?? []} />
@@ -86,6 +85,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 }
 
 function DefinitionsSection() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const listFn = useServerFn(adminListCapabilityDefinitions);
   const upsertFn = useServerFn(adminUpsertCapabilityDefinition);
@@ -96,7 +96,7 @@ function DefinitionsSection() {
   const create = useMutation({
     mutationFn: () => upsertFn({ data: { key, label, enabled: true, archived: false, displayOrder: 0 } }),
     onSuccess: () => {
-      toast.success("Capability created");
+      toast.success(t("admin.capabilities.created"));
       setKey("");
       setLabel("");
       void qc.invalidateQueries({ queryKey: ["admin-capability-definitions"] });
@@ -139,19 +139,19 @@ function DefinitionsSection() {
   });
 
   return (
-    <Card title="Capability definitions">
+    <Card title={t("admin.capabilities.definitionsTitle")}>
       <div className="flex flex-wrap items-end gap-2">
         <label className="text-sm">
-          Key
+          {t("admin.common.key")}
           <input
             value={key}
             onChange={(e) => setKey(e.target.value)}
-            placeholder="e.g. live_streaming"
+            placeholder={t("admin.capabilities.keyPlaceholder")}
             className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
           />
         </label>
         <label className="text-sm">
-          Label
+          {t("admin.common.label")}
           <input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
@@ -163,7 +163,7 @@ function DefinitionsSection() {
           disabled={!key.trim() || !label.trim() || create.isPending}
           className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
         >
-          <Plus className="h-4 w-4" /> Add
+          <Plus className="h-4 w-4" /> {t("admin.common.add")}
         </button>
       </div>
       <ul className="mt-4 divide-y divide-gray-100">
@@ -181,15 +181,15 @@ function DefinitionsSection() {
                   c.enabled ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
                 }`}
               >
-                {c.enabled ? "Enabled" : "Disabled"}
+                {c.enabled ? t("admin.common.enabled") : t("admin.common.disabled")}
               </button>
               <button
                 onClick={() => toggleArchived.mutate(c)}
                 className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
-                title={c.archived ? "Unarchive" : "Archive"}
+                title={c.archived ? t("admin.common.unarchive") : t("admin.common.archive")}
               >
                 {c.archived ? <RotateCcw className="h-3 w-3" /> : <Archive className="h-3 w-3" />}
-                {c.archived ? "Unarchive" : "Archive"}
+                {c.archived ? t("admin.common.unarchive") : t("admin.common.archive")}
               </button>
             </div>
           </li>
@@ -200,6 +200,7 @@ function DefinitionsSection() {
 }
 
 function ApplicationCapabilitiesSection({ apps }: { apps: ApplicationRow[] }) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const listFn = useServerFn(adminListApplicationCapabilities);
   const setFn = useServerFn(adminSetApplicationCapability);
@@ -218,15 +219,15 @@ function ApplicationCapabilitiesSection({ apps }: { apps: ApplicationRow[] }) {
   });
 
   return (
-    <Card title="Application capabilities">
+    <Card title={t("admin.capabilities.appCapabilitiesTitle")}>
       <label className="text-sm">
-        Application
+        {t("admin.common.application")}
         <select
           value={appId}
           onChange={(e) => setAppId(e.target.value)}
           className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
         >
-          <option value="">Select...</option>
+          <option value="">{t("admin.common.select")}</option>
           {apps.map((a) => (
             <option key={a.id} value={a.id}>
               {a.name}
@@ -248,12 +249,12 @@ function ApplicationCapabilitiesSection({ apps }: { apps: ApplicationRow[] }) {
                   c.appEnabled ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
                 }`}
               >
-                {c.appEnabled ? "Enabled" : "Disabled"}
+                {c.appEnabled ? t("admin.common.enabled") : t("admin.common.disabled")}
               </button>
             </li>
           ))}
           {(q.data ?? []).length === 0 && (
-            <p className="py-2 text-sm text-gray-500">No capability definitions yet.</p>
+            <p className="py-2 text-sm text-gray-500">{t("admin.capabilities.noDefinitions")}</p>
           )}
         </ul>
       )}

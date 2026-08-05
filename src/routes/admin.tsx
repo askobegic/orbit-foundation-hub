@@ -2,6 +2,7 @@ import { createFileRoute, Link, Outlet, useLocation, useNavigate } from "@tansta
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useTranslation } from "react-i18next";
 import {
   BadgeCheck,
   Clock,
@@ -39,6 +40,7 @@ export const Route = createFileRoute("/admin")({
 });
 
 function AdminGate() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
@@ -76,13 +78,13 @@ function AdminGate() {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#F7F8FA] px-6">
         <div className="max-w-md rounded-2xl bg-white p-8 text-center shadow-sm ring-1 ring-gray-100">
-          <h1 className="text-lg font-semibold text-gray-900">Nije moguće provjeriti admin pristup</h1>
-          <p className="mt-2 text-sm text-gray-500">{(q.error as Error)?.message ?? "Nepoznata greška"}</p>
+          <h1 className="text-lg font-semibold text-gray-900">{t("admin.hub.checkAccessError")}</h1>
+          <p className="mt-2 text-sm text-gray-500">{(q.error as Error)?.message ?? t("admin.common.unknownError")}</p>
           <button
             onClick={() => void navigate({ to: "/dashboard", replace: true })}
             className="mt-4 rounded-lg bg-[#1D6BF3] px-4 py-2 text-sm font-medium text-white"
           >
-            Nazad na dashboard
+            {t("admin.hub.backToDashboard")}
           </button>
         </div>
       </main>
@@ -93,8 +95,8 @@ function AdminGate() {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#F7F8FA] px-6">
         <div className="max-w-md rounded-2xl bg-white p-8 text-center shadow-sm ring-1 ring-gray-100">
-          <h1 className="text-lg font-semibold text-gray-900">Nemate pristup</h1>
-          <p className="mt-2 text-sm text-gray-500">Ova stranica je dostupna samo administratorima.</p>
+          <h1 className="text-lg font-semibold text-gray-900">{t("admin.hub.noAccessTitle")}</h1>
+          <p className="mt-2 text-sm text-gray-500">{t("admin.hub.noAccessBody")}</p>
         </div>
       </main>
     );
@@ -108,68 +110,68 @@ function AdminGate() {
     {
       to: "/admin/applications",
       icon: LayoutGrid,
-      title: "Applications & Plans",
-      desc: "Manage apps, Premium plans and payment links.",
+      title: t("admin.hub.cards.applications.title"),
+      desc: t("admin.hub.cards.applications.desc"),
     },
     {
       to: "/admin/users",
       icon: Users,
-      title: "Users & Subscriptions",
-      desc: "Grant or revoke Premium, view audit log.",
+      title: t("admin.hub.cards.users.title"),
+      desc: t("admin.hub.cards.users.desc"),
     },
     {
       to: "/admin/communication",
       icon: MegaphoneIcon,
-      title: "Communication",
-      desc: "Broadcast notifications to all or Premium users.",
+      title: t("admin.hub.cards.communication.title"),
+      desc: t("admin.hub.cards.communication.desc"),
     },
     {
       to: "/admin/payments",
       icon: Wallet,
-      title: "Payments",
-      desc: "View full payments history across all apps.",
+      title: t("admin.hub.cards.payments.title"),
+      desc: t("admin.hub.cards.payments.desc"),
     },
     {
       to: "/admin/verification",
       icon: BadgeCheck,
-      title: "Verification",
-      desc: "Approve or reject user verification requests.",
+      title: t("admin.hub.cards.verification.title"),
+      desc: t("admin.hub.cards.verification.desc"),
     },
     {
       to: "/admin/advertising",
       icon: Image,
-      title: "Advertising",
-      desc: "Placements, pricing, moderation, and trusted advertisers.",
+      title: t("admin.hub.cards.advertising.title"),
+      desc: t("admin.hub.cards.advertising.desc"),
     },
     {
       to: "/admin/trials",
       icon: Clock,
-      title: "Promotional Trials",
-      desc: "Grant, end, revoke, and review Promotional Trial history.",
+      title: t("admin.hub.cards.trials.title"),
+      desc: t("admin.hub.cards.trials.desc"),
     },
     {
       to: "/admin/capabilities",
       icon: Sliders,
-      title: "Capabilities",
-      desc: "Register capabilities and enable them per application.",
+      title: t("admin.hub.cards.capabilities.title"),
+      desc: t("admin.hub.cards.capabilities.desc"),
     },
     {
       to: "/admin/dashboard-widgets",
       icon: LayoutGrid,
-      title: "Dashboard Widgets",
-      desc: "Enable or disable dashboard sections, globally or per application.",
+      title: t("admin.hub.cards.dashboardWidgets.title"),
+      desc: t("admin.hub.cards.dashboardWidgets.desc"),
     },
     {
       to: "/admin/rewards",
       icon: Gift,
-      title: "Rewards & Loyalty",
-      desc: "Action rules, levels, achievements, catalog, fulfillment types, config.",
+      title: t("admin.hub.cards.rewards.title"),
+      desc: t("admin.hub.cards.rewards.desc"),
     },
-  ] as const;
+  ];
   return (
     <main className="min-h-screen bg-[#F7F8FA] px-6 py-10">
       <div className="mx-auto max-w-6xl">
-        <h1 className="text-2xl font-semibold text-gray-900">Admin</h1>
+        <h1 className="text-2xl font-semibold text-gray-900">{t("admin.hub.title")}</h1>
         <OverviewStats />
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {cards.map((c) => (
@@ -190,14 +192,15 @@ function AdminGate() {
 }
 
 function OverviewStats() {
+  const { t } = useTranslation();
   const statsFn = useServerFn(adminOverviewStats);
   const q = useQuery({ queryKey: ["admin-overview"], queryFn: () => statsFn() });
   const s = q.data;
   const items = [
-    { icon: Users, label: "Total users", value: s?.totalUsers ?? "—", tone: "text-[#1D6BF3]" },
-    { icon: CreditCard, label: "Active Premium", value: s?.activePremium ?? "—", tone: "text-purple-600" },
-    { icon: TrendingUp, label: "Revenue this month", value: s ? `€${s.revenueThisMonth.toFixed(2)}` : "—", tone: "text-green-600" },
-    { icon: UserPlus, label: "New users this week", value: s?.newUsersThisWeek ?? "—", tone: "text-orange-600" },
+    { icon: Users, label: t("admin.hub.stats.totalUsers"), value: s?.totalUsers ?? "—", tone: "text-[#1D6BF3]" },
+    { icon: CreditCard, label: t("admin.hub.stats.activePremium"), value: s?.activePremium ?? "—", tone: "text-purple-600" },
+    { icon: TrendingUp, label: t("admin.hub.stats.revenueThisMonth"), value: s ? `€${s.revenueThisMonth.toFixed(2)}` : "—", tone: "text-green-600" },
+    { icon: UserPlus, label: t("admin.hub.stats.newUsersThisWeek"), value: s?.newUsersThisWeek ?? "—", tone: "text-orange-600" },
   ];
   return (
     <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

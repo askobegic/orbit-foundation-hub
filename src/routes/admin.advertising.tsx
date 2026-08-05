@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { ArrowLeft, Check, Gift, Plus, ShieldCheck, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -41,6 +42,7 @@ export const Route = createFileRoute("/admin/advertising")({
 });
 
 function AdminAdvertising() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const isAdminFn = useServerFn(getMyIsAdmin);
   const adminQ = useQuery({ queryKey: ["is-admin"], queryFn: () => isAdminFn() });
@@ -61,10 +63,10 @@ function AdminAdvertising() {
     <main className="min-h-screen bg-[#F7F8FA] px-6 py-10">
       <div className="mx-auto max-w-5xl">
         <Link to="/admin" className="mb-4 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900">
-          <ArrowLeft className="h-4 w-4" /> Back
+          <ArrowLeft className="h-4 w-4" /> {t("admin.common.back")}
         </Link>
-        <h1 className="text-2xl font-semibold text-gray-900">Advertising</h1>
-        <p className="mt-1 text-sm text-gray-500">Placements, pricing, moderation, and trusted advertisers.</p>
+        <h1 className="text-2xl font-semibold text-gray-900">{t("admin.advertising.title")}</h1>
+        <p className="mt-1 text-sm text-gray-500">{t("admin.advertising.subtitle")}</p>
 
         <PlacementsSection />
         <PricesSection apps={appsQ.data ?? []} />
@@ -88,6 +90,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 }
 
 function PlacementsSection() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const listFn = useServerFn(adminListAdPlacements);
   const upsertFn = useServerFn(adminUpsertAdPlacement);
@@ -98,7 +101,7 @@ function PlacementsSection() {
   const mut = useMutation({
     mutationFn: () => upsertFn({ data: { key, label, enabled: true, archived: false, displayOrder: 0 } }),
     onSuccess: () => {
-      toast.success("Placement created");
+      toast.success(t("admin.advertising.placementCreated"));
       setKey("");
       setLabel("");
       void qc.invalidateQueries({ queryKey: ["admin-ad-placements"] });
@@ -123,19 +126,19 @@ function PlacementsSection() {
   });
 
   return (
-    <Card title="Placements">
+    <Card title={t("admin.advertising.placementsTitle")}>
       <div className="flex flex-wrap items-end gap-2">
         <label className="text-sm">
-          Key
+          {t("admin.common.key")}
           <input
             value={key}
             onChange={(e) => setKey(e.target.value)}
-            placeholder="e.g. hero_banner"
+            placeholder={t("admin.advertising.placementKeyPlaceholder")}
             className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
           />
         </label>
         <label className="text-sm">
-          Label
+          {t("admin.common.label")}
           <input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
@@ -147,7 +150,7 @@ function PlacementsSection() {
           disabled={!key.trim() || !label.trim() || mut.isPending}
           className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
         >
-          <Plus className="h-4 w-4" /> Add
+          <Plus className="h-4 w-4" /> {t("admin.common.add")}
         </button>
       </div>
       <ul className="mt-4 divide-y divide-gray-100">
@@ -163,7 +166,7 @@ function PlacementsSection() {
                 p.enabled ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
               }`}
             >
-              {p.enabled ? "Enabled" : "Disabled"}
+              {p.enabled ? t("admin.common.enabled") : t("admin.common.disabled")}
             </button>
           </li>
         ))}
@@ -173,6 +176,7 @@ function PlacementsSection() {
 }
 
 function PricesSection({ apps }: { apps: ApplicationRow[] }) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const listPlacementsFn = useServerFn(adminListAdPlacements);
   const listPricesFn = useServerFn(adminListAdPlacementPrices);
@@ -202,23 +206,23 @@ function PricesSection({ apps }: { apps: ApplicationRow[] }) {
         },
       }),
     onSuccess: () => {
-      toast.success("Price added");
+      toast.success(t("admin.advertising.priceAdded"));
       void qc.invalidateQueries({ queryKey: ["admin-ad-prices"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   return (
-    <Card title="Placement pricing">
+    <Card title={t("admin.advertising.pricingTitle")}>
       <div className="flex flex-wrap items-end gap-2">
         <label className="text-sm">
-          Placement
+          {t("admin.advertising.placement")}
           <select
             value={placementKey}
             onChange={(e) => setPlacementKey(e.target.value)}
             className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
           >
-            <option value="">Select...</option>
+            <option value="">{t("admin.common.select")}</option>
             {(placementsQ.data ?? []).map((p) => (
               <option key={p.key} value={p.key}>
                 {p.label}
@@ -227,13 +231,13 @@ function PricesSection({ apps }: { apps: ApplicationRow[] }) {
           </select>
         </label>
         <label className="text-sm">
-          Application
+          {t("admin.common.application")}
           <select
             value={appId}
             onChange={(e) => setAppId(e.target.value)}
             className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
           >
-            <option value="">Global (all applications)</option>
+            <option value="">{t("admin.advertising.global")}</option>
             {apps.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name}
@@ -242,7 +246,7 @@ function PricesSection({ apps }: { apps: ApplicationRow[] }) {
           </select>
         </label>
         <label className="text-sm">
-          Duration (days)
+          {t("admin.advertising.durationDays")}
           <input
             type="number"
             value={durationDays}
@@ -251,7 +255,7 @@ function PricesSection({ apps }: { apps: ApplicationRow[] }) {
           />
         </label>
         <label className="text-sm">
-          Price
+          {t("admin.advertising.price")}
           <input
             type="number"
             value={price}
@@ -260,7 +264,7 @@ function PricesSection({ apps }: { apps: ApplicationRow[] }) {
           />
         </label>
         <label className="text-sm">
-          Currency
+          {t("admin.advertising.currency")}
           <input
             value={currency}
             onChange={(e) => setCurrency(e.target.value.toUpperCase())}
@@ -272,24 +276,21 @@ function PricesSection({ apps }: { apps: ApplicationRow[] }) {
           disabled={!placementKey || mut.isPending}
           className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
         >
-          <Plus className="h-4 w-4" /> Add price
+          <Plus className="h-4 w-4" /> {t("admin.advertising.addPrice")}
         </button>
       </div>
-      <p className="mt-3 text-xs text-gray-500">
-        Set a Stripe/PayPal Payment Link for each price row after creating it (edit support coming with the admin
-        panel layout retrofit) -- checkout requires one, matching how subscription plans work today.
-      </p>
+      <p className="mt-3 text-xs text-gray-500">{t("admin.advertising.priceHint")}</p>
       <ul className="mt-4 divide-y divide-gray-100">
         {(pricesQ.data ?? []).map((p) => (
           <li key={p.id} className="flex items-center justify-between py-2 text-sm">
             <span>
               {p.placement_key} — {p.duration_days}d — {p.price} {p.currency}{" "}
               <span className="text-gray-400">
-                ({apps.find((a) => a.id === p.app_id)?.name ?? "Global"})
+                ({apps.find((a) => a.id === p.app_id)?.name ?? t("admin.advertising.globalShort")})
               </span>
             </span>
             {!p.stripe_payment_link && !p.paypal_payment_link && (
-              <span className="text-xs text-amber-600">No payment link set</span>
+              <span className="text-xs text-amber-600">{t("admin.advertising.noPaymentLink")}</span>
             )}
           </li>
         ))}
@@ -303,6 +304,7 @@ type AdConfigInput =
   | { key: "eligibility_rule"; value: "anyone" | "premium_only" | "verified_only" | "trusted_only" };
 
 function ConfigSection({ apps }: { apps: ApplicationRow[] }) {
+  const { t } = useTranslation();
   const setConfigFn = useServerFn(adminSetAdConfig);
   const setAppSettingsFn = useServerFn(adminSetAdApplicationSettings);
   const [appId, setAppId] = useState("");
@@ -313,7 +315,7 @@ function ConfigSection({ apps }: { apps: ApplicationRow[] }) {
 
   const globalMut = useMutation<unknown, Error, AdConfigInput>({
     mutationFn: (input) => setConfigFn({ data: input }),
-    onSuccess: () => toast.success("Global default updated"),
+    onSuccess: () => toast.success(t("admin.advertising.globalDefaultUpdated")),
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -322,14 +324,14 @@ function ConfigSection({ apps }: { apps: ApplicationRow[] }) {
       setAppSettingsFn({
         data: { appId, moderationMode, eligibilityRule },
       }),
-    onSuccess: () => toast.success("Application override saved"),
+    onSuccess: () => toast.success(t("admin.advertising.overrideSaved")),
     onError: (e: Error) => toast.error(e.message),
   });
 
   return (
-    <Card title="Moderation & eligibility">
+    <Card title={t("admin.advertising.moderationEligibilityTitle")}>
       <div>
-        <p className="text-sm font-medium text-gray-700">Global defaults</p>
+        <p className="text-sm font-medium text-gray-700">{t("admin.advertising.globalDefaults")}</p>
         <div className="mt-2 flex flex-wrap gap-2">
           {(["manual", "auto", "trusted_only"] as const).map((m) => (
             <button
@@ -337,7 +339,7 @@ function ConfigSection({ apps }: { apps: ApplicationRow[] }) {
               onClick={() => globalMut.mutate({ key: "moderation_mode", value: m })}
               className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm hover:bg-gray-50"
             >
-              Moderation: {m}
+              {t("admin.advertising.moderationPrefix", { mode: t(`admin.advertising.moderationMode.${m}`) })}
             </button>
           ))}
         </div>
@@ -348,23 +350,23 @@ function ConfigSection({ apps }: { apps: ApplicationRow[] }) {
               onClick={() => globalMut.mutate({ key: "eligibility_rule", value: r })}
               className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm hover:bg-gray-50"
             >
-              Eligibility: {r}
+              {t("admin.advertising.eligibilityPrefix", { rule: t(`admin.advertising.eligibilityRule.${r}`) })}
             </button>
           ))}
         </div>
       </div>
 
       <div className="mt-6 border-t border-gray-100 pt-4">
-        <p className="text-sm font-medium text-gray-700">Per-application override</p>
+        <p className="text-sm font-medium text-gray-700">{t("admin.advertising.perAppOverride")}</p>
         <div className="mt-2 flex flex-wrap items-end gap-2">
           <label className="text-sm">
-            Application
+            {t("admin.common.application")}
             <select
               value={appId}
               onChange={(e) => setAppId(e.target.value)}
               className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
             >
-              <option value="">Select...</option>
+              <option value="">{t("admin.common.select")}</option>
               {apps.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.name}
@@ -373,28 +375,28 @@ function ConfigSection({ apps }: { apps: ApplicationRow[] }) {
             </select>
           </label>
           <label className="text-sm">
-            Moderation
+            {t("admin.advertising.moderation")}
             <select
               value={moderationMode}
               onChange={(e) => setModerationMode(e.target.value as typeof moderationMode)}
               className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
             >
-              <option value="manual">manual</option>
-              <option value="auto">auto</option>
-              <option value="trusted_only">trusted_only</option>
+              <option value="manual">{t("admin.advertising.moderationMode.manual")}</option>
+              <option value="auto">{t("admin.advertising.moderationMode.auto")}</option>
+              <option value="trusted_only">{t("admin.advertising.moderationMode.trusted_only")}</option>
             </select>
           </label>
           <label className="text-sm">
-            Eligibility
+            {t("admin.advertising.eligibility")}
             <select
               value={eligibilityRule}
               onChange={(e) => setEligibilityRule(e.target.value as typeof eligibilityRule)}
               className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
             >
-              <option value="anyone">anyone</option>
-              <option value="premium_only">premium_only</option>
-              <option value="verified_only">verified_only</option>
-              <option value="trusted_only">trusted_only</option>
+              <option value="anyone">{t("admin.advertising.eligibilityRule.anyone")}</option>
+              <option value="premium_only">{t("admin.advertising.eligibilityRule.premium_only")}</option>
+              <option value="verified_only">{t("admin.advertising.eligibilityRule.verified_only")}</option>
+              <option value="trusted_only">{t("admin.advertising.eligibilityRule.trusted_only")}</option>
             </select>
           </label>
           <button
@@ -402,7 +404,7 @@ function ConfigSection({ apps }: { apps: ApplicationRow[] }) {
             disabled={!appId || appMut.isPending}
             className="rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
           >
-            Save override
+            {t("admin.advertising.saveOverride")}
           </button>
         </div>
       </div>
@@ -411,23 +413,22 @@ function ConfigSection({ apps }: { apps: ApplicationRow[] }) {
 }
 
 function DraftExpirySection() {
+  const { t } = useTranslation();
   const setHoursFn = useServerFn(adminSetAdDraftExpiryHours);
   const [hours, setHours] = useState(48);
 
   const mut = useMutation({
     mutationFn: () => setHoursFn({ data: { hours } }),
-    onSuccess: () => toast.success("Draft expiry updated"),
+    onSuccess: () => toast.success(t("admin.advertising.draftExpiryUpdated")),
     onError: (e: Error) => toast.error(e.message),
   });
 
   return (
-    <Card title="Draft campaign expiry">
-      <p className="text-xs text-gray-500">
-        An unpaid draft campaign is automatically cancelled after this many hours.
-      </p>
+    <Card title={t("admin.advertising.draftExpiryTitle")}>
+      <p className="text-xs text-gray-500">{t("admin.advertising.draftExpiryHint")}</p>
       <div className="mt-2 flex items-end gap-2">
         <label className="text-sm">
-          Hours
+          {t("admin.advertising.hours")}
           <input
             type="number"
             min={1}
@@ -441,7 +442,7 @@ function DraftExpirySection() {
           disabled={mut.isPending}
           className="rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
         >
-          Save
+          {t("common.save")}
         </button>
       </div>
     </Card>
@@ -449,6 +450,7 @@ function DraftExpirySection() {
 }
 
 function TrustedAdvertisersSection({ apps }: { apps: ApplicationRow[] }) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const listFn = useServerFn(adminListTrustedAdvertisers);
   const setFn = useServerFn(adminSetTrustedAdvertiser);
@@ -468,11 +470,11 @@ function TrustedAdvertisersSection({ apps }: { apps: ApplicationRow[] }) {
         .eq("username", username.trim())
         .maybeSingle();
       if (error) throw error;
-      if (!profile) throw new Error("User not found");
+      if (!profile) throw new Error(t("admin.trials.userNotFound"));
       return setFn({ data: { userId: profile.id, appId, trusted: true } });
     },
     onSuccess: () => {
-      toast.success("Trusted advertiser granted");
+      toast.success(t("admin.advertising.trustedGranted"));
       setUsername("");
       void qc.invalidateQueries({ queryKey: ["admin-trusted-advertisers", appId] });
     },
@@ -486,17 +488,17 @@ function TrustedAdvertisersSection({ apps }: { apps: ApplicationRow[] }) {
   });
 
   return (
-    <Card title="Trusted advertisers">
-      <p className="mb-3 text-xs text-gray-500">Trust is granted per application, not globally.</p>
+    <Card title={t("admin.advertising.trustedAdvertisersTitle")}>
+      <p className="mb-3 text-xs text-gray-500">{t("admin.advertising.trustedAdvertisersHint")}</p>
       <div className="flex items-end gap-2">
         <label className="text-sm">
-          Application
+          {t("admin.common.application")}
           <select
             value={appId}
             onChange={(e) => setAppId(e.target.value)}
             className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
           >
-            <option value="">Select...</option>
+            <option value="">{t("admin.common.select")}</option>
             {apps.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name}
@@ -505,7 +507,7 @@ function TrustedAdvertisersSection({ apps }: { apps: ApplicationRow[] }) {
           </select>
         </label>
         <label className="text-sm">
-          Username
+          {t("admin.trials.username")}
           <input
             value={username}
             onChange={(e) => setUsername(e.target.value)}
@@ -517,7 +519,7 @@ function TrustedAdvertisersSection({ apps }: { apps: ApplicationRow[] }) {
           disabled={!appId || !username.trim() || grant.isPending}
           className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
         >
-          <ShieldCheck className="h-4 w-4" /> Grant
+          <ShieldCheck className="h-4 w-4" /> {t("admin.common.grant")}
         </button>
       </div>
       <ul className="mt-4 divide-y divide-gray-100">
@@ -532,17 +534,18 @@ function TrustedAdvertisersSection({ apps }: { apps: ApplicationRow[] }) {
               onClick={() => revoke.mutate(row.user_id)}
               className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
             >
-              <X className="h-3 w-3" /> Revoke
+              <X className="h-3 w-3" /> {t("admin.common.revoke")}
             </button>
           </li>
         ))}
-        {(q.data ?? []).length === 0 && <p className="py-2 text-sm text-gray-500">No trusted advertisers yet.</p>}
+        {(q.data ?? []).length === 0 && <p className="py-2 text-sm text-gray-500">{t("admin.advertising.noTrustedAdvertisers")}</p>}
       </ul>
     </Card>
   );
 }
 
 function ModerationQueueSection() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const listFn = useServerFn(adminListCampaigns);
   const moderateFn = useServerFn(adminModerateCampaign);
@@ -551,16 +554,16 @@ function ModerationQueueSection() {
   const mut = useMutation({
     mutationFn: (v: { campaignId: string; approve: boolean }) => moderateFn({ data: v }),
     onSuccess: () => {
-      toast.success("Updated");
+      toast.success(t("admin.common.updated"));
       void qc.invalidateQueries({ queryKey: ["admin-campaigns", "pending"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   return (
-    <Card title="Campaigns awaiting moderation">
+    <Card title={t("admin.advertising.moderationQueueTitle")}>
       {(q.data ?? []).length === 0 ? (
-        <p className="text-sm text-gray-500">Nothing pending.</p>
+        <p className="text-sm text-gray-500">{t("admin.common.nothingPending")}</p>
       ) : (
         <ul className="divide-y divide-gray-100">
           {q.data!.map((c) => (
@@ -579,13 +582,13 @@ function ModerationQueueSection() {
                   onClick={() => mut.mutate({ campaignId: c.id, approve: true })}
                   className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white"
                 >
-                  <Check className="h-4 w-4" /> Approve
+                  <Check className="h-4 w-4" /> {t("admin.common.approve")}
                 </button>
                 <button
                   onClick={() => mut.mutate({ campaignId: c.id, approve: false })}
                   className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
                 >
-                  <X className="h-4 w-4" /> Reject
+                  <X className="h-4 w-4" /> {t("admin.common.reject")}
                 </button>
               </div>
             </li>
@@ -597,6 +600,7 @@ function ModerationQueueSection() {
 }
 
 function CreditFulfillmentSection() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const listFn = useServerFn(adminListPendingAdvertisingCreditRedemptions);
   const fulfillFn = useServerFn(adminFulfillAdvertisingCreditRedemption);
@@ -605,16 +609,16 @@ function CreditFulfillmentSection() {
   const mut = useMutation({
     mutationFn: (redemptionId: string) => fulfillFn({ data: { redemptionId } }),
     onSuccess: () => {
-      toast.success("Credit fulfilled");
+      toast.success(t("admin.advertising.creditFulfilled"));
       void qc.invalidateQueries({ queryKey: ["admin-pending-ad-credits"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   return (
-    <Card title="Pending advertising-credit redemptions">
+    <Card title={t("admin.advertising.creditFulfillmentTitle")}>
       {(q.data ?? []).length === 0 ? (
-        <p className="text-sm text-gray-500">Nothing pending.</p>
+        <p className="text-sm text-gray-500">{t("admin.common.nothingPending")}</p>
       ) : (
         <ul className="divide-y divide-gray-100">
           {q.data!.map((r) => (
@@ -627,7 +631,7 @@ function CreditFulfillmentSection() {
                 onClick={() => mut.mutate(r.id)}
                 className="rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white"
               >
-                Fulfill
+                {t("admin.advertising.fulfill")}
               </button>
             </li>
           ))}

@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { ArrowLeft, Plus, Archive, Save } from "lucide-react";
 import { toast } from "sonner";
 
@@ -36,6 +37,7 @@ export const Route = createFileRoute("/admin/applications")({
 });
 
 function AdminApps() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const isAdminFn = useServerFn(getMyIsAdmin);
   const adminQ = useQuery({ queryKey: ["is-admin"], queryFn: () => isAdminFn() });
@@ -87,7 +89,7 @@ function AdminApps() {
   const createAppMutation = useMutation({
     mutationFn: (v: NewAppPayload) => createApp({ data: v }),
     onSuccess: (row) => {
-      toast.success("Application created");
+      toast.success(t("admin.applications.applicationCreated"));
       void qc.invalidateQueries({ queryKey: ["admin-apps"] });
       setAppId((row as { id: string }).id);
     },
@@ -97,7 +99,7 @@ function AdminApps() {
   const changeVisibility = useMutation({
     mutationFn: (v: { app_id: string; visibility: ApplicationVisibility }) => setVisibility({ data: v }),
     onSuccess: () => {
-      toast.success("Visibility updated");
+      toast.success(t("admin.applications.visibilityUpdated"));
       qc.invalidateQueries({ queryKey: ["admin-apps"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -106,7 +108,7 @@ function AdminApps() {
   const saveSettings = useMutation({
     mutationFn: (v: AppSettingsPayload & { app_id: string }) => updateSettings({ data: v }),
     onSuccess: () => {
-      toast.success("Postavke sačuvane");
+      toast.success(t("admin.applications.settingsSaved"));
       qc.invalidateQueries({ queryKey: ["admin-apps"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -132,7 +134,7 @@ function AdminApps() {
         },
       }),
     onSuccess: () => {
-      toast.success("Product saved");
+      toast.success(t("admin.applications.productSaved"));
       qc.invalidateQueries({ queryKey: ["admin-plans", activeAppId] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -141,7 +143,7 @@ function AdminApps() {
   const archivePlan = useMutation({
     mutationFn: (id: string) => archive({ data: { id } }),
     onSuccess: () => {
-      toast.success("Product deactivated");
+      toast.success(t("admin.applications.productDeactivated"));
       qc.invalidateQueries({ queryKey: ["admin-plans", activeAppId] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -157,9 +159,9 @@ function AdminApps() {
           className="mb-4 inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
         >
           <ArrowLeft className="h-4 w-4" />
-          Admin
+          {t("admin.hub.title")}
         </Link>
-        <h1 className="mb-6 text-2xl font-semibold text-gray-900">Applications & Plans</h1>
+        <h1 className="mb-6 text-2xl font-semibold text-gray-900">{t("admin.applications.title")}</h1>
 
         <div className="mb-6 flex flex-wrap gap-2">
           {(appsQ.data ?? []).map((a) => (
@@ -215,11 +217,8 @@ function AdminApps() {
             <ShareInviteSettings appId={activeApp.id} />
 
             <div>
-              <h2 className="mb-1 text-sm font-semibold text-gray-900">Products</h2>
-              <p className="mb-3 text-xs text-gray-500">
-                Every purchasable item for this application -- Premium subscriptions, promotions, and
-                one-time purchases are all Products, priced and configured the same way.
-              </p>
+              <h2 className="mb-1 text-sm font-semibold text-gray-900">{t("admin.applications.productsTitle")}</h2>
+              <p className="mb-3 text-xs text-gray-500">{t("admin.applications.productsHint")}</p>
               <div className="space-y-4">
                 {(plansQ.data ?? []).map((plan) => (
                   <PlanForm
@@ -265,6 +264,7 @@ function PlanForm({
   onSave: (p: Partial<SubscriptionPlanRow>) => void;
   onArchive?: () => void;
 }) {
+  const { t } = useTranslation();
   const [p, setP] = useState<Partial<SubscriptionPlanRow>>(initial);
 
   function feat(l: "bs" | "en" | "de", v: string) {
@@ -280,39 +280,39 @@ function PlanForm({
   return (
     <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
       <div className="mb-3 flex items-center justify-between">
-        <span className="text-sm font-semibold">{isNew ? "New product" : p.name}</span>
+        <span className="text-sm font-semibold">{isNew ? t("admin.applications.newProduct") : p.name}</span>
         {onArchive && (
           <button
             onClick={onArchive}
             disabled={p.is_active === false}
             className="rounded-lg p-2 text-red-500 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
-            aria-label="Deactivate product"
-            title={p.is_active === false ? "Already inactive" : "Deactivate this product (soft — never deleted)"}
+            aria-label={t("admin.applications.deactivateProduct")}
+            title={p.is_active === false ? t("admin.applications.alreadyInactive") : t("admin.applications.deactivateHint")}
           >
             <Archive className="h-4 w-4" />
           </button>
         )}
       </div>
       <div className="grid gap-3 md:grid-cols-4">
-        <Field label="Product type">
+        <Field label={t("admin.applications.productType")}>
           <select
             className="input"
             value={p.product_type ?? "subscription"}
             onChange={(e) => setP({ ...p, product_type: e.target.value as ProductType })}
           >
-            <option value="subscription">Subscription</option>
-            <option value="promotion">Promotion</option>
-            <option value="one_time">One-Time</option>
+            <option value="subscription">{t("admin.applications.typeSubscription")}</option>
+            <option value="promotion">{t("admin.applications.typePromotion")}</option>
+            <option value="one_time">{t("admin.applications.typeOneTime")}</option>
           </select>
         </Field>
-        <Field label="Name">
+        <Field label={t("admin.applications.name")}>
           <input
             className="input"
             value={p.name ?? ""}
             onChange={(e) => setP({ ...p, name: e.target.value })}
           />
         </Field>
-        <Field label="Duration (months)">
+        <Field label={t("admin.applications.durationMonths")}>
           <select
             className="input"
             value={p.duration_months ?? 12}
@@ -327,7 +327,7 @@ function PlanForm({
             ))}
           </select>
         </Field>
-        <Field label="Price">
+        <Field label={t("admin.applications.price")}>
           <input
             type="number"
             step="0.01"
@@ -336,14 +336,14 @@ function PlanForm({
             onChange={(e) => setP({ ...p, price: Number(e.target.value) })}
           />
         </Field>
-        <Field label="Currency">
+        <Field label={t("admin.applications.currency")}>
           <input
             className="input"
             value={p.currency ?? "EUR"}
             onChange={(e) => setP({ ...p, currency: e.target.value })}
           />
         </Field>
-        <Field label="Stripe payment link" wide>
+        <Field label={t("admin.applications.stripeLink")} wide>
           <input
             className="input"
             placeholder="https://buy.stripe.com/..."
@@ -351,7 +351,7 @@ function PlanForm({
             onChange={(e) => setP({ ...p, stripe_payment_link: e.target.value })}
           />
         </Field>
-        <Field label="PayPal payment link" wide>
+        <Field label={t("admin.applications.paypalLink")} wide>
           <input
             className="input"
             placeholder="https://www.paypal.com/..."
@@ -359,28 +359,28 @@ function PlanForm({
             onChange={(e) => setP({ ...p, paypal_payment_link: e.target.value })}
           />
         </Field>
-        <Field label="Features BS (one per line)" wide>
+        <Field label={t("admin.applications.featuresBs")} wide>
           <textarea
             className="input min-h-[80px]"
             value={(p.features_bs ?? []).join("\n")}
             onChange={(e) => feat("bs", e.target.value)}
           />
         </Field>
-        <Field label="Features EN (one per line)" wide>
+        <Field label={t("admin.applications.featuresEn")} wide>
           <textarea
             className="input min-h-[80px]"
             value={(p.features_en ?? []).join("\n")}
             onChange={(e) => feat("en", e.target.value)}
           />
         </Field>
-        <Field label="Features DE (one per line)" wide>
+        <Field label={t("admin.applications.featuresDe")} wide>
           <textarea
             className="input min-h-[80px]"
             value={(p.features_de ?? []).join("\n")}
             onChange={(e) => feat("de", e.target.value)}
           />
         </Field>
-        <Field label="Active">
+        <Field label={t("admin.applications.active")}>
           <input
             type="checkbox"
             checked={p.is_active ?? true}
@@ -394,7 +394,7 @@ function PlanForm({
           className="inline-flex items-center gap-2 rounded-lg bg-[#1D6BF3] px-4 py-2 text-sm font-medium text-white hover:bg-[#1858cf]"
         >
           {isNew ? <Plus className="h-4 w-4" /> : <Save className="h-4 w-4" />}
-          {isNew ? "Create" : "Save"}
+          {isNew ? t("admin.applications.create") : t("common.save")}
         </button>
       </div>
       <style>{`.input{width:100%;border:1px solid #e5e7eb;border-radius:8px;padding:6px 10px;font-size:14px;background:#fff}`}</style>
@@ -412,6 +412,7 @@ type NewAppPayload = {
 };
 
 function NewAppForm({ onCreate, busy }: { onCreate: (v: NewAppPayload) => void; busy?: boolean }) {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [domain, setDomain] = useState("");
@@ -437,14 +438,10 @@ function NewAppForm({ onCreate, busy }: { onCreate: (v: NewAppPayload) => void; 
 
   return (
     <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
-      <h2 className="mb-4 text-sm font-semibold text-gray-900">New Application</h2>
-      <p className="mb-3 text-xs text-gray-500">
-        Registers a new application. It automatically gets every Core capability (auth, profiles,
-        billing, notifications, permissions, audit log) with no further setup. It's created disabled
-        — add plans and branding below, then switch it on in App Settings once it's ready.
-      </p>
+      <h2 className="mb-4 text-sm font-semibold text-gray-900">{t("admin.applications.newApplicationTitle")}</h2>
+      <p className="mb-3 text-xs text-gray-500">{t("admin.applications.newApplicationHint")}</p>
       <div className="grid gap-3 md:grid-cols-3">
-        <Field label="Name">
+        <Field label={t("admin.applications.name")}>
           <input
             className="input"
             value={name}
@@ -452,7 +449,7 @@ function NewAppForm({ onCreate, busy }: { onCreate: (v: NewAppPayload) => void; 
             placeholder="Muzika.ba"
           />
         </Field>
-        <Field label="Slug">
+        <Field label={t("admin.applications.slug")}>
           <input
             className="input"
             value={slug}
@@ -460,7 +457,7 @@ function NewAppForm({ onCreate, busy }: { onCreate: (v: NewAppPayload) => void; 
             placeholder="muzika-ba"
           />
         </Field>
-        <Field label="Domain">
+        <Field label={t("admin.applications.domain")}>
           <input
             className="input"
             value={domain}
@@ -468,7 +465,7 @@ function NewAppForm({ onCreate, busy }: { onCreate: (v: NewAppPayload) => void; 
             placeholder="muzika.ba"
           />
         </Field>
-        <Field label="Primary color">
+        <Field label={t("admin.applications.primaryColor")}>
           <input
             type="color"
             className="input h-9 p-1"
@@ -476,7 +473,7 @@ function NewAppForm({ onCreate, busy }: { onCreate: (v: NewAppPayload) => void; 
             onChange={(e) => setPrimaryColor(e.target.value)}
           />
         </Field>
-        <Field label="Secondary color">
+        <Field label={t("admin.applications.secondaryColor")}>
           <input
             type="color"
             className="input h-9 p-1"
@@ -484,7 +481,7 @@ function NewAppForm({ onCreate, busy }: { onCreate: (v: NewAppPayload) => void; 
             onChange={(e) => setSecondaryColor(e.target.value)}
           />
         </Field>
-        <Field label="Google Client ID" wide>
+        <Field label={t("admin.applications.googleClientId")} wide>
           <input
             className="input"
             value={googleClientId}
@@ -500,7 +497,7 @@ function NewAppForm({ onCreate, busy }: { onCreate: (v: NewAppPayload) => void; 
           className="inline-flex items-center gap-2 rounded-lg bg-[#1D6BF3] px-4 py-2 text-sm font-medium text-white hover:bg-[#1858cf] disabled:opacity-60"
         >
           <Plus className="h-4 w-4" />
-          {busy ? "Creating…" : "Create application"}
+          {busy ? t("admin.applications.creating") : t("admin.applications.createApplication")}
         </button>
       </div>
       <style>{`.input{width:100%;border:1px solid #e5e7eb;border-radius:8px;padding:6px 10px;font-size:14px;background:#fff}`}</style>
@@ -526,12 +523,16 @@ type AppSettingsPayload = {
   default_language: "bs" | "en" | "de" | null;
 };
 
-const VISIBILITY_OPTIONS: { value: ApplicationVisibility; label: string; hint: string }[] = [
-  { value: "draft", label: "Draft", hint: "Hidden from all normal users. Visible only to administrators." },
-  { value: "coming_soon", label: "Coming Soon", hint: "Visible on the Dashboard, clearly marked. Users cannot enter." },
-  { value: "active", label: "Active", hint: "Fully visible and accessible." },
-  { value: "archived", label: "Archived", hint: "Hidden from normal users. Preserved for administration and history." },
-];
+function getVisibilityOptions(
+  t: (key: string) => string,
+): { value: ApplicationVisibility; label: string; hint: string }[] {
+  return [
+    { value: "draft", label: t("admin.applications.visibility.draft.label"), hint: t("admin.applications.visibility.draft.hint") },
+    { value: "coming_soon", label: t("admin.applications.visibility.coming_soon.label"), hint: t("admin.applications.visibility.coming_soon.hint") },
+    { value: "active", label: t("admin.applications.visibility.active.label"), hint: t("admin.applications.visibility.active.hint") },
+    { value: "archived", label: t("admin.applications.visibility.archived.label"), hint: t("admin.applications.visibility.archived.hint") },
+  ];
+}
 
 function AppSettings({
   app,
@@ -546,6 +547,8 @@ function AppSettings({
   onSetVisibility: (visibility: ApplicationVisibility) => void;
   visibilityBusy?: boolean;
 }) {
+  const { t } = useTranslation();
+  const VISIBILITY_OPTIONS = useMemo(() => getVisibilityOptions(t), [t]);
   const [name, setName] = useState(app.name);
   const [slug, setSlug] = useState(app.slug);
   const [domain, setDomain] = useState(app.domain ?? "");
@@ -607,7 +610,7 @@ function AppSettings({
   async function upload(kind: "logo" | "favicon" | "cover", file: File) {
     const maxSize = kind === "cover" ? 5 * 1024 * 1024 : 2 * 1024 * 1024;
     if (file.size > maxSize) {
-      toast.error(`Fajl je prevelik (max ${maxSize / (1024 * 1024)}MB)`);
+      toast.error(t("admin.applications.fileTooLarge", { max: maxSize / (1024 * 1024) }));
       return;
     }
     if (
@@ -620,7 +623,7 @@ function AppSettings({
         "image/vnd.microsoft.icon",
       ].includes(file.type)
     ) {
-      toast.error("Nepodržan format");
+      toast.error(t("admin.applications.unsupportedFormat"));
       return;
     }
     setUploading(kind);
@@ -646,7 +649,7 @@ function AppSettings({
 
   function submit() {
     if (!name.trim() || !slug.trim()) {
-      toast.error("Name and slug are required");
+      toast.error(t("admin.applications.nameSlugRequired"));
       return;
     }
     onSave({
@@ -670,19 +673,19 @@ function AppSettings({
 
   return (
     <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
-      <h2 className="mb-4 text-sm font-semibold text-gray-900">App Settings</h2>
+      <h2 className="mb-4 text-sm font-semibold text-gray-900">{t("admin.applications.appSettingsTitle")}</h2>
 
       <div className="mb-4 grid gap-3 md:grid-cols-3">
-        <Field label="Name">
+        <Field label={t("admin.applications.name")}>
           <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
-        <Field label="Slug">
+        <Field label={t("admin.applications.slug")}>
           <input className="input" value={slug} onChange={(e) => setSlug(e.target.value)} />
         </Field>
-        <Field label="Domain">
+        <Field label={t("admin.applications.domain")}>
           <input className="input" value={domain} onChange={(e) => setDomain(e.target.value)} />
         </Field>
-        <Field label="Primary color">
+        <Field label={t("admin.applications.primaryColor")}>
           <input
             type="color"
             className="input h-9 p-1"
@@ -690,7 +693,7 @@ function AppSettings({
             onChange={(e) => setPrimaryColor(e.target.value)}
           />
         </Field>
-        <Field label="Secondary color">
+        <Field label={t("admin.applications.secondaryColor")}>
           <input
             type="color"
             className="input h-9 p-1"
@@ -698,7 +701,7 @@ function AppSettings({
             onChange={(e) => setSecondaryColor(e.target.value)}
           />
         </Field>
-        <Field label="Sort order">
+        <Field label={t("admin.applications.sortOrder")}>
           <input
             type="number"
             className="input"
@@ -710,7 +713,7 @@ function AppSettings({
 
       <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:gap-8">
         <div>
-          <div className="mb-1 text-xs font-medium text-gray-600">Logo</div>
+          <div className="mb-1 text-xs font-medium text-gray-600">{t("admin.applications.logo")}</div>
           <div className="flex items-center gap-3">
             <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl bg-gray-50 ring-1 ring-gray-200">
               {logoUrl ? (
@@ -725,7 +728,7 @@ function AppSettings({
               disabled={uploading === "logo"}
               className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
             >
-              {uploading === "logo" ? "Uploading…" : "Promijeni logo"}
+              {uploading === "logo" ? t("admin.applications.uploading") : t("admin.applications.changeLogo")}
             </button>
             <input
               ref={logoRef}
@@ -738,11 +741,11 @@ function AppSettings({
               }}
             />
           </div>
-          <p className="mt-1 text-[11px] text-gray-400">PNG, SVG, JPG · max 2MB</p>
+          <p className="mt-1 text-[11px] text-gray-400">{t("admin.applications.logoHint")}</p>
         </div>
 
         <div>
-          <div className="mb-1 text-xs font-medium text-gray-600">Favicon</div>
+          <div className="mb-1 text-xs font-medium text-gray-600">{t("admin.applications.favicon")}</div>
           <div className="flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded bg-gray-50 ring-1 ring-gray-200">
               {faviconUrl ? (
@@ -757,7 +760,7 @@ function AppSettings({
               disabled={uploading === "favicon"}
               className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
             >
-              {uploading === "favicon" ? "Uploading…" : "Promijeni favicon"}
+              {uploading === "favicon" ? t("admin.applications.uploading") : t("admin.applications.changeFavicon")}
             </button>
             <input
               ref={favRef}
@@ -770,11 +773,11 @@ function AppSettings({
               }}
             />
           </div>
-          <p className="mt-1 text-[11px] text-gray-400">PNG, SVG, ICO · max 2MB</p>
+          <p className="mt-1 text-[11px] text-gray-400">{t("admin.applications.faviconHint")}</p>
         </div>
 
         <div>
-          <div className="mb-1 text-xs font-medium text-gray-600">Cover Image</div>
+          <div className="mb-1 text-xs font-medium text-gray-600">{t("admin.applications.coverImage")}</div>
           <div className="flex items-center gap-3">
             <div className="flex h-16 w-32 items-center justify-center overflow-hidden rounded-xl bg-gray-50 ring-1 ring-gray-200">
               {coverImageUrl ? (
@@ -789,7 +792,7 @@ function AppSettings({
               disabled={uploading === "cover"}
               className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
             >
-              {uploading === "cover" ? "Uploading…" : "Promijeni cover"}
+              {uploading === "cover" ? t("admin.applications.uploading") : t("admin.applications.changeCover")}
             </button>
             <input
               ref={coverRef}
@@ -802,12 +805,12 @@ function AppSettings({
               }}
             />
           </div>
-          <p className="mt-1 text-[11px] text-gray-400">PNG, JPG, WEBP · max 5MB</p>
+          <p className="mt-1 text-[11px] text-gray-400">{t("admin.applications.coverHint")}</p>
         </div>
       </div>
 
       <div className="mb-4">
-        <div className="mb-2 text-xs font-medium text-gray-600">Preview</div>
+        <div className="mb-2 text-xs font-medium text-gray-600">{t("admin.applications.preview")}</div>
         <BrandingPreview
           name={name}
           logoUrl={logoUrl}
@@ -818,7 +821,7 @@ function AppSettings({
       </div>
 
       <div className="mb-4">
-        <Field label="Google Client ID">
+        <Field label={t("admin.applications.googleClientId")}>
           <input
             className="input"
             value={googleClientId}
@@ -826,15 +829,11 @@ function AppSettings({
             placeholder="xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com"
           />
         </Field>
-        <p className="mt-1 text-[11px] text-gray-400">
-          This application's own Google Cloud OAuth Client ID (its own consent-screen name/logo).
-          Not secret. The Client Secret is never stored here -- it stays only in Supabase's Auth
-          provider configuration.
-        </p>
+        <p className="mt-1 text-[11px] text-gray-400">{t("admin.applications.googleClientIdHint")}</p>
       </div>
 
       <div className="mb-4 grid gap-3 md:grid-cols-2">
-        <Field label="Launch date (optional)">
+        <Field label={t("admin.applications.launchDate")}>
           <input
             type="datetime-local"
             className="input"
@@ -842,29 +841,25 @@ function AppSettings({
             onChange={(e) => setLaunchDate(e.target.value)}
           />
         </Field>
-        <Field label="Default language">
+        <Field label={t("admin.applications.defaultLanguage")}>
           <select
             className="input"
             value={defaultLanguage}
             onChange={(e) => setDefaultLanguage(e.target.value as "" | "bs" | "en" | "de")}
           >
-            <option value="">None (fall through to next resolution step)</option>
-            <option value="bs">Bosnian</option>
-            <option value="en">English</option>
-            <option value="de">German</option>
+            <option value="">{t("admin.applications.noneFallThrough")}</option>
+            <option value="bs">{t("admin.applications.langBosnian")}</option>
+            <option value="en">{t("admin.applications.langEnglish")}</option>
+            <option value="de">{t("admin.applications.langGerman")}</option>
           </select>
         </Field>
       </div>
-      <p className="mb-4 -mt-2 text-[11px] text-gray-400">
-        Launch date is informational only -- shown next to a "Coming Soon" application, never used to
-        activate it automatically. Default language is step 3 of the API's locale resolution order
-        (Accept-Language header → user's own profile language → this → English).
-      </p>
+      <p className="mb-4 -mt-2 text-[11px] text-gray-400">{t("admin.applications.languageHint")}</p>
 
       <div className="grid gap-3">
-        <DescField label="Kratki opis (BS)" value={dBs} onChange={setDBs} />
-        <DescField label="Kratki opis (EN)" value={dEn} onChange={setDEn} />
-        <DescField label="Kratki opis (DE)" value={dDe} onChange={setDDe} />
+        <DescField label={t("admin.applications.descBs")} value={dBs} onChange={setDBs} />
+        <DescField label={t("admin.applications.descEn")} value={dEn} onChange={setDEn} />
+        <DescField label={t("admin.applications.descDe")} value={dDe} onChange={setDDe} />
       </div>
 
       <div className="mt-5 flex justify-end">
@@ -875,12 +870,12 @@ function AppSettings({
           className="inline-flex items-center gap-2 rounded-lg bg-[#1D6BF3] px-4 py-2 text-sm font-medium text-white hover:bg-[#1858cf] disabled:opacity-60"
         >
           <Save className="h-4 w-4" />
-          {busy ? "Spremam…" : "Sačuvaj postavke"}
+          {busy ? t("admin.applications.saving") : t("admin.applications.saveSettings")}
         </button>
       </div>
 
       <div className="mt-4 border-t border-gray-100 pt-4">
-        <div className="mb-2 text-xs font-medium text-gray-600">Visibility</div>
+        <div className="mb-2 text-xs font-medium text-gray-600">{t("admin.applications.visibilityTitle")}</div>
         <select
           className="input max-w-sm"
           value={visibility}
@@ -895,17 +890,14 @@ function AppSettings({
         <p className="mt-2 text-xs text-gray-500">
           {VISIBILITY_OPTIONS.find((o) => o.value === visibility)?.hint}
         </p>
-        <p className="mt-1 text-xs text-gray-500">
-          Changing visibility is always this one explicit action -- nothing in this codebase ever
-          changes it automatically, even once a launch date has passed.
-        </p>
+        <p className="mt-1 text-xs text-gray-500">{t("admin.applications.visibilityImmutableHint")}</p>
         <button
           type="button"
           onClick={() => onSetVisibility(visibility)}
           disabled={visibilityBusy || visibility === app.visibility}
           className="mt-3 inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {visibilityBusy ? "Updating…" : "Update visibility"}
+          {visibilityBusy ? t("admin.applications.updatingVisibility") : t("admin.applications.updateVisibility")}
         </button>
       </div>
     </div>
@@ -920,6 +912,7 @@ function AppSettings({
 // locale-aware default, it never breaks. See PROJECT_KNOWLEDGE.md -> Share
 // Profile / Invite a Friend.
 function ShareInviteSettings({ appId }: { appId: string }) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const getConfigFn = useServerFn(getShareInviteConfig);
   const upsertFn = useServerFn(adminUpsertShareInviteTemplate);
@@ -953,7 +946,7 @@ function ShareInviteSettings({ appId }: { appId: string }) {
         },
       }),
     onSuccess: () => {
-      toast.success("Share & Invite templates saved");
+      toast.success(t("admin.applications.shareInviteSaved"));
       qc.invalidateQueries({ queryKey: ["admin-share-invite-config", appId] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -961,16 +954,16 @@ function ShareInviteSettings({ appId }: { appId: string }) {
 
   return (
     <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
-      <h2 className="mb-1 text-sm font-semibold text-gray-900">Share & Invite</h2>
+      <h2 className="mb-1 text-sm font-semibold text-gray-900">{t("admin.applications.shareInviteTitle")}</h2>
       <p className="mb-4 text-xs text-gray-500">
-        Leave a field blank to use the built-in default. Share is application-focused (shown
-        regardless of who is sharing); Invite is personal and supports the placeholders{" "}
-        <code className="rounded bg-gray-100 px-1">{"{user_name}"}</code> and{" "}
+        {t("admin.applications.shareInviteHint")}{" "}
+        <code className="rounded bg-gray-100 px-1">{"{user_name}"}</code>{" "}
+        {t("admin.applications.and")}{" "}
         <code className="rounded bg-gray-100 px-1">{"{invite_link}"}</code>.
       </p>
 
       <div className="grid gap-3 md:grid-cols-2">
-        <Field label="Share Title">
+        <Field label={t("admin.applications.shareTitle")}>
           <input
             className="input"
             value={shareTitle}
@@ -978,7 +971,7 @@ function ShareInviteSettings({ appId }: { appId: string }) {
             placeholder="Check this out"
           />
         </Field>
-        <Field label="Share URL">
+        <Field label={t("admin.applications.shareUrl")}>
           <input
             className="input"
             value={shareUrl}
@@ -986,7 +979,7 @@ function ShareInviteSettings({ appId }: { appId: string }) {
             placeholder="https://your-app.example"
           />
         </Field>
-        <Field label="Share Description" wide>
+        <Field label={t("admin.applications.shareDescription")} wide>
           <textarea
             className="input min-h-[60px]"
             value={shareDescription}
@@ -994,7 +987,7 @@ function ShareInviteSettings({ appId }: { appId: string }) {
             placeholder="Discover this platform."
           />
         </Field>
-        <Field label="Invite Template" wide>
+        <Field label={t("admin.applications.inviteTemplate")} wide>
           <textarea
             className="input min-h-[60px]"
             value={inviteTemplate}
@@ -1012,7 +1005,7 @@ function ShareInviteSettings({ appId }: { appId: string }) {
           className="inline-flex items-center gap-2 rounded-lg bg-[#1D6BF3] px-4 py-2 text-sm font-medium text-white hover:bg-[#1858cf] disabled:opacity-60"
         >
           <Save className="h-4 w-4" />
-          {save.isPending ? "Saving…" : "Save"}
+          {save.isPending ? t("common.saving") : t("common.save")}
         </button>
       </div>
     </div>
@@ -1036,6 +1029,7 @@ function BrandingPreview({
   primaryColor: string;
   secondaryColor: string;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="w-full max-w-xs overflow-hidden rounded-2xl ring-1 ring-gray-200">
       <div
@@ -1056,7 +1050,7 @@ function BrandingPreview({
         <span className="h-2 w-2 rounded-full" style={{ backgroundColor: primaryColor }} />
         <span className="h-2 w-2 rounded-full" style={{ backgroundColor: secondaryColor }} />
         <span className="truncate text-xs font-medium text-gray-700">
-          {name || "Application name"}
+          {name || t("admin.applications.applicationNamePlaceholder")}
         </span>
       </div>
     </div>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useTranslation } from "react-i18next";
 import { ArrowLeft, Send } from "lucide-react";
 import { toast } from "sonner";
 
@@ -27,6 +28,7 @@ export const Route = createFileRoute("/admin/communication")({
 });
 
 function CommunicationPage() {
+  const { t } = useTranslation();
   const send = useServerFn(adminSendNotification);
   const [target, setTarget] = useState<"all" | "premium" | "user">("all");
   const [userId, setUserId] = useState("");
@@ -64,7 +66,7 @@ function CommunicationPage() {
         },
       }),
     onSuccess: (r) => {
-      toast.success(`Sent to ${r.sent} user(s)`);
+      toast.success(t("admin.communication.sentTo", { count: r.sent }));
       setTitleBs(""); setTitleEn(""); setTitleDe("");
       setMsgBs(""); setMsgEn(""); setMsgDe("");
     },
@@ -75,33 +77,33 @@ function CommunicationPage() {
     <main className="min-h-screen bg-[#F7F8FA] px-6 py-10">
       <div className="mx-auto max-w-3xl">
         <Link to="/admin" className="mb-4 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900">
-          <ArrowLeft className="h-4 w-4" /> Back
+          <ArrowLeft className="h-4 w-4" /> {t("admin.common.back")}
         </Link>
-        <h1 className="text-2xl font-semibold text-gray-900">Communication Center</h1>
-        <p className="mt-1 text-sm text-gray-500">Broadcast notifications in BS / EN / DE.</p>
+        <h1 className="text-2xl font-semibold text-gray-900">{t("admin.communication.title")}</h1>
+        <p className="mt-1 text-sm text-gray-500">{t("admin.communication.subtitle")}</p>
 
         <section className="mt-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <label className="text-sm font-medium text-gray-700">
-              Audience
+              {t("admin.communication.audience")}
               <select
                 value={target}
                 onChange={(e) => setTarget(e.target.value as typeof target)}
                 className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
               >
-                <option value="all">All users</option>
-                <option value="premium">Premium users</option>
-                <option value="user">Single user</option>
+                <option value="all">{t("admin.communication.audienceAll")}</option>
+                <option value="premium">{t("admin.communication.audiencePremium")}</option>
+                <option value="user">{t("admin.communication.audienceSingle")}</option>
               </select>
             </label>
             <label className="text-sm font-medium text-gray-700">
-              Application (optional)
+              {t("admin.communication.application")}
               <select
                 value={appId}
                 onChange={(e) => setAppId(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
               >
-                <option value="">— none —</option>
+                <option value="">{t("admin.communication.none")}</option>
                 {(appsQ.data ?? []).map((a) => (
                   <option key={a.id} value={a.id}>{a.name}</option>
                 ))}
@@ -109,7 +111,7 @@ function CommunicationPage() {
             </label>
             {target === "user" && (
               <label className="md:col-span-2 text-sm font-medium text-gray-700">
-                User ID
+                {t("admin.communication.userId")}
                 <input
                   value={userId}
                   onChange={(e) => setUserId(e.target.value)}
@@ -119,16 +121,16 @@ function CommunicationPage() {
               </label>
             )}
             <label className="text-sm font-medium text-gray-700">
-              Type
+              {t("admin.communication.type")}
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value as typeof type)}
                 className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
               >
-                <option value="info">Info</option>
-                <option value="success">Success</option>
-                <option value="warning">Warning</option>
-                <option value="error">Error</option>
+                <option value="info">{t("admin.communication.typeInfo")}</option>
+                <option value="success">{t("admin.communication.typeSuccess")}</option>
+                <option value="warning">{t("admin.communication.typeWarning")}</option>
+                <option value="error">{t("admin.communication.typeError")}</option>
               </select>
             </label>
           </div>
@@ -145,13 +147,13 @@ function CommunicationPage() {
                   <input
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Title"
+                    placeholder={t("admin.communication.titlePlaceholder")}
                     className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
                   />
                   <textarea
                     value={msg}
                     onChange={(e) => setMsg(e.target.value)}
-                    placeholder="Message"
+                    placeholder={t("admin.communication.messagePlaceholder")}
                     rows={3}
                     className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
                   />
@@ -167,7 +169,7 @@ function CommunicationPage() {
             className="mt-6 inline-flex items-center gap-2 rounded-lg bg-[#1D6BF3] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#155ac9] disabled:opacity-60"
           >
             <Send className="h-4 w-4" />
-            {mut.isPending ? "Sending…" : "Send notification"}
+            {mut.isPending ? t("admin.communication.sending") : t("admin.communication.send")}
           </button>
         </section>
       </div>

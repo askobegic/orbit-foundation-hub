@@ -10,6 +10,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { ArrowLeft, Plus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -41,6 +42,7 @@ export const Route = createFileRoute("/admin/dashboard-widgets")({
 });
 
 function AdminDashboardWidgets() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const isAdminFn = useServerFn(getMyIsAdmin);
   const adminQ = useQuery({ queryKey: ["is-admin"], queryFn: () => isAdminFn() });
@@ -61,12 +63,10 @@ function AdminDashboardWidgets() {
     <main className="min-h-screen bg-[#F7F8FA] px-6 py-10">
       <div className="mx-auto max-w-5xl">
         <Link to="/admin" className="mb-4 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900">
-          <ArrowLeft className="h-4 w-4" /> Back
+          <ArrowLeft className="h-4 w-4" /> {t("admin.common.back")}
         </Link>
-        <h1 className="text-2xl font-semibold text-gray-900">Dashboard Widgets</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Which sections of the user dashboard are enabled, globally or per application.
-        </p>
+        <h1 className="text-2xl font-semibold text-gray-900">{t("admin.dashboardWidgets.title")}</h1>
+        <p className="mt-1 text-sm text-gray-500">{t("admin.dashboardWidgets.subtitle")}</p>
 
         <DefinitionsSection />
         <ApplicationSettingsSection apps={appsQ.data ?? []} />
@@ -85,6 +85,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 }
 
 function DefinitionsSection() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const listFn = useServerFn(adminListDashboardWidgets);
   const upsertFn = useServerFn(adminUpsertDashboardWidget);
@@ -111,7 +112,7 @@ function DefinitionsSection() {
         },
       }),
     onSuccess: () => {
-      toast.success("Widget created");
+      toast.success(t("admin.dashboardWidgets.created"));
       setKey("");
       setLabel("");
       setRequiresCapability("");
@@ -139,19 +140,19 @@ function DefinitionsSection() {
   });
 
   return (
-    <Card title="Widget definitions">
+    <Card title={t("admin.dashboardWidgets.definitionsTitle")}>
       <div className="flex flex-wrap items-end gap-2">
         <label className="text-sm">
-          Key
+          {t("admin.common.key")}
           <input
             value={key}
             onChange={(e) => setKey(e.target.value)}
-            placeholder="e.g. leaderboard"
+            placeholder={t("admin.dashboardWidgets.keyPlaceholder")}
             className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
           />
         </label>
         <label className="text-sm">
-          Label
+          {t("admin.common.label")}
           <input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
@@ -159,13 +160,13 @@ function DefinitionsSection() {
           />
         </label>
         <label className="text-sm">
-          Requires capability
+          {t("admin.dashboardWidgets.requiresCapability")}
           <select
             value={requiresCapability}
             onChange={(e) => setRequiresCapability(e.target.value)}
             className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
           >
-            <option value="">None</option>
+            <option value="">{t("admin.common.none")}</option>
             {(capabilitiesQ.data ?? []).map((c) => (
               <option key={c.key} value={c.key}>
                 {c.label}
@@ -178,7 +179,7 @@ function DefinitionsSection() {
           disabled={!key.trim() || !label.trim() || create.isPending}
           className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
         >
-          <Plus className="h-4 w-4" /> Add
+          <Plus className="h-4 w-4" /> {t("admin.common.add")}
         </button>
       </div>
       <ul className="mt-4 divide-y divide-gray-100">
@@ -189,7 +190,7 @@ function DefinitionsSection() {
               <span className="text-gray-400">({w.key})</span>
               {w.requiresCapability && (
                 <span className="ml-2 rounded-full bg-purple-100 px-1.5 py-0.5 text-[10px] font-semibold text-purple-700">
-                  requires: {w.requiresCapability}
+                  {t("admin.dashboardWidgets.requiresBadge", { capability: w.requiresCapability })}
                 </span>
               )}
             </span>
@@ -199,7 +200,7 @@ function DefinitionsSection() {
                 w.enabled ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
               }`}
             >
-              {w.enabled ? "Enabled" : "Disabled"}
+              {w.enabled ? t("admin.common.enabled") : t("admin.common.disabled")}
             </button>
           </li>
         ))}
@@ -209,6 +210,7 @@ function DefinitionsSection() {
 }
 
 function ApplicationSettingsSection({ apps }: { apps: ApplicationRow[] }) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const listFn = useServerFn(adminListDashboardWidgetSettings);
   const setFn = useServerFn(adminSetDashboardWidgetAppSetting);
@@ -227,15 +229,15 @@ function ApplicationSettingsSection({ apps }: { apps: ApplicationRow[] }) {
   });
 
   return (
-    <Card title="Per-application overrides">
+    <Card title={t("admin.dashboardWidgets.overridesTitle")}>
       <label className="text-sm">
-        Application
+        {t("admin.common.application")}
         <select
           value={appId}
           onChange={(e) => setAppId(e.target.value)}
           className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
         >
-          <option value="">Select...</option>
+          <option value="">{t("admin.common.select")}</option>
           {apps.map((a) => (
             <option key={a.id} value={a.id}>
               {a.name}
@@ -257,12 +259,12 @@ function ApplicationSettingsSection({ apps }: { apps: ApplicationRow[] }) {
                   w.appEnabled ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
                 }`}
               >
-                {w.appEnabled ? "Enabled" : "Disabled"}
+                {w.appEnabled ? t("admin.common.enabled") : t("admin.common.disabled")}
               </button>
             </li>
           ))}
           {(q.data ?? []).length === 0 && (
-            <p className="py-2 text-sm text-gray-500">No widget definitions yet.</p>
+            <p className="py-2 text-sm text-gray-500">{t("admin.dashboardWidgets.noWidgets")}</p>
           )}
         </ul>
       )}
