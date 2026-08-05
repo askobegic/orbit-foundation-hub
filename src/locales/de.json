@@ -3,6 +3,7 @@
     "home": "Startseite",
     "profile": "Mein Profil",
     "applications": "Meine Anwendungen",
+    "purchases": "Käufe",
     "subscriptions": "Meine Abonnements",
     "payments": "Zahlungsverlauf",
     "settings": "Einstellungen",
@@ -16,7 +17,8 @@
   },
   "messages": {
     "title": "Nachrichten",
-    "empty": "Noch keine Unterhaltungen"
+    "empty": "Noch keine Unterhaltungen",
+    "unavailable": "Nachrichten sind für diese Anwendung nicht verfügbar"
   },
   "auth": {
     "login": "Anmelden",
@@ -43,21 +45,22 @@
     "backToDashboard": "Zurück zum Dashboard"
   },
   "share": {
+    "shareApp": "Teilen",
     "shareProfile": "Profil teilen",
     "share": "Teilen",
     "copyLink": "Link kopieren",
     "linkCopied": "Link kopiert!",
-    "profileText": "Schau dir mein Profil auf Core Platform an:",
+    "defaultShareTitle": "Schau dir das an",
+    "defaultShareDescription": "Entdecke diese Plattform.",
     "instagramCopied": "Link kopiert! In Instagram-Bio einfügen.",
     "tiktokCopied": "Link kopiert! In TikTok-Bio einfügen.",
-    "emailSubject": "Mein Profil auf Core Platform",
     "inviteFriend": "Freund einladen",
     "inviteSubtitle": "Teile deine Einladung mit Freunden",
     "invite": "Einladen",
-    "inviteText": "Tritt Core Platform bei:",
-    "inviteDescription": "Teile diesen Link mit einem Freund und lade ihn zu Core Platform ein.",
-    "yourInviteLink": "Dein Einladungslink",
-    "referralComingSoon": "Referral-Programm kommt bald"
+    "defaultInviteTemplate": "{user_name} hat dich eingeladen. Hier registrieren: {invite_link}",
+    "inviteDescription": "Teile diesen Link mit einem Freund und lade ihn ein, beizutreten.",
+    "yourInviteLink": "Deine Einladungsnachricht",
+    "aFriend": "Ein Freund"
   },
   "profile": {
     "title": "Mein Profil",
@@ -142,6 +145,7 @@
     "viewAll": "Alle anzeigen",
     "validUntil": "Gültig bis",
     "comingSoon": "Demnächst verfügbar",
+    "launchDate": "Start",
     "active": "Aktiv",
     "expired": "Abgelaufen",
     "standard": "Standard",
@@ -170,6 +174,23 @@
       "pending": "Ausstehend",
       "expired": "Abgelaufen",
       "cancelled": "Gekündigt"
+    }
+  },
+  "purchases": {
+    "title": "Käufe",
+    "subtitle": "Ihre vollständige Kaufhistorie im gesamten Ökosystem.",
+    "products": "Produkte",
+    "noProducts": "Noch keine Käufe",
+    "paymentHistory": "Zahlungsverlauf",
+    "noPayments": "Noch keine Zahlungen",
+    "transactionId": "Transaktions-ID",
+    "provider": "Anbieter",
+    "adminGrant": "Admin-Vergabe",
+    "advertisingCampaign": "Werbekampagne",
+    "type": {
+      "subscription": "Abonnement",
+      "promotion": "Aktion",
+      "one_time": "Einmalig"
     }
   },
   "common": {
@@ -367,9 +388,9 @@
     "cta": "Installieren"
   },
   "trial": {
-    "activeTitle": "🎉 Sie haben 7 Tage kostenlosen Premium-Zugang!",
+    "activeTitle": "🎉 Sie haben promotionalen Premium-Zugang!",
     "activeExpires": "Läuft ab",
-    "expiredTitle": "Ihre Testphase ist abgelaufen",
+    "expiredTitle": "Ihre Promotion-Testphase ist beendet",
     "expiredHint": "Nutzen Sie alle Premium-Funktionen ohne Unterbrechung weiter.",
     "upgradeNow": "Jetzt upgraden"
   },

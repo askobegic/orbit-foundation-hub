@@ -22,7 +22,7 @@ export function ApplicationSelector({ onSelect }: Props) {
       const { data, error } = await supabase
         .from("applications")
         .select("id, name, slug, logo_url, primary_color")
-        .eq("status", "active")
+        .eq("visibility", "active")
         .order("sort_order", { ascending: true });
       if (error) throw error;
       return (data ?? []) as Pick<

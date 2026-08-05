@@ -11,6 +11,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { getApplicationCapabilities } from "@/lib/capabilities.functions";
 import { hasAnyActivePremium } from "@/lib/premium";
 import type { Conversation, ConversationSummary } from "@/types/messaging";
 
@@ -63,6 +64,15 @@ export const getOrCreateConversation = createServerFn({ method: "POST" })
 
     // Eligibility is checked only here, at creation -- never re-checked for
     // an existing conversation (see PROJECT_KNOWLEDGE.md -> Contact Actions).
+    // R-2 extends the same "checked once, at creation" rule to the messaging
+    // capability itself -- checked against the application the initiator is
+    // currently browsing, since a conversation has no per-conversation app_id
+    // (see the file-level comment above), matching how Advertising/Rewards
+    // gate their own current-application-context actions.
+    const capabilities = await getApplicationCapabilities({ data: { appId: data.currentAppId } });
+    if (!capabilities.includes("messaging")) {
+      throw new Error("Messaging is not available for this application");
+    }
     const [initiatorPremium, recipientPremium] = await Promise.all([
       hasAnyActivePremium(initiatorId),
       hasAnyActivePremium(data.recipientUserId),

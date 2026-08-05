@@ -328,6 +328,144 @@ export const adminListRewardActionRules = createServerFn({ method: "POST" })
     return data ?? [];
   });
 
+const levelSchema = z.object({
+  id: z.string().uuid().optional(),
+  key: z.string().trim().min(1).max(60).regex(/^[a-z][a-z0-9_]*$/),
+  label: z.string().trim().min(1).max(120),
+  minLifetimePoints: z.number().int().min(0).default(0),
+  displayOrder: z.number().int().default(0),
+  enabled: z.boolean().default(true),
+  archived: z.boolean().default(false),
+  reason: z.string().trim().max(500).optional(),
+});
+
+export const adminUpsertRewardLevel = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => levelSchema.parse(raw))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const supabaseAdmin = await adminClient();
+
+    let previous: unknown = null;
+    if (data.id) {
+      const { data: existing } = await supabaseAdmin
+        .from("reward_levels")
+        .select("*")
+        .eq("id", data.id)
+        .maybeSingle();
+      previous = existing;
+    }
+
+    const payload = {
+      key: data.key,
+      label: data.label,
+      min_lifetime_points: data.minLifetimePoints,
+      display_order: data.displayOrder,
+      enabled: data.enabled,
+      archived: data.archived,
+    };
+    const { data: row, error } = data.id
+      ? await supabaseAdmin.from("reward_levels").update(payload).eq("id", data.id).select("*").single()
+      : await supabaseAdmin.from("reward_levels").insert(payload).select("*").single();
+    if (error) throw new Error(error.message);
+
+    await writeAuditLog({
+      userId: context.userId,
+      action: data.id ? "reward_level.update" : "reward_level.create",
+      entityType: "reward_level",
+      entityId: row.id,
+      oldData: previous,
+      newData: row,
+      reason: data.reason ?? null,
+    });
+    return row;
+  });
+
+export const adminListRewardLevels = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { data, error } = await context.supabase
+      .from("reward_levels")
+      .select("*")
+      .order("display_order", { ascending: true });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+const achievementSchema = z.object({
+  id: z.string().uuid().optional(),
+  key: z.string().trim().min(1).max(60).regex(/^[a-z][a-z0-9_]*$/),
+  label: z.string().trim().min(1).max(120),
+  description: z.string().trim().max(500).nullable().optional(),
+  // References reward_action_rules.action -- an achievement is earned by
+  // reaching triggerCount occurrences of that action (see rewards.server.ts).
+  // Nullable: an achievement not tied to any action rule is never
+  // auto-awarded, only ever granted manually/by a future mechanism.
+  triggerAction: z.string().trim().nullable().optional(),
+  triggerCount: z.number().int().min(1).default(1),
+  displayOrder: z.number().int().default(0),
+  enabled: z.boolean().default(true),
+  archived: z.boolean().default(false),
+  reason: z.string().trim().max(500).optional(),
+});
+
+export const adminUpsertRewardAchievement = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => achievementSchema.parse(raw))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const supabaseAdmin = await adminClient();
+
+    let previous: unknown = null;
+    if (data.id) {
+      const { data: existing } = await supabaseAdmin
+        .from("reward_achievements")
+        .select("*")
+        .eq("id", data.id)
+        .maybeSingle();
+      previous = existing;
+    }
+
+    const payload = {
+      key: data.key,
+      label: data.label,
+      description: data.description ?? null,
+      trigger_action: data.triggerAction ?? null,
+      trigger_count: data.triggerCount,
+      display_order: data.displayOrder,
+      enabled: data.enabled,
+      archived: data.archived,
+    };
+    const { data: row, error } = data.id
+      ? await supabaseAdmin.from("reward_achievements").update(payload).eq("id", data.id).select("*").single()
+      : await supabaseAdmin.from("reward_achievements").insert(payload).select("*").single();
+    if (error) throw new Error(error.message);
+
+    await writeAuditLog({
+      userId: context.userId,
+      action: data.id ? "reward_achievement.update" : "reward_achievement.create",
+      entityType: "reward_achievement",
+      entityId: row.id,
+      oldData: previous,
+      newData: row,
+      reason: data.reason ?? null,
+    });
+    return row;
+  });
+
+export const adminListRewardAchievements = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { data, error } = await context.supabase
+      .from("reward_achievements")
+      .select("*")
+      .order("display_order", { ascending: true });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
 // Fulfillment types (adjustment, Priority 8.3 follow-up): a registry,
 // exactly like capability_definitions, rather than a fixed literal union
 // -- so a later module (Advertising, or anything after it) can register
@@ -481,6 +619,18 @@ export const adminListRewardCatalog = createServerFn({ method: "POST" })
       .from("reward_catalog")
       .select("*")
       .order("display_order", { ascending: true });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+export const adminListRewardConfig = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { data, error } = await context.supabase
+      .from("reward_config")
+      .select("*")
+      .order("key", { ascending: true });
     if (error) throw new Error(error.message);
     return data ?? [];
   });

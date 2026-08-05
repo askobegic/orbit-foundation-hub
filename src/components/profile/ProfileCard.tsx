@@ -27,6 +27,7 @@ import {
 
 import { useApplication } from "@/context/ApplicationContext";
 import { supabase } from "@/integrations/supabase/client";
+import { getApplicationCapabilities } from "@/lib/capabilities.functions";
 import { getOrCreateConversation } from "@/lib/conversation.functions";
 import { getVisibleApplications, hasAnyActivePremium } from "@/lib/premium";
 import { isSafeProfileUrl } from "@/lib/url";
@@ -150,6 +151,19 @@ export function ProfileCard({ profile, premiumProfile, viewerId, className }: Pr
   });
   const isViewerPremium = viewerPremiumQuery.data ?? false;
   const canContact = showPremiumContent && isViewerPremium && isOwnerContactableHere;
+
+  // R-2: the Send Message action is a UI-action-level capability gate,
+  // matching the same "hide the app-scoped action, not the whole card"
+  // treatment as Advertising/Rewards -- unlike the always-shown Call/
+  // WhatsApp/etc. actions above, it disappears entirely (not just locked)
+  // when the current application has messaging disabled, since there is
+  // nothing to upgrade into in that case.
+  const capabilitiesQuery = useQuery({
+    queryKey: ["applicationCapabilities", application?.id],
+    queryFn: () => getApplicationCapabilities({ data: { appId: application!.id } }),
+    enabled: !!application?.id,
+  });
+  const messagingEnabled = !application || (capabilitiesQuery.data?.includes("messaging") ?? true);
 
   function handleGatedContact(action: () => void) {
     if (!canContact) {
@@ -494,15 +508,17 @@ export function ProfileCard({ profile, premiumProfile, viewerId, className }: Pr
                       />
                     );
                   })}
-                  <ContactActionButton
-                    icon={MessageSquare}
-                    value={t("profile.sendMessage")}
-                    platformLabel={t("profile.sendMessage")}
-                    canContact={canContact}
-                    onClick={() => handleGatedContact(handleSendMessage)}
-                    className="text-white hover:opacity-90"
-                    style={{ backgroundColor: primaryColor }}
-                  />
+                  {messagingEnabled && (
+                    <ContactActionButton
+                      icon={MessageSquare}
+                      value={t("profile.sendMessage")}
+                      platformLabel={t("profile.sendMessage")}
+                      canContact={canContact}
+                      onClick={() => handleGatedContact(handleSendMessage)}
+                      className="text-white hover:opacity-90"
+                      style={{ backgroundColor: primaryColor }}
+                    />
+                  )}
                 </div>
               )}
             </>

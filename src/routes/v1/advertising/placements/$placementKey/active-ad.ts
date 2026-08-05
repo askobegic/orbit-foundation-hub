@@ -1,0 +1,22 @@
+// API_CONTRACT.md §14 -- GET /v1/advertising/placements/{placementKey}/active-ad.
+// Reuses getActivePlacementAd directly (middleware-less createServerFn).
+import { createFileRoute } from "@tanstack/react-router";
+
+import { getActivePlacementAd } from "@/lib/advertising.functions";
+import { apiData, withRoute } from "@/lib/v1/http.server";
+import { resolveAppId } from "@/lib/v1/context.server";
+
+export const Route = createFileRoute("/v1/advertising/placements/$placementKey/active-ad")({
+  server: {
+    handlers: {
+      GET: withRoute(async ({ request, params }) => {
+        const url = new URL(request.url);
+        const appId = await resolveAppId(request, url, { required: true });
+        const ad = await getActivePlacementAd({
+          data: { appId: appId!, placementKey: params.placementKey },
+        });
+        return apiData(ad);
+      }),
+    },
+  },
+});

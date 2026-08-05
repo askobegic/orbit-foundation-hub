@@ -63,7 +63,7 @@ function SettingsPage() {
     if (!user) return;
     void (async () => {
       const [{ data: apps }, { data: settings }] = await Promise.all([
-        supabase.from("applications").select("*").eq("status", "active").order("sort_order"),
+        supabase.from("applications").select("*").eq("visibility", "active").order("sort_order"),
         supabase
           .from("user_app_settings")
           .select("app_id, is_visible, is_contactable")

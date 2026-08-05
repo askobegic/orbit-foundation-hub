@@ -1,5 +1,5 @@
 import { ShareAndInvite } from "@/components/dashboard/ShareAndInvite";
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import { NotificationBell } from "@/components/dashboard/NotificationBell";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -10,7 +10,6 @@ import {
   User,
   LayoutGrid,
   CreditCard,
-  Receipt,
   Settings,
   Shield,
   Bell,
@@ -36,7 +35,6 @@ import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrialBanner } from "@/components/dashboard/TrialBanner";
 import { InstallPrompt } from "@/components/InstallPrompt";
-import { activateTrialIfEligible } from "@/lib/trial.functions";
 import type {
   ApplicationRow,
   PaymentRow,
@@ -51,10 +49,7 @@ export function DashboardPage() {
   const { user, profile, signOut } = useAuth();
   const { application } = useApplication();
   const lang = (i18n.language?.slice(0, 2) ?? "bs") as "bs" | "en" | "de";
-  const queryClient = useQueryClient();
-  const activateTrial = useServerFn(activateTrialIfEligible);
   const getDashboardWidgetsFn = useServerFn(getDashboardWidgets);
-  const triedTrialRef = useRef(false);
 
   // Priority 8.2: Dashboard Widget Modularity -- which of this page's
   // sections are enabled, globally or overridden for the application
@@ -69,13 +64,21 @@ export function DashboardPage() {
   const isWidgetEnabled = (key: string) => !application || (widgetsQuery.data?.includes(key) ?? true);
   const rewardsEnabled = isWidgetEnabled("rewards");
   const advertisingEnabled = isWidgetEnabled("advertising");
+  const messagingEnabled = isWidgetEnabled("messaging");
 
+  // Priority 8.9: Application Visibility -- draft and archived are hidden
+  // from every normal user (draft: not ready yet, admin-only; archived:
+  // retired, preserved for history/administration only), excluded at the
+  // query itself rather than merely not-rendered, so a end-user's own
+  // dashboard never even receives those rows. coming_soon/active are the
+  // only two states a normal user's Dashboard ever shows.
   const appsQuery = useQuery({
     queryKey: ["dashboard", "applications"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("applications")
         .select("*")
+        .in("visibility", ["coming_soon", "active"])
         .order("sort_order", { ascending: true });
       if (error) throw error;
       return (data ?? []) as ApplicationRow[];
@@ -96,37 +99,6 @@ export function DashboardPage() {
       return (data ?? []) as unknown as SubscriptionWithPlan[];
     },
   });
-
-  // All subs (any status) — used to drive trial banner and one-time activation.
-  const allSubsQuery = useQuery({
-    queryKey: ["dashboard", "subscriptions-all", user?.id],
-    enabled: !!user?.id,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("subscriptions")
-        .select("*")
-        .eq("user_id", user!.id)
-        .order("expires_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as SubscriptionRow[];
-    },
-  });
-
-  useEffect(() => {
-    if (!user?.id) return;
-    if (allSubsQuery.isLoading) return;
-    if (triedTrialRef.current) return;
-    if ((allSubsQuery.data ?? []).length > 0) return;
-    triedTrialRef.current = true;
-    void activateTrial()
-      .then((res) => {
-        if (res?.activated) {
-          void queryClient.invalidateQueries({ queryKey: ["dashboard", "subscriptions", user.id] });
-          void queryClient.invalidateQueries({ queryKey: ["dashboard", "subscriptions-all", user.id] });
-        }
-      })
-      .catch(() => {});
-  }, [user?.id, allSubsQuery.data, allSubsQuery.isLoading, activateTrial, queryClient]);
 
   const paymentsQuery = useQuery({
     queryKey: ["dashboard", "payments", user?.id],
@@ -192,6 +164,7 @@ export function DashboardPage() {
         onSignOut={() => void signOut()}
         rewardsEnabled={rewardsEnabled}
         advertisingEnabled={advertisingEnabled}
+        messagingEnabled={messagingEnabled}
       />
 
       <div className="lg:pl-64">
@@ -226,9 +199,7 @@ export function DashboardPage() {
         <main className="grid gap-6 p-4 lg:grid-cols-3 lg:p-8">
           {/* LEFT (2 cols) */}
           <div className="flex flex-col gap-6 lg:col-span-2">
-            {isWidgetEnabled("trial_banner") && (
-              <TrialBanner subscriptions={allSubsQuery.data ?? []} />
-            )}
+            {isWidgetEnabled("trial_banner") && <TrialBanner />}
             {/* Profile card */}
             <section className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-100">
               <div className="h-24 bg-gradient-to-r from-[#1D6BF3] via-[#6366F1] to-[#8B5CF6]" />
@@ -323,7 +294,7 @@ export function DashboardPage() {
                     // tile reflects the same platform-wide status, not a
                     // per-application one.
                     const isPremium = hasPremium;
-                    const isActive = app.is_enabled !== false && app.status === "active";
+                    const isActive = app.visibility === "active";
                     const desc =
                       app[`short_description_${lang}` as const] ??
                       app.short_description_en ??
@@ -360,7 +331,11 @@ export function DashboardPage() {
                                 {t("dashboard.comingSoon")}
                               </span>
                             </div>
-                            <p className="truncate text-xs text-gray-400">{desc}</p>
+                            <p className="truncate text-xs text-gray-400">
+                              {app.launch_date
+                                ? `${t("dashboard.launchDate")}: ${new Date(app.launch_date).toLocaleDateString(i18n.language)}`
+                                : desc}
+                            </p>
                           </div>
                         </div>
                       );
@@ -483,7 +458,7 @@ export function DashboardPage() {
                     {new Date(activeSub.expires_at).toLocaleDateString(i18n.language)}
                   </p>
                   <Link
-                    to="/dashboard/subscriptions"
+                    to="/dashboard/purchases"
                     className="mt-4 inline-flex items-center justify-center rounded-lg bg-white/15 px-3 py-1.5 text-xs font-medium backdrop-blur hover:bg-white/25"
                   >
                     {t("subscription.managePlan")}
@@ -508,9 +483,9 @@ export function DashboardPage() {
             <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="text-sm font-semibold">{t("dashboard.paymentHistory")}</h3>
-                <button className="text-xs font-medium text-[#1D6BF3] hover:underline">
+                <Link to="/dashboard/purchases" className="text-xs font-medium text-[#1D6BF3] hover:underline">
                   {t("dashboard.viewAll")}
-                </button>
+                </Link>
               </div>
               {paymentsQuery.isLoading ? (
                 <div className="space-y-2">
@@ -585,6 +560,7 @@ export function DashboardPage() {
 <ShareAndInvite
   username={profile?.username ?? null}
   firstName={profile?.first_name ?? null}
+  lastName={profile?.last_name ?? null}
 />
 )}
           </div>
@@ -619,18 +595,19 @@ function Sidebar({
   onSignOut,
   rewardsEnabled,
   advertisingEnabled,
+  messagingEnabled,
 }: {
   onSignOut: () => void;
   rewardsEnabled: boolean;
   advertisingEnabled: boolean;
+  messagingEnabled: boolean;
 }) {
   const { t } = useTranslation();
   const items = [
     { to: "/dashboard", icon: Home, label: t("nav.home") },
     { to: "/dashboard/profile", icon: User, label: t("nav.profile") },
     { to: "/dashboard", icon: LayoutGrid, label: t("nav.applications") },
-    { to: "/dashboard/subscriptions", icon: CreditCard, label: t("nav.subscriptions") },
-    { to: "/dashboard", icon: Receipt, label: t("nav.payments") },
+    { to: "/dashboard/purchases", icon: CreditCard, label: t("nav.purchases") },
     ...(rewardsEnabled
       ? [{ to: "/dashboard/rewards" as const, icon: Gift, label: t("nav.rewards") }]
       : []),
@@ -640,7 +617,9 @@ function Sidebar({
     { to: "/dashboard/settings", icon: Settings, label: t("nav.settings") },
     { to: "/dashboard/security", icon: Shield, label: t("nav.security") },
     { to: "/dashboard/notifications", icon: Bell, label: t("nav.notifications") },
-    { to: "/dashboard/messages", icon: MessageSquare, label: t("nav.messages") },
+    ...(messagingEnabled
+      ? [{ to: "/dashboard/messages" as const, icon: MessageSquare, label: t("nav.messages") }]
+      : []),
     { to: "/dashboard/help", icon: HelpCircle, label: t("nav.help") },
   ] as const;
 

@@ -1,0 +1,771 @@
+// Priority 8.7 (C-1): Admin UI for Rewards & Loyalty (Priority 8.3).
+//
+// Reward Action Rules, Levels, Achievements, Catalog, Fulfillment Types and
+// Config were all fully implemented server-side (src/lib/rewards.functions.ts)
+// but had no admin surface -- every value (point amounts, level thresholds,
+// achievement triggers, catalog items, fulfillment types, the referral
+// verification window) required SQL. This page closes that gap, following
+// the same Card-based pattern already established by /admin/advertising.
+import { useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { useEffect } from "react";
+import { ArrowLeft, Plus } from "lucide-react";
+import { toast } from "sonner";
+
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { getMyIsAdmin } from "@/lib/admin.functions";
+import { adminListCapabilityDefinitions } from "@/lib/capabilities.functions";
+import {
+  adminListRewardAchievements,
+  adminListRewardActionRules,
+  adminListRewardCatalog,
+  adminListRewardConfig,
+  adminListRewardFulfillmentTypes,
+  adminListRewardLevels,
+  adminSetRewardConfig,
+  adminUpsertRewardAchievement,
+  adminUpsertRewardActionRule,
+  adminUpsertRewardCatalogItem,
+  adminUpsertRewardFulfillmentType,
+  adminUpsertRewardLevel,
+} from "@/lib/rewards.functions";
+
+export const Route = createFileRoute("/admin/rewards")({
+  head: () => ({
+    meta: [
+      { title: "Admin · Rewards & Loyalty — Core Platform" },
+      { name: "description", content: "Action rules, levels, achievements, catalog, fulfillment types and config." },
+    ],
+  }),
+  component: () => (
+    <ProtectedRoute>
+      <AdminRewards />
+    </ProtectedRoute>
+  ),
+});
+
+function AdminRewards() {
+  const navigate = useNavigate();
+  const isAdminFn = useServerFn(getMyIsAdmin);
+  const adminQ = useQuery({ queryKey: ["is-admin"], queryFn: () => isAdminFn() });
+  useEffect(() => {
+    if (adminQ.data && !adminQ.data.isAdmin) void navigate({ to: "/dashboard", replace: true });
+  }, [adminQ.data, navigate]);
+
+  return (
+    <main className="min-h-screen bg-[#F7F8FA] px-6 py-10">
+      <div className="mx-auto max-w-5xl">
+        <Link to="/admin" className="mb-4 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900">
+          <ArrowLeft className="h-4 w-4" /> Back
+        </Link>
+        <h1 className="text-2xl font-semibold text-gray-900">Rewards & Loyalty</h1>
+        <p className="mt-1 text-sm text-gray-500">
+          Action rules, levels, achievements, the redemption catalog, fulfillment types, and configuration.
+        </p>
+
+        <ActionRulesSection />
+        <LevelsSection />
+        <AchievementsSection />
+        <CatalogSection />
+        <FulfillmentTypesSection />
+        <ConfigSection />
+      </div>
+    </main>
+  );
+}
+
+function Card({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="mt-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
+      <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+      <div className="mt-4">{children}</div>
+    </section>
+  );
+}
+
+function ActionRulesSection() {
+  const qc = useQueryClient();
+  const listFn = useServerFn(adminListRewardActionRules);
+  const upsertFn = useServerFn(adminUpsertRewardActionRule);
+  const q = useQuery({ queryKey: ["admin-reward-action-rules"], queryFn: () => listFn() });
+  const [action, setAction] = useState("");
+  const [label, setLabel] = useState("");
+  const [points, setPoints] = useState(0);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
+
+  const create = useMutation({
+    mutationFn: () =>
+      upsertFn({
+        data: { action, label, points, cooldownSeconds, displayOrder: 0, enabled: true, archived: false },
+      }),
+    onSuccess: () => {
+      toast.success("Action rule created");
+      setAction("");
+      setLabel("");
+      setPoints(0);
+      setCooldownSeconds(0);
+      void qc.invalidateQueries({ queryKey: ["admin-reward-action-rules"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const toggle = useMutation({
+    mutationFn: (row: NonNullable<typeof q.data>[number]) =>
+      upsertFn({
+        data: {
+          id: row.id,
+          action: row.action,
+          label: row.label,
+          points: row.points,
+          cooldownSeconds: row.cooldown_seconds,
+          maxPerUser: row.max_per_user,
+          displayOrder: row.display_order,
+          enabled: !row.enabled,
+          archived: row.archived,
+        },
+      }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["admin-reward-action-rules"] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Card title="Action rules">
+      <p className="mb-3 text-xs text-gray-500">
+        The sole lookup for how many points each action grants -- no action is ever hardcoded elsewhere.
+      </p>
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="text-sm">
+          Action
+          <input
+            value={action}
+            onChange={(e) => setAction(e.target.value)}
+            placeholder="e.g. profile_completed"
+            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          />
+        </label>
+        <label className="text-sm">
+          Label
+          <input
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          />
+        </label>
+        <label className="text-sm">
+          Points
+          <input
+            type="number"
+            value={points}
+            onChange={(e) => setPoints(Number(e.target.value))}
+            className="mt-1 block w-24 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          />
+        </label>
+        <label className="text-sm">
+          Cooldown (s)
+          <input
+            type="number"
+            value={cooldownSeconds}
+            onChange={(e) => setCooldownSeconds(Number(e.target.value))}
+            className="mt-1 block w-24 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          />
+        </label>
+        <button
+          onClick={() => create.mutate()}
+          disabled={!action.trim() || !label.trim() || create.isPending}
+          className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+        >
+          <Plus className="h-4 w-4" /> Add
+        </button>
+      </div>
+      <ul className="mt-4 divide-y divide-gray-100">
+        {(q.data ?? []).map((r) => (
+          <li key={r.id} className="flex items-center justify-between py-2 text-sm">
+            <span>
+              <span className="font-medium">{r.label}</span>{" "}
+              <span className="text-gray-400">
+                ({r.action}) -- {r.points} pts
+                {r.cooldown_seconds > 0 ? `, ${r.cooldown_seconds}s cooldown` : ""}
+              </span>
+            </span>
+            <button
+              onClick={() => toggle.mutate(r)}
+              className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                r.enabled ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
+              }`}
+            >
+              {r.enabled ? "Enabled" : "Disabled"}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+function LevelsSection() {
+  const qc = useQueryClient();
+  const listFn = useServerFn(adminListRewardLevels);
+  const upsertFn = useServerFn(adminUpsertRewardLevel);
+  const q = useQuery({ queryKey: ["admin-reward-levels"], queryFn: () => listFn() });
+  const [key, setKey] = useState("");
+  const [label, setLabel] = useState("");
+  const [minLifetimePoints, setMinLifetimePoints] = useState(0);
+
+  const create = useMutation({
+    mutationFn: () =>
+      upsertFn({ data: { key, label, minLifetimePoints, displayOrder: 0, enabled: true, archived: false } }),
+    onSuccess: () => {
+      toast.success("Level created");
+      setKey("");
+      setLabel("");
+      setMinLifetimePoints(0);
+      void qc.invalidateQueries({ queryKey: ["admin-reward-levels"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const toggle = useMutation({
+    mutationFn: (row: NonNullable<typeof q.data>[number]) =>
+      upsertFn({
+        data: {
+          id: row.id,
+          key: row.key,
+          label: row.label,
+          minLifetimePoints: row.min_lifetime_points,
+          displayOrder: row.display_order,
+          enabled: !row.enabled,
+          archived: row.archived,
+        },
+      }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["admin-reward-levels"] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Card title="Levels">
+      <p className="mb-3 text-xs text-gray-500">
+        A user's level is whichever level's threshold their Lifetime Points currently clear -- resolved
+        generically, not hardcoded.
+      </p>
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="text-sm">
+          Key
+          <input
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+            placeholder="e.g. gold"
+            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          />
+        </label>
+        <label className="text-sm">
+          Label
+          <input
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          />
+        </label>
+        <label className="text-sm">
+          Min lifetime points
+          <input
+            type="number"
+            value={minLifetimePoints}
+            onChange={(e) => setMinLifetimePoints(Number(e.target.value))}
+            className="mt-1 block w-32 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          />
+        </label>
+        <button
+          onClick={() => create.mutate()}
+          disabled={!key.trim() || !label.trim() || create.isPending}
+          className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+        >
+          <Plus className="h-4 w-4" /> Add
+        </button>
+      </div>
+      <ul className="mt-4 divide-y divide-gray-100">
+        {(q.data ?? []).map((l) => (
+          <li key={l.id} className="flex items-center justify-between py-2 text-sm">
+            <span>
+              <span className="font-medium">{l.label}</span>{" "}
+              <span className="text-gray-400">
+                ({l.key}) -- from {l.min_lifetime_points} pts
+              </span>
+            </span>
+            <button
+              onClick={() => toggle.mutate(l)}
+              className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                l.enabled ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
+              }`}
+            >
+              {l.enabled ? "Enabled" : "Disabled"}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+function AchievementsSection() {
+  const qc = useQueryClient();
+  const listFn = useServerFn(adminListRewardAchievements);
+  const upsertFn = useServerFn(adminUpsertRewardAchievement);
+  const listActionsFn = useServerFn(adminListRewardActionRules);
+  const q = useQuery({ queryKey: ["admin-reward-achievements"], queryFn: () => listFn() });
+  const actionsQ = useQuery({ queryKey: ["admin-reward-action-rules"], queryFn: () => listActionsFn() });
+  const [key, setKey] = useState("");
+  const [label, setLabel] = useState("");
+  const [triggerAction, setTriggerAction] = useState("");
+  const [triggerCount, setTriggerCount] = useState(1);
+
+  const create = useMutation({
+    mutationFn: () =>
+      upsertFn({
+        data: {
+          key,
+          label,
+          triggerAction: triggerAction || null,
+          triggerCount,
+          displayOrder: 0,
+          enabled: true,
+          archived: false,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Achievement created");
+      setKey("");
+      setLabel("");
+      setTriggerAction("");
+      setTriggerCount(1);
+      void qc.invalidateQueries({ queryKey: ["admin-reward-achievements"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const toggle = useMutation({
+    mutationFn: (row: NonNullable<typeof q.data>[number]) =>
+      upsertFn({
+        data: {
+          id: row.id,
+          key: row.key,
+          label: row.label,
+          description: row.description,
+          triggerAction: row.trigger_action,
+          triggerCount: row.trigger_count,
+          displayOrder: row.display_order,
+          enabled: !row.enabled,
+          archived: row.archived,
+        },
+      }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["admin-reward-achievements"] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Card title="Achievements">
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="text-sm">
+          Key
+          <input
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+            placeholder="e.g. five_referrals"
+            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          />
+        </label>
+        <label className="text-sm">
+          Label
+          <input
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          />
+        </label>
+        <label className="text-sm">
+          Trigger action
+          <select
+            value={triggerAction}
+            onChange={(e) => setTriggerAction(e.target.value)}
+            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          >
+            <option value="">None (manual only)</option>
+            {(actionsQ.data ?? []).map((a) => (
+              <option key={a.action} value={a.action}>
+                {a.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-sm">
+          Trigger count
+          <input
+            type="number"
+            min={1}
+            value={triggerCount}
+            onChange={(e) => setTriggerCount(Number(e.target.value))}
+            className="mt-1 block w-24 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          />
+        </label>
+        <button
+          onClick={() => create.mutate()}
+          disabled={!key.trim() || !label.trim() || create.isPending}
+          className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+        >
+          <Plus className="h-4 w-4" /> Add
+        </button>
+      </div>
+      <ul className="mt-4 divide-y divide-gray-100">
+        {(q.data ?? []).map((a) => (
+          <li key={a.id} className="flex items-center justify-between py-2 text-sm">
+            <span>
+              <span className="font-medium">{a.label}</span>{" "}
+              <span className="text-gray-400">
+                ({a.key}){a.trigger_action ? ` -- ${a.trigger_count}x ${a.trigger_action}` : " -- manual"}
+              </span>
+            </span>
+            <button
+              onClick={() => toggle.mutate(a)}
+              className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                a.enabled ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
+              }`}
+            >
+              {a.enabled ? "Enabled" : "Disabled"}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+function CatalogSection() {
+  const qc = useQueryClient();
+  const listFn = useServerFn(adminListRewardCatalog);
+  const upsertFn = useServerFn(adminUpsertRewardCatalogItem);
+  const listFulfillmentFn = useServerFn(adminListRewardFulfillmentTypes);
+  const listCapabilitiesFn = useServerFn(adminListCapabilityDefinitions);
+  const q = useQuery({ queryKey: ["admin-reward-catalog"], queryFn: () => listFn() });
+  const fulfillmentQ = useQuery({
+    queryKey: ["admin-reward-fulfillment-types"],
+    queryFn: () => listFulfillmentFn(),
+  });
+  const capabilitiesQ = useQuery({
+    queryKey: ["admin-capability-definitions"],
+    queryFn: () => listCapabilitiesFn(),
+  });
+  const [key, setKey] = useState("");
+  const [label, setLabel] = useState("");
+  const [pointsCost, setPointsCost] = useState(0);
+  const [verifiedReferralsRequired, setVerifiedReferralsRequired] = useState(0);
+  const [grantType, setGrantType] = useState("");
+  const [requiresCapability, setRequiresCapability] = useState("");
+
+  const create = useMutation({
+    mutationFn: () =>
+      upsertFn({
+        data: {
+          key,
+          label,
+          pointsCost,
+          verifiedReferralsRequired,
+          grantType,
+          grantValue: {},
+          requiresCapability: requiresCapability || null,
+          displayOrder: 0,
+          enabled: true,
+          archived: false,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Catalog item created");
+      setKey("");
+      setLabel("");
+      setPointsCost(0);
+      setVerifiedReferralsRequired(0);
+      setGrantType("");
+      setRequiresCapability("");
+      void qc.invalidateQueries({ queryKey: ["admin-reward-catalog"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const toggle = useMutation({
+    mutationFn: (row: NonNullable<typeof q.data>[number]) =>
+      upsertFn({
+        data: {
+          id: row.id,
+          key: row.key,
+          label: row.label,
+          description: row.description,
+          pointsCost: row.points_cost,
+          verifiedReferralsRequired: row.verified_referrals_required,
+          grantType: row.grant_type,
+          grantValue: (row.grant_value as Record<string, unknown>) ?? {},
+          requiresCapability: row.requires_capability,
+          displayOrder: row.display_order,
+          enabled: !row.enabled,
+          archived: row.archived,
+        },
+      }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["admin-reward-catalog"] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Card title="Redemption catalog">
+      <p className="mb-3 text-xs text-gray-500">
+        Redeeming requires both the points threshold and the verified-referrals threshold. Fulfillment is
+        recorded as pending -- see Fulfillment Types below.
+      </p>
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="text-sm">
+          Key
+          <input
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+            placeholder="e.g. one_month_premium"
+            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          />
+        </label>
+        <label className="text-sm">
+          Label
+          <input
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          />
+        </label>
+        <label className="text-sm">
+          Points cost
+          <input
+            type="number"
+            value={pointsCost}
+            onChange={(e) => setPointsCost(Number(e.target.value))}
+            className="mt-1 block w-24 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          />
+        </label>
+        <label className="text-sm">
+          Verified referrals req.
+          <input
+            type="number"
+            value={verifiedReferralsRequired}
+            onChange={(e) => setVerifiedReferralsRequired(Number(e.target.value))}
+            className="mt-1 block w-24 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          />
+        </label>
+        <label className="text-sm">
+          Grant type
+          <select
+            value={grantType}
+            onChange={(e) => setGrantType(e.target.value)}
+            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          >
+            <option value="">Select...</option>
+            {(fulfillmentQ.data ?? []).map((f) => (
+              <option key={f.key} value={f.key}>
+                {f.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-sm">
+          Requires capability
+          <select
+            value={requiresCapability}
+            onChange={(e) => setRequiresCapability(e.target.value)}
+            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          >
+            <option value="">None</option>
+            {(capabilitiesQ.data ?? []).map((c) => (
+              <option key={c.key} value={c.key}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          onClick={() => create.mutate()}
+          disabled={!key.trim() || !label.trim() || !grantType || create.isPending}
+          className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+        >
+          <Plus className="h-4 w-4" /> Add
+        </button>
+      </div>
+      <ul className="mt-4 divide-y divide-gray-100">
+        {(q.data ?? []).map((c) => (
+          <li key={c.id} className="flex items-center justify-between py-2 text-sm">
+            <span>
+              <span className="font-medium">{c.label}</span>{" "}
+              <span className="text-gray-400">
+                ({c.key}) -- {c.points_cost} pts
+                {c.verified_referrals_required > 0 ? `, ${c.verified_referrals_required} verified referrals` : ""}
+                {" -- "}
+                {c.grant_type}
+              </span>
+            </span>
+            <button
+              onClick={() => toggle.mutate(c)}
+              className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                c.enabled ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
+              }`}
+            >
+              {c.enabled ? "Enabled" : "Disabled"}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+function FulfillmentTypesSection() {
+  const qc = useQueryClient();
+  const listFn = useServerFn(adminListRewardFulfillmentTypes);
+  const upsertFn = useServerFn(adminUpsertRewardFulfillmentType);
+  const q = useQuery({ queryKey: ["admin-reward-fulfillment-types"], queryFn: () => listFn() });
+  const [key, setKey] = useState("");
+  const [label, setLabel] = useState("");
+
+  const create = useMutation({
+    mutationFn: () => upsertFn({ data: { key, label, enabled: true, archived: false, displayOrder: 0 } }),
+    onSuccess: () => {
+      toast.success("Fulfillment type created");
+      setKey("");
+      setLabel("");
+      void qc.invalidateQueries({ queryKey: ["admin-reward-fulfillment-types"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const toggle = useMutation({
+    mutationFn: (row: NonNullable<typeof q.data>[number]) =>
+      upsertFn({
+        data: {
+          id: row.id,
+          key: row.key,
+          label: row.label,
+          description: row.description,
+          displayOrder: row.display_order,
+          enabled: !row.enabled,
+          archived: row.archived,
+        },
+      }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["admin-reward-fulfillment-types"] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Card title="Fulfillment types">
+      <p className="mb-3 text-xs text-gray-500">
+        A registry, not a fixed enum -- a future module can register its own fulfillment type without a
+        deployment. Rewards only records which type a redemption needs; acting on it stays with the owning
+        module.
+      </p>
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="text-sm">
+          Key
+          <input
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+            placeholder="e.g. extend_premium"
+            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          />
+        </label>
+        <label className="text-sm">
+          Label
+          <input
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          />
+        </label>
+        <button
+          onClick={() => create.mutate()}
+          disabled={!key.trim() || !label.trim() || create.isPending}
+          className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+        >
+          <Plus className="h-4 w-4" /> Add
+        </button>
+      </div>
+      <ul className="mt-4 divide-y divide-gray-100">
+        {(q.data ?? []).map((f) => (
+          <li key={f.id} className="flex items-center justify-between py-2 text-sm">
+            <span>
+              <span className="font-medium">{f.label}</span>{" "}
+              <span className="text-gray-400">({f.key})</span>
+            </span>
+            <button
+              onClick={() => toggle.mutate(f)}
+              className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                f.enabled ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
+              }`}
+            >
+              {f.enabled ? "Enabled" : "Disabled"}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+function ConfigSection() {
+  const qc = useQueryClient();
+  const listFn = useServerFn(adminListRewardConfig);
+  const setFn = useServerFn(adminSetRewardConfig);
+  const q = useQuery({ queryKey: ["admin-reward-config"], queryFn: () => listFn() });
+
+  // The one config key rewards.server.ts currently reads
+  // (getVerificationDays()) -- exposed as a dedicated field so the admin
+  // doesn't need to guess the key/JSON shape; the list below still shows
+  // every row verbatim for anything added later.
+  const verificationRow = (q.data ?? []).find((r) => r.key === "referral_verification_days");
+  const [verificationDays, setVerificationDays] = useState(
+    typeof verificationRow?.value === "number" ? verificationRow.value : 30,
+  );
+
+  const save = useMutation({
+    mutationFn: () => setFn({ data: { key: "referral_verification_days", value: verificationDays } }),
+    onSuccess: () => {
+      toast.success("Config saved");
+      void qc.invalidateQueries({ queryKey: ["admin-reward-config"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Card title="Configuration">
+      <label className="text-sm">
+        Referral verification period (days)
+        <input
+          type="number"
+          min={1}
+          value={verificationDays}
+          onChange={(e) => setVerificationDays(Number(e.target.value))}
+          className="mt-1 block w-32 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+        />
+      </label>
+      <p className="mt-1 text-xs text-gray-500">
+        How long a Premium Referral must stay verified-Premium before it counts toward catalog thresholds.
+      </p>
+      <button
+        onClick={() => save.mutate()}
+        disabled={save.isPending}
+        className="mt-2 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+      >
+        Save
+      </button>
+
+      <ul className="mt-6 divide-y divide-gray-100 border-t border-gray-100 pt-4">
+        {(q.data ?? []).map((c) => (
+          <li key={c.key} className="flex items-center justify-between py-2 text-sm">
+            <span className="font-medium">{c.key}</span>
+            <span className="text-gray-500">{JSON.stringify(c.value)}</span>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}

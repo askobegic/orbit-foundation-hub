@@ -9,7 +9,9 @@ import { MessageSquare } from "lucide-react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ConversationListItem } from "@/components/messaging/ConversationListItem";
 import { useAuth } from "@/context/AuthContext";
+import { useApplication } from "@/context/ApplicationContext";
 import { supabase } from "@/integrations/supabase/client";
+import { getApplicationCapabilities } from "@/lib/capabilities.functions";
 import { getConversations, hideConversation } from "@/lib/conversation.functions";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -30,14 +32,26 @@ export const Route = createFileRoute("/dashboard/messages")({
 function MessagesInbox() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { application } = useApplication();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const getConversationsFn = useServerFn(getConversations);
   const hideConversationFn = useServerFn(hideConversation);
 
+  // R-2: matches the nav's own gating (DashboardPage.tsx's messagingEnabled)
+  // so a direct URL visit can't reach an inbox the current application has
+  // disabled messaging for. Existing conversations/messages are unaffected --
+  // this only gates the page shell, not getConversations/hideConversation.
+  const capabilitiesQuery = useQuery({
+    queryKey: ["applicationCapabilities", application?.id],
+    enabled: !!application?.id,
+    queryFn: () => getApplicationCapabilities({ data: { appId: application!.id } }),
+  });
+  const messagingEnabled = !application || (capabilitiesQuery.data?.includes("messaging") ?? true);
+
   const query = useQuery({
     queryKey: ["conversations", user?.id],
-    enabled: !!user?.id,
+    enabled: !!user?.id && messagingEnabled,
     queryFn: () => getConversationsFn({}),
   });
 
@@ -85,7 +99,12 @@ function MessagesInbox() {
       <div className="mx-auto max-w-2xl">
         <h1 className="mb-6 text-2xl font-semibold text-gray-900">{t("messages.title")}</h1>
         <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-100">
-          {query.isLoading ? (
+          {!messagingEnabled ? (
+            <div className="flex flex-col items-center justify-center gap-3 p-12 text-center">
+              <MessageSquare className="h-10 w-10 text-gray-300" />
+              <p className="text-sm text-gray-500">{t("messages.unavailable")}</p>
+            </div>
+          ) : query.isLoading ? (
             <div className="space-y-3 p-6">
               {Array.from({ length: 4 }).map((_, i) => (
                 <Skeleton key={i} className="h-14 w-full" />

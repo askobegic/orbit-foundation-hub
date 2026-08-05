@@ -8,7 +8,7 @@ import {
   addMonthsIso,
   deleteUserAccountCascade,
 } from "@/lib/admin.server";
-import { isSubscriptionActiveNow } from "@/lib/subscription";
+import { resolvePremiumStatusBulk } from "@/lib/premium.server";
 
 export type VerificationRow = {
   id: string;
@@ -23,7 +23,8 @@ export type VerificationRow = {
   created_at: string | null;
 };
 
-// ---------- Plans ----------
+// ---------- Products (Priority 8.11 -- was "Plans"; subscription_plans is
+// unchanged at the database level, see the migration comment for why) ----------
 
 const planInputSchema = z.object({
   id: z.string().uuid().optional(),
@@ -38,6 +39,9 @@ const planInputSchema = z.object({
   features_en: z.array(z.string()).default([]),
   features_de: z.array(z.string()).default([]),
   is_active: z.boolean().default(true),
+  // Priority 8.11: admin-facing classification only -- does not change
+  // checkout/entitlement logic. See ProductType (src/types/database.ts).
+  product_type: z.enum(["subscription", "promotion", "one_time"]).default("subscription"),
 });
 
 export const adminUpsertPlan = createServerFn({ method: "POST" })
@@ -62,21 +66,34 @@ export const adminUpsertPlan = createServerFn({ method: "POST" })
     return row;
   });
 
-export const adminDeletePlan = createServerFn({ method: "POST" })
+// Priority 8.7 (R-4): was a hard `DELETE`, the only one found across CORE
+// during the Priority 8.6 audit -- inconsistent with the soft-lifecycle
+// convention every other registry table follows, and redundant besides:
+// `is_active` already exists on this table for exactly this purpose (the
+// admin UI's own "Active" checkbox already toggles it). Archiving here
+// just means "switch it off," never a delete -- a plan referenced by any
+// past or present subscription is never at risk of disappearing.
+export const adminArchivePlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((raw: unknown) => z.object({ id: z.string().uuid() }).parse(raw))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.from("subscription_plans").delete().eq("id", data.id);
+    const { data: row, error } = await supabaseAdmin
+      .from("subscription_plans")
+      .update({ is_active: false })
+      .eq("id", data.id)
+      .select("*")
+      .single();
     if (error) throw new Error(error.message);
     await writeAuditLog({
       userId: context.userId,
-      action: "plan.delete",
+      action: "plan.archive",
       entityType: "subscription_plan",
       entityId: data.id,
+      newData: { is_active: false },
     });
-    return { ok: true };
+    return row;
   });
 
 // ---------- Grant / revoke premium ----------
@@ -200,20 +217,15 @@ export const adminListUsers = createServerFn({ method: "POST" })
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // Resolve the full set of currently-Premium user ids up front -- same
-    // "active" predicate as has_any_active_premium() -- only when the
-    // caller actually asked to filter or needs it applied before pagination.
+    // Resolve the full set of currently-Premium user ids up front -- via
+    // the one shared Premium Status Resolver (Priority 8.7, R-1/R-3), so a
+    // user who is Premium only through an active Promotional Trial is
+    // filtered/badged identically to one with a paid subscription --
+    // only when the caller actually asked to filter or needs it applied
+    // before pagination.
     let premiumUserIds: string[] | null = null;
     if (data.premiumFilter) {
-      const { data: activeSubs, error: subsError } = await supabaseAdmin
-        .from("subscriptions")
-        .select("user_id")
-        .eq("status", "active")
-        .gt("expires_at", new Date().toISOString());
-      if (subsError) throw new Error(subsError.message);
-      premiumUserIds = [
-        ...new Set((activeSubs ?? []).map((s) => s.user_id).filter((id): id is string => !!id)),
-      ];
+      premiumUserIds = [...(await resolvePremiumStatusBulk(supabaseAdmin)).keys()];
     }
 
     const from = (data.page - 1) * data.pageSize;
@@ -250,16 +262,7 @@ export const adminListUsers = createServerFn({ method: "POST" })
     if (premiumUserIds) {
       premiumOnPage = new Set(premiumUserIds);
     } else {
-      const { data: activeSubs, error: subsError } = await supabaseAdmin
-        .from("subscriptions")
-        .select("user_id")
-        .in("user_id", pageIds.length > 0 ? pageIds : ["00000000-0000-0000-0000-000000000000"])
-        .eq("status", "active")
-        .gt("expires_at", new Date().toISOString());
-      if (subsError) throw new Error(subsError.message);
-      premiumOnPage = new Set(
-        (activeSubs ?? []).map((s) => s.user_id).filter((id): id is string => !!id),
-      );
+      premiumOnPage = new Set((await resolvePremiumStatusBulk(supabaseAdmin, pageIds)).keys());
     }
     const rowsWithPremium = (rows ?? []).map((r) => ({
       ...r,
@@ -273,15 +276,17 @@ export const adminListUsers = createServerFn({ method: "POST" })
 // Deliberately excludes first_name/last_name/avatar_url -- those are under
 // Identity Lock (see PROJECT_KNOWLEDGE.md -> Profiles); editing them is a
 // separate, not-yet-built administrator identity-review workflow, not part
-// of general user-management completion.
-
+// of general user-management completion. Also excludes email (Priority
+// 8.7, R-7): the authentication identity is the single source of truth
+// for it, resynced automatically by AuthContext.tsx on every session load
+// -- an admin override here would just be silently reverted the next time
+// the user signs in, so it's not offered as an editable field at all.
 const userUpdateSchema = z.object({
   user_id: z.string().uuid(),
   city: z.string().trim().min(1).nullable().optional(),
   country: z.string().trim().min(1).nullable().optional(),
   bio: z.string().nullable().optional(),
   username: z.string().trim().min(1).nullable().optional(),
-  email: z.string().email().nullable().optional(),
 });
 
 export const adminUpdateUser = createServerFn({ method: "POST" })
@@ -393,15 +398,17 @@ export const adminOverviewStats = createServerFn({ method: "GET" })
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-    const [users, active, payments, newUsers] = await Promise.all([
+    // Priority 8.7 (R-1): "Active Premium" is resolved through the same
+    // shared Premium Status Resolver every other admin surface now uses --
+    // previously this counted only paying subscriptions lasting >= 28 days
+    // (an ad hoc heuristic that predates Promotional Trials existing as
+    // their own table, and never counted a Trial-only Premium user at
+    // all). This now matches hasAnyActivePremium()'s own canonical
+    // definition exactly: a paid subscription, an active Promotional
+    // Trial, or both.
+    const [users, premiumStatuses, payments, newUsers] = await Promise.all([
       supabaseAdmin.from("profiles").select("id", { count: "exact", head: true }),
-      supabaseAdmin
-        .from("subscriptions")
-        .select("id, started_at, expires_at, amount_paid")
-        .eq("status", "active")
-        .gt("amount_paid", 0)
-        .gt("expires_at", new Date().toISOString())
-        .lte("started_at", new Date().toISOString()),
+      resolvePremiumStatusBulk(supabaseAdmin),
       supabaseAdmin
         .from("payments")
         .select("amount")
@@ -418,14 +425,9 @@ export const adminOverviewStats = createServerFn({ method: "GET" })
       0,
     );
 
-    const MIN_MS = 28 * 24 * 60 * 60 * 1000;
-    const activePremiumCount = ((active.data ?? []) as { started_at: string; expires_at: string }[])
-      .filter((r) => new Date(r.expires_at).getTime() - new Date(r.started_at).getTime() >= MIN_MS)
-      .length;
-
     return {
       totalUsers: users.count ?? 0,
-      activePremium: activePremiumCount,
+      activePremium: premiumStatuses.size,
       revenueThisMonth: revenue,
       newUsersThisWeek: newUsers.count ?? 0,
     };
@@ -458,17 +460,9 @@ export const adminSendNotification = createServerFn({ method: "POST" })
       if (!data.user_id) throw new Error("user_id required");
       userIds = [data.user_id];
     } else if (data.target === "premium") {
-      const { data: subs } = await supabaseAdmin
-        .from("subscriptions")
-        .select("user_id, status, expires_at")
-        .eq("status", "active");
-      userIds = Array.from(
-        new Set(
-          ((subs ?? []) as { user_id: string; status: "active"; expires_at: string }[])
-            .filter(isSubscriptionActiveNow)
-            .map((r) => r.user_id),
-        ),
-      );
+      // Priority 8.7 (R-1): via the shared resolver, so a Trial-only
+      // Premium user is reachable by a "Premium users" broadcast too.
+      userIds = [...(await resolvePremiumStatusBulk(supabaseAdmin)).keys()];
     } else {
       const { data: profs } = await supabaseAdmin.from("profiles").select("id");
       userIds = ((profs ?? []) as { id: string }[]).map((r) => r.id);
@@ -522,18 +516,9 @@ export const adminListVerificationRequests = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    // Candidates: premium (active subscription) users not yet verified
-    const { data: subs } = await supabaseAdmin
-      .from("subscriptions")
-      .select("user_id, status, expires_at")
-      .eq("status", "active");
-    const ids = Array.from(
-      new Set(
-        ((subs ?? []) as { user_id: string; status: "active"; expires_at: string }[])
-          .filter(isSubscriptionActiveNow)
-          .map((r) => r.user_id),
-      ),
-    );
+    // Candidates: Premium (paid subscription or active Promotional Trial --
+    // Priority 8.7, R-1) users not yet verified.
+    const ids = [...(await resolvePremiumStatusBulk(supabaseAdmin)).keys()];
     if (ids.length === 0) return [] as VerificationRow[];
     const { data, error } = await supabaseAdmin
       .from("profiles")
@@ -577,16 +562,33 @@ export const adminSetVerified = createServerFn({ method: "POST" })
 // wiring required.
 
 // Shared by appCreateSchema and appSettingsSchema below -- the slug format
-// rule is defined once here, not duplicated per schema.
-const appSlugSchema = z
+// rule is defined once here, not duplicated per schema. Exported (Priority
+// 8.11) so the /v1 admin Applications endpoints reuse the exact same rule
+// instead of re-typing it -- see src/routes/v1/admin/applications/*.
+export const appSlugSchema = z
   .string()
   .min(1)
   .regex(/^[a-z0-9-]+$/, "Slug must be lowercase letters, numbers, and hyphens only");
 
+// Priority 8.7 (R-9): normalized the same way the Application Resolver
+// normalizes an incoming request's Host header (extractHostname() in
+// application-resolver.functions.ts) -- an admin typing `Muzika.BA` (or
+// pasting a domain with any uppercase/whitespace) would otherwise silently
+// and permanently break resolution for that application, since the
+// resolver's exact-match lookup is already lowercase. Exported (Priority
+// 8.11) for the same reason as appSlugSchema above.
+export const domainSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(1)
+  .nullable()
+  .optional();
+
 const appCreateSchema = z.object({
   name: z.string().min(1),
   slug: appSlugSchema,
-  domain: z.string().min(1).nullable().optional(),
+  domain: domainSchema,
   primary_color: z.string().min(1).optional(),
   secondary_color: z.string().min(1).optional(),
   google_client_id: z.string().min(1).nullable().optional(),
@@ -598,12 +600,14 @@ export const adminCreateApplication = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    // New applications start disabled -- the admin explicitly enables them
-    // (via the existing is_enabled toggle) once branding/plans are set up,
-    // instead of a half-configured app appearing live immediately.
+    // New applications start as visibility='draft' (the column's own DB
+    // DEFAULT, Priority 8.9) -- hidden from every normal user, visible only
+    // to administrators, until an explicit adminSetApplicationVisibility
+    // call moves it forward. No half-configured app ever appears live
+    // immediately.
     const { data: row, error } = await supabaseAdmin
       .from("applications")
-      .insert({ ...data, is_enabled: false })
+      .insert(data)
       .select("*")
       .single();
     if (error) throw new Error(error.message);
@@ -617,45 +621,70 @@ export const adminCreateApplication = createServerFn({ method: "POST" })
     return row;
   });
 
-// ---------- App enable/disable ----------
+// ---------- Application Visibility (Priority 8.9) ----------
+// One single visibility state per application -- draft/coming_soon/active/
+// archived -- replacing the earlier status+is_enabled pair (see the
+// migration that dropped both). Kept as its own dedicated action, separate
+// from adminUpdateAppSettings below, matching this codebase's existing
+// pattern of state-machine transitions (adminSetVerified, adminSetUserActive)
+// being distinct from general field edits -- never bundled silently into a
+// generic "save settings" call. Moving from coming_soon to active is always
+// this explicit call; nothing in this codebase ever flips it automatically
+// based on launch_date or any other signal.
+const VISIBILITY_VALUES = ["draft", "coming_soon", "active", "archived"] as const;
 
-export const adminSetAppEnabled = createServerFn({ method: "POST" })
+const visibilitySchema = z.object({
+  app_id: z.string().uuid(),
+  visibility: z.enum(VISIBILITY_VALUES),
+  reason: z.string().trim().max(500).optional(),
+});
+
+export const adminSetApplicationVisibility = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((raw: unknown) =>
-    z.object({ app_id: z.string().uuid(), is_enabled: z.boolean() }).parse(raw),
-  )
+  .inputValidator((raw: unknown) => visibilitySchema.parse(raw))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: previous } = await supabaseAdmin
+      .from("applications")
+      .select("visibility")
+      .eq("id", data.app_id)
+      .maybeSingle();
+
     const { data: row, error } = await supabaseAdmin
       .from("applications")
-      .update({ is_enabled: data.is_enabled })
+      .update({ visibility: data.visibility })
       .eq("id", data.app_id)
-      .select("id, is_enabled")
+      .select("id, visibility")
       .single();
     if (error) throw new Error(error.message);
+
     await writeAuditLog({
       userId: context.userId,
-      action: data.is_enabled ? "app_enabled" : "app_disabled",
+      action: "application.visibility_change",
       entityType: "application",
       entityId: data.app_id,
-      newData: { is_enabled: data.is_enabled },
+      oldData: { visibility: previous?.visibility ?? null },
+      newData: { visibility: data.visibility },
+      reason: data.reason ?? null,
     });
     return row;
   });
 
-// ---------- App settings (identity, branding, logo, favicon, descriptions, enabled) ----------
+// ---------- App settings (identity, branding, logo, favicon, descriptions) ----------
 // Extensible by design: every field here is optional except app_id, so
 // adding another editable application setting in the future means adding
 // one more optional key to this schema and one more <Field>/<DescField>
 // in AppSettings (src/routes/admin.applications.tsx) -- not a new
-// function, route, or admin UI pattern.
+// function, route, or admin UI pattern. Visibility itself is deliberately
+// NOT part of this schema -- see adminSetApplicationVisibility above.
 
 const appSettingsSchema = z.object({
   app_id: z.string().uuid(),
   name: z.string().min(1).optional(),
   slug: appSlugSchema.optional(),
-  domain: z.string().min(1).nullable().optional(),
+  domain: domainSchema,
   primary_color: z.string().min(1).optional(),
   secondary_color: z.string().min(1).optional(),
   cover_image_url: z.string().url().nullable().optional(),
@@ -666,7 +695,11 @@ const appSettingsSchema = z.object({
   short_description_bs: z.string().max(160).nullable().optional(),
   short_description_en: z.string().max(160).nullable().optional(),
   short_description_de: z.string().max(160).nullable().optional(),
-  is_enabled: z.boolean(),
+  // Priority 8.9: informational only, never read by any activation logic.
+  launch_date: z.string().datetime().nullable().optional(),
+  // Priority 8.9: localization resolution order step 3 (see
+  // PROJECT_KNOWLEDGE.md -> Authentication -> Localization).
+  default_language: z.enum(["bs", "en", "de"]).nullable().optional(),
 });
 
 export const adminUpdateAppSettings = createServerFn({ method: "POST" })

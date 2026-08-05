@@ -120,7 +120,6 @@ function AdminUsers() {
   const [editCity, setEditCity] = useState("");
   const [editCountry, setEditCountry] = useState("");
   const [editUsername, setEditUsername] = useState("");
-  const [editEmail, setEditEmail] = useState("");
   const [selApp, setSelApp] = useState<string>("");
   const [months, setMonths] = useState<number>(12);
   const [reason, setReason] = useState("");
@@ -131,7 +130,6 @@ function AdminUsers() {
     setEditCity(row.city ?? "");
     setEditCountry(row.country ?? "");
     setEditUsername(row.username ?? "");
-    setEditEmail(row.email ?? "");
     setSelApp("");
   }
 
@@ -186,7 +184,6 @@ function AdminUsers() {
           city: editCity.trim() || null,
           country: editCountry.trim() || null,
           username: editUsername.trim() || null,
-          email: editEmail.trim() || null,
         },
       }),
     onSuccess: (row) => {
@@ -501,13 +498,13 @@ function AdminUsers() {
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
-                  <EditField label="Email" value={editEmail} onChange={setEditEmail} />
+                  <Field label="Email" value={modal.email ?? "—"} />
                   <EditField label="Username" value={editUsername} onChange={setEditUsername} />
                   <EditField label="City" value={editCity} onChange={setEditCity} />
                   <EditField label="Country" value={editCountry} onChange={setEditCountry} />
                   <p className="col-span-2 text-[11px] text-gray-400">
-                    Name and profile photo come from the user's identity provider and are locked —
-                    not editable here.
+                    Name, profile photo, and email come from the user's identity provider and are
+                    locked — not editable here. Email is kept in sync automatically on every sign-in.
                   </p>
                   <button
                     onClick={() => doUpdate.mutate()}

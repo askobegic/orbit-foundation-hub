@@ -16,8 +16,12 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as AdminAdvertisingRouteImport } from './routes/admin.advertising'
 import { Route as AdminApplicationsRouteImport } from './routes/admin.applications'
+import { Route as AdminCapabilitiesRouteImport } from './routes/admin.capabilities'
 import { Route as AdminCommunicationRouteImport } from './routes/admin.communication'
+import { Route as AdminDashboardWidgetsRouteImport } from './routes/admin.dashboard-widgets'
 import { Route as AdminPaymentsRouteImport } from './routes/admin.payments'
+import { Route as AdminRewardsRouteImport } from './routes/admin.rewards'
+import { Route as AdminTrialsRouteImport } from './routes/admin.trials'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminVerificationRouteImport } from './routes/admin.verification'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
@@ -27,17 +31,114 @@ import { Route as DashboardHelpRouteImport } from './routes/dashboard.help'
 import { Route as DashboardMessagesRouteImport } from './routes/dashboard.messages'
 import { Route as DashboardNotificationsRouteImport } from './routes/dashboard.notifications'
 import { Route as DashboardProfileRouteImport } from './routes/dashboard.profile'
+import { Route as DashboardPurchasesRouteImport } from './routes/dashboard.purchases'
 import { Route as DashboardRewardsRouteImport } from './routes/dashboard.rewards'
 import { Route as DashboardSecurityRouteImport } from './routes/dashboard.security'
 import { Route as DashboardSettingsRouteImport } from './routes/dashboard.settings'
-import { Route as DashboardSubscriptionsRouteImport } from './routes/dashboard.subscriptions'
 import { Route as PaymentSuccessRouteImport } from './routes/payment.success'
 import { Route as ProfileUsernameRouteImport } from './routes/profile.$username'
 import { Route as UUsernameRouteImport } from './routes/u.$username'
 import { Route as DashboardMessagesConversationIdRouteImport } from './routes/dashboard.messages.$conversationId'
 import { Route as UUsernameShareRouteImport } from './routes/u.$username.share'
+import { Route as V1ApplicationsIndexRouteImport } from './routes/v1/applications/index'
+import { Route as V1ApplicationsIdOrSlugRouteImport } from './routes/v1/applications/$idOrSlug'
+import { Route as V1AuthLogoutRouteImport } from './routes/v1/auth/logout'
+import { Route as V1AuthRefreshRouteImport } from './routes/v1/auth/refresh'
+import { Route as V1AuthSessionRouteImport } from './routes/v1/auth/session'
+import { Route as V1CapabilitiesIndexRouteImport } from './routes/v1/capabilities/index'
+import { Route as V1ConversationsIndexRouteImport } from './routes/v1/conversations/index'
+import { Route as V1MeIndexRouteImport } from './routes/v1/me/index'
+import { Route as V1MeExportRouteImport } from './routes/v1/me/export'
+import { Route as V1MePremiumRouteImport } from './routes/v1/me/premium'
+import { Route as V1MePremiumProfileRouteImport } from './routes/v1/me/premium-profile'
+import { Route as V1MePurchasesRouteImport } from './routes/v1/me/purchases'
+import { Route as V1MeReferralRouteImport } from './routes/v1/me/referral'
+import { Route as V1MeTrialRouteImport } from './routes/v1/me/trial'
+import { Route as V1MeVisibleApplicationsRouteImport } from './routes/v1/me/visible-applications'
+import { Route as V1MediaAdvertisingBannerRouteImport } from './routes/v1/media/advertising-banner'
+import { Route as V1MediaAvatarRouteImport } from './routes/v1/media/avatar'
+import { Route as V1PaymentsReferenceRouteImport } from './routes/v1/payments/reference'
+import { Route as V1ProductsIndexRouteImport } from './routes/v1/products/index'
+import { Route as V1ProfilesUsernameRouteImport } from './routes/v1/profiles/$username'
+import { Route as V1ShareInviteIndexRouteImport } from './routes/v1/share-invite/index'
+import { Route as V1TrialPolicyIndexRouteImport } from './routes/v1/trial-policy/index'
 import { Route as ApiPublicWebhooksPaypalRouteImport } from './routes/api/public/webhooks/paypal'
 import { Route as ApiPublicWebhooksStripeRouteImport } from './routes/api/public/webhooks/stripe'
+import { Route as V1AdminApplicationsIndexRouteImport } from './routes/v1/admin/applications/index'
+import { Route as V1AdminAuditLogsIndexRouteImport } from './routes/v1/admin/audit-logs/index'
+import { Route as V1AdminCapabilitiesIndexRouteImport } from './routes/v1/admin/capabilities/index'
+import { Route as V1AdminCapabilitiesKeyRouteImport } from './routes/v1/admin/capabilities/$key'
+import { Route as V1AdminDashboardWidgetsIndexRouteImport } from './routes/v1/admin/dashboard-widgets/index'
+import { Route as V1AdminDashboardWidgetsKeyRouteImport } from './routes/v1/admin/dashboard-widgets/$key'
+import { Route as V1AdminMediaBrandingRouteImport } from './routes/v1/admin/media/branding'
+import { Route as V1AdminNotificationsBroadcastRouteImport } from './routes/v1/admin/notifications/broadcast'
+import { Route as V1AdminPaymentsIndexRouteImport } from './routes/v1/admin/payments/index'
+import { Route as V1AdminPremiumGrantRouteImport } from './routes/v1/admin/premium/grant'
+import { Route as V1AdminProductsIndexRouteImport } from './routes/v1/admin/products/index'
+import { Route as V1AdminStatsIndexRouteImport } from './routes/v1/admin/stats/index'
+import { Route as V1AdminTrialPolicyIndexRouteImport } from './routes/v1/admin/trial-policy/index'
+import { Route as V1AdminTrialSourcesIndexRouteImport } from './routes/v1/admin/trial-sources/index'
+import { Route as V1AdminTrialsIndexRouteImport } from './routes/v1/admin/trials/index'
+import { Route as V1AdminTrialsGrantRouteImport } from './routes/v1/admin/trials/grant'
+import { Route as V1AdminUsersIndexRouteImport } from './routes/v1/admin/users/index'
+import { Route as V1AdminVerificationRequestsIndexRouteImport } from './routes/v1/admin/verification-requests/index'
+import { Route as V1AdminVerificationUserIdRouteImport } from './routes/v1/admin/verification/$userId'
+import { Route as V1AdvertisingPlacementsIndexRouteImport } from './routes/v1/advertising/placements/index'
+import { Route as V1ConversationsConversationIdHideRouteImport } from './routes/v1/conversations/$conversationId/hide'
+import { Route as V1ConversationsConversationIdReadRouteImport } from './routes/v1/conversations/$conversationId/read'
+import { Route as V1DashboardWidgetsIndexRouteImport } from './routes/v1/dashboard/widgets/index'
+import { Route as V1MeAdvertisingSummaryRouteImport } from './routes/v1/me/advertising/summary'
+import { Route as V1MeAppSettingsIndexRouteImport } from './routes/v1/me/app-settings/index'
+import { Route as V1MeAppSettingsAppIdRouteImport } from './routes/v1/me/app-settings/$appId'
+import { Route as V1MeNotificationsIndexRouteImport } from './routes/v1/me/notifications/index'
+import { Route as V1MeNotificationsReadAllRouteImport } from './routes/v1/me/notifications/read-all'
+import { Route as V1MeRewardsIndexRouteImport } from './routes/v1/me/rewards/index'
+import { Route as V1MeRewardsRedeemRouteImport } from './routes/v1/me/rewards/redeem'
+import { Route as V1AdminAdvertisingCampaignsIndexRouteImport } from './routes/v1/admin/advertising/campaigns/index'
+import { Route as V1AdminAdvertisingConfigIndexRouteImport } from './routes/v1/admin/advertising/config/index'
+import { Route as V1AdminAdvertisingCreditRedemptionsIndexRouteImport } from './routes/v1/admin/advertising/credit-redemptions/index'
+import { Route as V1AdminAdvertisingPlacementsIndexRouteImport } from './routes/v1/admin/advertising/placements/index'
+import { Route as V1AdminAdvertisingPlacementsKeyRouteImport } from './routes/v1/admin/advertising/placements/$key'
+import { Route as V1AdminAdvertisingPricesIndexRouteImport } from './routes/v1/admin/advertising/prices/index'
+import { Route as V1AdminAdvertisingPricesIdRouteImport } from './routes/v1/admin/advertising/prices/$id'
+import { Route as V1AdminApplicationsAppIdIndexRouteImport } from './routes/v1/admin/applications/$appId/index'
+import { Route as V1AdminApplicationsAppIdAdvertisingSettingsRouteImport } from './routes/v1/admin/applications/$appId/advertising-settings'
+import { Route as V1AdminApplicationsAppIdShareInviteRouteImport } from './routes/v1/admin/applications/$appId/share-invite'
+import { Route as V1AdminApplicationsAppIdVisibilityRouteImport } from './routes/v1/admin/applications/$appId/visibility'
+import { Route as V1AdminPremiumPurchaseIdRevokeRouteImport } from './routes/v1/admin/premium/$purchaseId/revoke'
+import { Route as V1AdminProductsProductIdIndexRouteImport } from './routes/v1/admin/products/$productId/index'
+import { Route as V1AdminProductsProductIdArchiveRouteImport } from './routes/v1/admin/products/$productId/archive'
+import { Route as V1AdminRewardsAchievementsIndexRouteImport } from './routes/v1/admin/rewards/achievements/index'
+import { Route as V1AdminRewardsAchievementsKeyRouteImport } from './routes/v1/admin/rewards/achievements/$key'
+import { Route as V1AdminRewardsActionRulesIndexRouteImport } from './routes/v1/admin/rewards/action-rules/index'
+import { Route as V1AdminRewardsActionRulesActionRouteImport } from './routes/v1/admin/rewards/action-rules/$action'
+import { Route as V1AdminRewardsCatalogIndexRouteImport } from './routes/v1/admin/rewards/catalog/index'
+import { Route as V1AdminRewardsCatalogKeyRouteImport } from './routes/v1/admin/rewards/catalog/$key'
+import { Route as V1AdminRewardsConfigIndexRouteImport } from './routes/v1/admin/rewards/config/index'
+import { Route as V1AdminRewardsConfigKeyRouteImport } from './routes/v1/admin/rewards/config/$key'
+import { Route as V1AdminRewardsFulfillmentTypesIndexRouteImport } from './routes/v1/admin/rewards/fulfillment-types/index'
+import { Route as V1AdminRewardsFulfillmentTypesKeyRouteImport } from './routes/v1/admin/rewards/fulfillment-types/$key'
+import { Route as V1AdminRewardsLevelsIndexRouteImport } from './routes/v1/admin/rewards/levels/index'
+import { Route as V1AdminRewardsLevelsKeyRouteImport } from './routes/v1/admin/rewards/levels/$key'
+import { Route as V1AdminTrialsTrialIdEndRouteImport } from './routes/v1/admin/trials/$trialId/end'
+import { Route as V1AdminTrialsTrialIdRevokeRouteImport } from './routes/v1/admin/trials/$trialId/revoke'
+import { Route as V1AdminUsersUserIdIndexRouteImport } from './routes/v1/admin/users/$userId/index'
+import { Route as V1AdminUsersUserIdReactivateRouteImport } from './routes/v1/admin/users/$userId/reactivate'
+import { Route as V1AdminUsersUserIdSuspendRouteImport } from './routes/v1/admin/users/$userId/suspend'
+import { Route as V1AdvertisingPlacementsPlacementKeyActiveAdRouteImport } from './routes/v1/advertising/placements/$placementKey/active-ad'
+import { Route as V1ConversationsConversationIdMessagesIndexRouteImport } from './routes/v1/conversations/$conversationId/messages/index'
+import { Route as V1MeAdvertisingCampaignsIndexRouteImport } from './routes/v1/me/advertising/campaigns/index'
+import { Route as V1MeNotificationsNotificationIdReadRouteImport } from './routes/v1/me/notifications/$notificationId/read'
+import { Route as V1AdminAdvertisingCampaignsCampaignIdModerateRouteImport } from './routes/v1/admin/advertising/campaigns/$campaignId/moderate'
+import { Route as V1AdminAdvertisingCreditRedemptionsRedemptionIdFulfillRouteImport } from './routes/v1/admin/advertising/credit-redemptions/$redemptionId/fulfill'
+import { Route as V1AdminApplicationsAppIdCapabilitiesIndexRouteImport } from './routes/v1/admin/applications/$appId/capabilities/index'
+import { Route as V1AdminApplicationsAppIdCapabilitiesKeyRouteImport } from './routes/v1/admin/applications/$appId/capabilities/$key'
+import { Route as V1AdminApplicationsAppIdDashboardWidgetsIndexRouteImport } from './routes/v1/admin/applications/$appId/dashboard-widgets/index'
+import { Route as V1AdminApplicationsAppIdDashboardWidgetsKeyRouteImport } from './routes/v1/admin/applications/$appId/dashboard-widgets/$key'
+import { Route as V1AdminApplicationsAppIdTrustedAdvertisersIndexRouteImport } from './routes/v1/admin/applications/$appId/trusted-advertisers/index'
+import { Route as V1AdminApplicationsAppIdTrustedAdvertisersUserIdRouteImport } from './routes/v1/admin/applications/$appId/trusted-advertisers/$userId'
+import { Route as V1MeAdvertisingCampaignsCampaignIdIndexRouteImport } from './routes/v1/me/advertising/campaigns/$campaignId/index'
+import { Route as V1MeAdvertisingCampaignsCampaignIdCheckoutReferenceRouteImport } from './routes/v1/me/advertising/campaigns/$campaignId/checkout-reference'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -74,14 +175,34 @@ const AdminApplicationsRoute = AdminApplicationsRouteImport.update({
   path: '/applications',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminCapabilitiesRoute = AdminCapabilitiesRouteImport.update({
+  id: '/capabilities',
+  path: '/capabilities',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminCommunicationRoute = AdminCommunicationRouteImport.update({
   id: '/communication',
   path: '/communication',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminDashboardWidgetsRoute = AdminDashboardWidgetsRouteImport.update({
+  id: '/dashboard-widgets',
+  path: '/dashboard-widgets',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminPaymentsRoute = AdminPaymentsRouteImport.update({
   id: '/payments',
   path: '/payments',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminRewardsRoute = AdminRewardsRouteImport.update({
+  id: '/rewards',
+  path: '/rewards',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminTrialsRoute = AdminTrialsRouteImport.update({
+  id: '/trials',
+  path: '/trials',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminUsersRoute = AdminUsersRouteImport.update({
@@ -129,6 +250,11 @@ const DashboardProfileRoute = DashboardProfileRouteImport.update({
   path: '/dashboard/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardPurchasesRoute = DashboardPurchasesRouteImport.update({
+  id: '/dashboard/purchases',
+  path: '/dashboard/purchases',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardRewardsRoute = DashboardRewardsRouteImport.update({
   id: '/dashboard/rewards',
   path: '/dashboard/rewards',
@@ -142,11 +268,6 @@ const DashboardSecurityRoute = DashboardSecurityRouteImport.update({
 const DashboardSettingsRoute = DashboardSettingsRouteImport.update({
   id: '/dashboard/settings',
   path: '/dashboard/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardSubscriptionsRoute = DashboardSubscriptionsRouteImport.update({
-  id: '/dashboard/subscriptions',
-  path: '/dashboard/subscriptions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PaymentSuccessRoute = PaymentSuccessRouteImport.update({
@@ -175,6 +296,117 @@ const UUsernameShareRoute = UUsernameShareRouteImport.update({
   path: '/share',
   getParentRoute: () => UUsernameRoute,
 } as any)
+const V1ApplicationsIndexRoute = V1ApplicationsIndexRouteImport.update({
+  id: '/v1/applications/',
+  path: '/v1/applications/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1ApplicationsIdOrSlugRoute = V1ApplicationsIdOrSlugRouteImport.update({
+  id: '/v1/applications/$idOrSlug',
+  path: '/v1/applications/$idOrSlug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1AuthLogoutRoute = V1AuthLogoutRouteImport.update({
+  id: '/v1/auth/logout',
+  path: '/v1/auth/logout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1AuthRefreshRoute = V1AuthRefreshRouteImport.update({
+  id: '/v1/auth/refresh',
+  path: '/v1/auth/refresh',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1AuthSessionRoute = V1AuthSessionRouteImport.update({
+  id: '/v1/auth/session',
+  path: '/v1/auth/session',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1CapabilitiesIndexRoute = V1CapabilitiesIndexRouteImport.update({
+  id: '/v1/capabilities/',
+  path: '/v1/capabilities/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1ConversationsIndexRoute = V1ConversationsIndexRouteImport.update({
+  id: '/v1/conversations/',
+  path: '/v1/conversations/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1MeIndexRoute = V1MeIndexRouteImport.update({
+  id: '/v1/me/',
+  path: '/v1/me/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1MeExportRoute = V1MeExportRouteImport.update({
+  id: '/v1/me/export',
+  path: '/v1/me/export',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1MePremiumRoute = V1MePremiumRouteImport.update({
+  id: '/v1/me/premium',
+  path: '/v1/me/premium',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1MePremiumProfileRoute = V1MePremiumProfileRouteImport.update({
+  id: '/v1/me/premium-profile',
+  path: '/v1/me/premium-profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1MePurchasesRoute = V1MePurchasesRouteImport.update({
+  id: '/v1/me/purchases',
+  path: '/v1/me/purchases',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1MeReferralRoute = V1MeReferralRouteImport.update({
+  id: '/v1/me/referral',
+  path: '/v1/me/referral',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1MeTrialRoute = V1MeTrialRouteImport.update({
+  id: '/v1/me/trial',
+  path: '/v1/me/trial',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1MeVisibleApplicationsRoute = V1MeVisibleApplicationsRouteImport.update({
+  id: '/v1/me/visible-applications',
+  path: '/v1/me/visible-applications',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1MediaAdvertisingBannerRoute =
+  V1MediaAdvertisingBannerRouteImport.update({
+    id: '/v1/media/advertising-banner',
+    path: '/v1/media/advertising-banner',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1MediaAvatarRoute = V1MediaAvatarRouteImport.update({
+  id: '/v1/media/avatar',
+  path: '/v1/media/avatar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1PaymentsReferenceRoute = V1PaymentsReferenceRouteImport.update({
+  id: '/v1/payments/reference',
+  path: '/v1/payments/reference',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1ProductsIndexRoute = V1ProductsIndexRouteImport.update({
+  id: '/v1/products/',
+  path: '/v1/products/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1ProfilesUsernameRoute = V1ProfilesUsernameRouteImport.update({
+  id: '/v1/profiles/$username',
+  path: '/v1/profiles/$username',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1ShareInviteIndexRoute = V1ShareInviteIndexRouteImport.update({
+  id: '/v1/share-invite/',
+  path: '/v1/share-invite/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1TrialPolicyIndexRoute = V1TrialPolicyIndexRouteImport.update({
+  id: '/v1/trial-policy/',
+  path: '/v1/trial-policy/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicWebhooksPaypalRoute = ApiPublicWebhooksPaypalRouteImport.update({
   id: '/api/public/webhooks/paypal',
   path: '/api/public/webhooks/paypal',
@@ -185,6 +417,434 @@ const ApiPublicWebhooksStripeRoute = ApiPublicWebhooksStripeRouteImport.update({
   path: '/api/public/webhooks/stripe',
   getParentRoute: () => rootRouteImport,
 } as any)
+const V1AdminApplicationsIndexRoute =
+  V1AdminApplicationsIndexRouteImport.update({
+    id: '/v1/admin/applications/',
+    path: '/v1/admin/applications/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminAuditLogsIndexRoute = V1AdminAuditLogsIndexRouteImport.update({
+  id: '/v1/admin/audit-logs/',
+  path: '/v1/admin/audit-logs/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1AdminCapabilitiesIndexRoute =
+  V1AdminCapabilitiesIndexRouteImport.update({
+    id: '/v1/admin/capabilities/',
+    path: '/v1/admin/capabilities/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminCapabilitiesKeyRoute = V1AdminCapabilitiesKeyRouteImport.update({
+  id: '/v1/admin/capabilities/$key',
+  path: '/v1/admin/capabilities/$key',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1AdminDashboardWidgetsIndexRoute =
+  V1AdminDashboardWidgetsIndexRouteImport.update({
+    id: '/v1/admin/dashboard-widgets/',
+    path: '/v1/admin/dashboard-widgets/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminDashboardWidgetsKeyRoute =
+  V1AdminDashboardWidgetsKeyRouteImport.update({
+    id: '/v1/admin/dashboard-widgets/$key',
+    path: '/v1/admin/dashboard-widgets/$key',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminMediaBrandingRoute = V1AdminMediaBrandingRouteImport.update({
+  id: '/v1/admin/media/branding',
+  path: '/v1/admin/media/branding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1AdminNotificationsBroadcastRoute =
+  V1AdminNotificationsBroadcastRouteImport.update({
+    id: '/v1/admin/notifications/broadcast',
+    path: '/v1/admin/notifications/broadcast',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminPaymentsIndexRoute = V1AdminPaymentsIndexRouteImport.update({
+  id: '/v1/admin/payments/',
+  path: '/v1/admin/payments/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1AdminPremiumGrantRoute = V1AdminPremiumGrantRouteImport.update({
+  id: '/v1/admin/premium/grant',
+  path: '/v1/admin/premium/grant',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1AdminProductsIndexRoute = V1AdminProductsIndexRouteImport.update({
+  id: '/v1/admin/products/',
+  path: '/v1/admin/products/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1AdminStatsIndexRoute = V1AdminStatsIndexRouteImport.update({
+  id: '/v1/admin/stats/',
+  path: '/v1/admin/stats/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1AdminTrialPolicyIndexRoute = V1AdminTrialPolicyIndexRouteImport.update({
+  id: '/v1/admin/trial-policy/',
+  path: '/v1/admin/trial-policy/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1AdminTrialSourcesIndexRoute =
+  V1AdminTrialSourcesIndexRouteImport.update({
+    id: '/v1/admin/trial-sources/',
+    path: '/v1/admin/trial-sources/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminTrialsIndexRoute = V1AdminTrialsIndexRouteImport.update({
+  id: '/v1/admin/trials/',
+  path: '/v1/admin/trials/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1AdminTrialsGrantRoute = V1AdminTrialsGrantRouteImport.update({
+  id: '/v1/admin/trials/grant',
+  path: '/v1/admin/trials/grant',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1AdminUsersIndexRoute = V1AdminUsersIndexRouteImport.update({
+  id: '/v1/admin/users/',
+  path: '/v1/admin/users/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1AdminVerificationRequestsIndexRoute =
+  V1AdminVerificationRequestsIndexRouteImport.update({
+    id: '/v1/admin/verification-requests/',
+    path: '/v1/admin/verification-requests/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminVerificationUserIdRoute =
+  V1AdminVerificationUserIdRouteImport.update({
+    id: '/v1/admin/verification/$userId',
+    path: '/v1/admin/verification/$userId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdvertisingPlacementsIndexRoute =
+  V1AdvertisingPlacementsIndexRouteImport.update({
+    id: '/v1/advertising/placements/',
+    path: '/v1/advertising/placements/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1ConversationsConversationIdHideRoute =
+  V1ConversationsConversationIdHideRouteImport.update({
+    id: '/v1/conversations/$conversationId/hide',
+    path: '/v1/conversations/$conversationId/hide',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1ConversationsConversationIdReadRoute =
+  V1ConversationsConversationIdReadRouteImport.update({
+    id: '/v1/conversations/$conversationId/read',
+    path: '/v1/conversations/$conversationId/read',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1DashboardWidgetsIndexRoute = V1DashboardWidgetsIndexRouteImport.update({
+  id: '/v1/dashboard/widgets/',
+  path: '/v1/dashboard/widgets/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1MeAdvertisingSummaryRoute = V1MeAdvertisingSummaryRouteImport.update({
+  id: '/v1/me/advertising/summary',
+  path: '/v1/me/advertising/summary',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1MeAppSettingsIndexRoute = V1MeAppSettingsIndexRouteImport.update({
+  id: '/v1/me/app-settings/',
+  path: '/v1/me/app-settings/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1MeAppSettingsAppIdRoute = V1MeAppSettingsAppIdRouteImport.update({
+  id: '/v1/me/app-settings/$appId',
+  path: '/v1/me/app-settings/$appId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1MeNotificationsIndexRoute = V1MeNotificationsIndexRouteImport.update({
+  id: '/v1/me/notifications/',
+  path: '/v1/me/notifications/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1MeNotificationsReadAllRoute =
+  V1MeNotificationsReadAllRouteImport.update({
+    id: '/v1/me/notifications/read-all',
+    path: '/v1/me/notifications/read-all',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1MeRewardsIndexRoute = V1MeRewardsIndexRouteImport.update({
+  id: '/v1/me/rewards/',
+  path: '/v1/me/rewards/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1MeRewardsRedeemRoute = V1MeRewardsRedeemRouteImport.update({
+  id: '/v1/me/rewards/redeem',
+  path: '/v1/me/rewards/redeem',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1AdminAdvertisingCampaignsIndexRoute =
+  V1AdminAdvertisingCampaignsIndexRouteImport.update({
+    id: '/v1/admin/advertising/campaigns/',
+    path: '/v1/admin/advertising/campaigns/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminAdvertisingConfigIndexRoute =
+  V1AdminAdvertisingConfigIndexRouteImport.update({
+    id: '/v1/admin/advertising/config/',
+    path: '/v1/admin/advertising/config/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminAdvertisingCreditRedemptionsIndexRoute =
+  V1AdminAdvertisingCreditRedemptionsIndexRouteImport.update({
+    id: '/v1/admin/advertising/credit-redemptions/',
+    path: '/v1/admin/advertising/credit-redemptions/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminAdvertisingPlacementsIndexRoute =
+  V1AdminAdvertisingPlacementsIndexRouteImport.update({
+    id: '/v1/admin/advertising/placements/',
+    path: '/v1/admin/advertising/placements/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminAdvertisingPlacementsKeyRoute =
+  V1AdminAdvertisingPlacementsKeyRouteImport.update({
+    id: '/v1/admin/advertising/placements/$key',
+    path: '/v1/admin/advertising/placements/$key',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminAdvertisingPricesIndexRoute =
+  V1AdminAdvertisingPricesIndexRouteImport.update({
+    id: '/v1/admin/advertising/prices/',
+    path: '/v1/admin/advertising/prices/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminAdvertisingPricesIdRoute =
+  V1AdminAdvertisingPricesIdRouteImport.update({
+    id: '/v1/admin/advertising/prices/$id',
+    path: '/v1/admin/advertising/prices/$id',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminApplicationsAppIdIndexRoute =
+  V1AdminApplicationsAppIdIndexRouteImport.update({
+    id: '/v1/admin/applications/$appId/',
+    path: '/v1/admin/applications/$appId/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminApplicationsAppIdAdvertisingSettingsRoute =
+  V1AdminApplicationsAppIdAdvertisingSettingsRouteImport.update({
+    id: '/v1/admin/applications/$appId/advertising-settings',
+    path: '/v1/admin/applications/$appId/advertising-settings',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminApplicationsAppIdShareInviteRoute =
+  V1AdminApplicationsAppIdShareInviteRouteImport.update({
+    id: '/v1/admin/applications/$appId/share-invite',
+    path: '/v1/admin/applications/$appId/share-invite',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminApplicationsAppIdVisibilityRoute =
+  V1AdminApplicationsAppIdVisibilityRouteImport.update({
+    id: '/v1/admin/applications/$appId/visibility',
+    path: '/v1/admin/applications/$appId/visibility',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminPremiumPurchaseIdRevokeRoute =
+  V1AdminPremiumPurchaseIdRevokeRouteImport.update({
+    id: '/v1/admin/premium/$purchaseId/revoke',
+    path: '/v1/admin/premium/$purchaseId/revoke',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminProductsProductIdIndexRoute =
+  V1AdminProductsProductIdIndexRouteImport.update({
+    id: '/v1/admin/products/$productId/',
+    path: '/v1/admin/products/$productId/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminProductsProductIdArchiveRoute =
+  V1AdminProductsProductIdArchiveRouteImport.update({
+    id: '/v1/admin/products/$productId/archive',
+    path: '/v1/admin/products/$productId/archive',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminRewardsAchievementsIndexRoute =
+  V1AdminRewardsAchievementsIndexRouteImport.update({
+    id: '/v1/admin/rewards/achievements/',
+    path: '/v1/admin/rewards/achievements/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminRewardsAchievementsKeyRoute =
+  V1AdminRewardsAchievementsKeyRouteImport.update({
+    id: '/v1/admin/rewards/achievements/$key',
+    path: '/v1/admin/rewards/achievements/$key',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminRewardsActionRulesIndexRoute =
+  V1AdminRewardsActionRulesIndexRouteImport.update({
+    id: '/v1/admin/rewards/action-rules/',
+    path: '/v1/admin/rewards/action-rules/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminRewardsActionRulesActionRoute =
+  V1AdminRewardsActionRulesActionRouteImport.update({
+    id: '/v1/admin/rewards/action-rules/$action',
+    path: '/v1/admin/rewards/action-rules/$action',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminRewardsCatalogIndexRoute =
+  V1AdminRewardsCatalogIndexRouteImport.update({
+    id: '/v1/admin/rewards/catalog/',
+    path: '/v1/admin/rewards/catalog/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminRewardsCatalogKeyRoute =
+  V1AdminRewardsCatalogKeyRouteImport.update({
+    id: '/v1/admin/rewards/catalog/$key',
+    path: '/v1/admin/rewards/catalog/$key',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminRewardsConfigIndexRoute =
+  V1AdminRewardsConfigIndexRouteImport.update({
+    id: '/v1/admin/rewards/config/',
+    path: '/v1/admin/rewards/config/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminRewardsConfigKeyRoute = V1AdminRewardsConfigKeyRouteImport.update({
+  id: '/v1/admin/rewards/config/$key',
+  path: '/v1/admin/rewards/config/$key',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1AdminRewardsFulfillmentTypesIndexRoute =
+  V1AdminRewardsFulfillmentTypesIndexRouteImport.update({
+    id: '/v1/admin/rewards/fulfillment-types/',
+    path: '/v1/admin/rewards/fulfillment-types/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminRewardsFulfillmentTypesKeyRoute =
+  V1AdminRewardsFulfillmentTypesKeyRouteImport.update({
+    id: '/v1/admin/rewards/fulfillment-types/$key',
+    path: '/v1/admin/rewards/fulfillment-types/$key',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminRewardsLevelsIndexRoute =
+  V1AdminRewardsLevelsIndexRouteImport.update({
+    id: '/v1/admin/rewards/levels/',
+    path: '/v1/admin/rewards/levels/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminRewardsLevelsKeyRoute = V1AdminRewardsLevelsKeyRouteImport.update({
+  id: '/v1/admin/rewards/levels/$key',
+  path: '/v1/admin/rewards/levels/$key',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1AdminTrialsTrialIdEndRoute = V1AdminTrialsTrialIdEndRouteImport.update({
+  id: '/v1/admin/trials/$trialId/end',
+  path: '/v1/admin/trials/$trialId/end',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1AdminTrialsTrialIdRevokeRoute =
+  V1AdminTrialsTrialIdRevokeRouteImport.update({
+    id: '/v1/admin/trials/$trialId/revoke',
+    path: '/v1/admin/trials/$trialId/revoke',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminUsersUserIdIndexRoute = V1AdminUsersUserIdIndexRouteImport.update({
+  id: '/v1/admin/users/$userId/',
+  path: '/v1/admin/users/$userId/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1AdminUsersUserIdReactivateRoute =
+  V1AdminUsersUserIdReactivateRouteImport.update({
+    id: '/v1/admin/users/$userId/reactivate',
+    path: '/v1/admin/users/$userId/reactivate',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminUsersUserIdSuspendRoute =
+  V1AdminUsersUserIdSuspendRouteImport.update({
+    id: '/v1/admin/users/$userId/suspend',
+    path: '/v1/admin/users/$userId/suspend',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdvertisingPlacementsPlacementKeyActiveAdRoute =
+  V1AdvertisingPlacementsPlacementKeyActiveAdRouteImport.update({
+    id: '/v1/advertising/placements/$placementKey/active-ad',
+    path: '/v1/advertising/placements/$placementKey/active-ad',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1ConversationsConversationIdMessagesIndexRoute =
+  V1ConversationsConversationIdMessagesIndexRouteImport.update({
+    id: '/v1/conversations/$conversationId/messages/',
+    path: '/v1/conversations/$conversationId/messages/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1MeAdvertisingCampaignsIndexRoute =
+  V1MeAdvertisingCampaignsIndexRouteImport.update({
+    id: '/v1/me/advertising/campaigns/',
+    path: '/v1/me/advertising/campaigns/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1MeNotificationsNotificationIdReadRoute =
+  V1MeNotificationsNotificationIdReadRouteImport.update({
+    id: '/v1/me/notifications/$notificationId/read',
+    path: '/v1/me/notifications/$notificationId/read',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminAdvertisingCampaignsCampaignIdModerateRoute =
+  V1AdminAdvertisingCampaignsCampaignIdModerateRouteImport.update({
+    id: '/v1/admin/advertising/campaigns/$campaignId/moderate',
+    path: '/v1/admin/advertising/campaigns/$campaignId/moderate',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminAdvertisingCreditRedemptionsRedemptionIdFulfillRoute =
+  V1AdminAdvertisingCreditRedemptionsRedemptionIdFulfillRouteImport.update({
+    id: '/v1/admin/advertising/credit-redemptions/$redemptionId/fulfill',
+    path: '/v1/admin/advertising/credit-redemptions/$redemptionId/fulfill',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminApplicationsAppIdCapabilitiesIndexRoute =
+  V1AdminApplicationsAppIdCapabilitiesIndexRouteImport.update({
+    id: '/v1/admin/applications/$appId/capabilities/',
+    path: '/v1/admin/applications/$appId/capabilities/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminApplicationsAppIdCapabilitiesKeyRoute =
+  V1AdminApplicationsAppIdCapabilitiesKeyRouteImport.update({
+    id: '/v1/admin/applications/$appId/capabilities/$key',
+    path: '/v1/admin/applications/$appId/capabilities/$key',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminApplicationsAppIdDashboardWidgetsIndexRoute =
+  V1AdminApplicationsAppIdDashboardWidgetsIndexRouteImport.update({
+    id: '/v1/admin/applications/$appId/dashboard-widgets/',
+    path: '/v1/admin/applications/$appId/dashboard-widgets/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminApplicationsAppIdDashboardWidgetsKeyRoute =
+  V1AdminApplicationsAppIdDashboardWidgetsKeyRouteImport.update({
+    id: '/v1/admin/applications/$appId/dashboard-widgets/$key',
+    path: '/v1/admin/applications/$appId/dashboard-widgets/$key',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminApplicationsAppIdTrustedAdvertisersIndexRoute =
+  V1AdminApplicationsAppIdTrustedAdvertisersIndexRouteImport.update({
+    id: '/v1/admin/applications/$appId/trusted-advertisers/',
+    path: '/v1/admin/applications/$appId/trusted-advertisers/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AdminApplicationsAppIdTrustedAdvertisersUserIdRoute =
+  V1AdminApplicationsAppIdTrustedAdvertisersUserIdRouteImport.update({
+    id: '/v1/admin/applications/$appId/trusted-advertisers/$userId',
+    path: '/v1/admin/applications/$appId/trusted-advertisers/$userId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1MeAdvertisingCampaignsCampaignIdIndexRoute =
+  V1MeAdvertisingCampaignsCampaignIdIndexRouteImport.update({
+    id: '/v1/me/advertising/campaigns/$campaignId/',
+    path: '/v1/me/advertising/campaigns/$campaignId/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1MeAdvertisingCampaignsCampaignIdCheckoutReferenceRoute =
+  V1MeAdvertisingCampaignsCampaignIdCheckoutReferenceRouteImport.update({
+    id: '/v1/me/advertising/campaigns/$campaignId/checkout-reference',
+    path: '/v1/me/advertising/campaigns/$campaignId/checkout-reference',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -194,8 +854,12 @@ export interface FileRoutesByFullPath {
   '/pricing': typeof PricingRoute
   '/admin/advertising': typeof AdminAdvertisingRoute
   '/admin/applications': typeof AdminApplicationsRoute
+  '/admin/capabilities': typeof AdminCapabilitiesRoute
   '/admin/communication': typeof AdminCommunicationRoute
+  '/admin/dashboard-widgets': typeof AdminDashboardWidgetsRoute
   '/admin/payments': typeof AdminPaymentsRoute
+  '/admin/rewards': typeof AdminRewardsRoute
+  '/admin/trials': typeof AdminTrialsRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -204,18 +868,115 @@ export interface FileRoutesByFullPath {
   '/dashboard/messages': typeof DashboardMessagesRouteWithChildren
   '/dashboard/notifications': typeof DashboardNotificationsRoute
   '/dashboard/profile': typeof DashboardProfileRoute
+  '/dashboard/purchases': typeof DashboardPurchasesRoute
   '/dashboard/rewards': typeof DashboardRewardsRoute
   '/dashboard/security': typeof DashboardSecurityRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
-  '/dashboard/subscriptions': typeof DashboardSubscriptionsRoute
   '/payment/success': typeof PaymentSuccessRoute
   '/profile/$username': typeof ProfileUsernameRoute
   '/u/$username': typeof UUsernameRouteWithChildren
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/messages/$conversationId': typeof DashboardMessagesConversationIdRoute
   '/u/$username/share': typeof UUsernameShareRoute
+  '/v1/applications/$idOrSlug': typeof V1ApplicationsIdOrSlugRoute
+  '/v1/auth/logout': typeof V1AuthLogoutRoute
+  '/v1/auth/refresh': typeof V1AuthRefreshRoute
+  '/v1/auth/session': typeof V1AuthSessionRoute
+  '/v1/me/export': typeof V1MeExportRoute
+  '/v1/me/premium': typeof V1MePremiumRoute
+  '/v1/me/premium-profile': typeof V1MePremiumProfileRoute
+  '/v1/me/purchases': typeof V1MePurchasesRoute
+  '/v1/me/referral': typeof V1MeReferralRoute
+  '/v1/me/trial': typeof V1MeTrialRoute
+  '/v1/me/visible-applications': typeof V1MeVisibleApplicationsRoute
+  '/v1/media/advertising-banner': typeof V1MediaAdvertisingBannerRoute
+  '/v1/media/avatar': typeof V1MediaAvatarRoute
+  '/v1/payments/reference': typeof V1PaymentsReferenceRoute
+  '/v1/profiles/$username': typeof V1ProfilesUsernameRoute
+  '/v1/applications/': typeof V1ApplicationsIndexRoute
+  '/v1/capabilities/': typeof V1CapabilitiesIndexRoute
+  '/v1/conversations/': typeof V1ConversationsIndexRoute
+  '/v1/me/': typeof V1MeIndexRoute
+  '/v1/products/': typeof V1ProductsIndexRoute
+  '/v1/share-invite/': typeof V1ShareInviteIndexRoute
+  '/v1/trial-policy/': typeof V1TrialPolicyIndexRoute
   '/api/public/webhooks/paypal': typeof ApiPublicWebhooksPaypalRoute
   '/api/public/webhooks/stripe': typeof ApiPublicWebhooksStripeRoute
+  '/v1/admin/capabilities/$key': typeof V1AdminCapabilitiesKeyRoute
+  '/v1/admin/dashboard-widgets/$key': typeof V1AdminDashboardWidgetsKeyRoute
+  '/v1/admin/media/branding': typeof V1AdminMediaBrandingRoute
+  '/v1/admin/notifications/broadcast': typeof V1AdminNotificationsBroadcastRoute
+  '/v1/admin/premium/grant': typeof V1AdminPremiumGrantRoute
+  '/v1/admin/trials/grant': typeof V1AdminTrialsGrantRoute
+  '/v1/admin/verification/$userId': typeof V1AdminVerificationUserIdRoute
+  '/v1/conversations/$conversationId/hide': typeof V1ConversationsConversationIdHideRoute
+  '/v1/conversations/$conversationId/read': typeof V1ConversationsConversationIdReadRoute
+  '/v1/me/advertising/summary': typeof V1MeAdvertisingSummaryRoute
+  '/v1/me/app-settings/$appId': typeof V1MeAppSettingsAppIdRoute
+  '/v1/me/notifications/read-all': typeof V1MeNotificationsReadAllRoute
+  '/v1/me/rewards/redeem': typeof V1MeRewardsRedeemRoute
+  '/v1/admin/applications/': typeof V1AdminApplicationsIndexRoute
+  '/v1/admin/audit-logs/': typeof V1AdminAuditLogsIndexRoute
+  '/v1/admin/capabilities/': typeof V1AdminCapabilitiesIndexRoute
+  '/v1/admin/dashboard-widgets/': typeof V1AdminDashboardWidgetsIndexRoute
+  '/v1/admin/payments/': typeof V1AdminPaymentsIndexRoute
+  '/v1/admin/products/': typeof V1AdminProductsIndexRoute
+  '/v1/admin/stats/': typeof V1AdminStatsIndexRoute
+  '/v1/admin/trial-policy/': typeof V1AdminTrialPolicyIndexRoute
+  '/v1/admin/trial-sources/': typeof V1AdminTrialSourcesIndexRoute
+  '/v1/admin/trials/': typeof V1AdminTrialsIndexRoute
+  '/v1/admin/users/': typeof V1AdminUsersIndexRoute
+  '/v1/admin/verification-requests/': typeof V1AdminVerificationRequestsIndexRoute
+  '/v1/advertising/placements/': typeof V1AdvertisingPlacementsIndexRoute
+  '/v1/dashboard/widgets/': typeof V1DashboardWidgetsIndexRoute
+  '/v1/me/app-settings/': typeof V1MeAppSettingsIndexRoute
+  '/v1/me/notifications/': typeof V1MeNotificationsIndexRoute
+  '/v1/me/rewards/': typeof V1MeRewardsIndexRoute
+  '/v1/admin/advertising/placements/$key': typeof V1AdminAdvertisingPlacementsKeyRoute
+  '/v1/admin/advertising/prices/$id': typeof V1AdminAdvertisingPricesIdRoute
+  '/v1/admin/applications/$appId/advertising-settings': typeof V1AdminApplicationsAppIdAdvertisingSettingsRoute
+  '/v1/admin/applications/$appId/share-invite': typeof V1AdminApplicationsAppIdShareInviteRoute
+  '/v1/admin/applications/$appId/visibility': typeof V1AdminApplicationsAppIdVisibilityRoute
+  '/v1/admin/premium/$purchaseId/revoke': typeof V1AdminPremiumPurchaseIdRevokeRoute
+  '/v1/admin/products/$productId/archive': typeof V1AdminProductsProductIdArchiveRoute
+  '/v1/admin/rewards/achievements/$key': typeof V1AdminRewardsAchievementsKeyRoute
+  '/v1/admin/rewards/action-rules/$action': typeof V1AdminRewardsActionRulesActionRoute
+  '/v1/admin/rewards/catalog/$key': typeof V1AdminRewardsCatalogKeyRoute
+  '/v1/admin/rewards/config/$key': typeof V1AdminRewardsConfigKeyRoute
+  '/v1/admin/rewards/fulfillment-types/$key': typeof V1AdminRewardsFulfillmentTypesKeyRoute
+  '/v1/admin/rewards/levels/$key': typeof V1AdminRewardsLevelsKeyRoute
+  '/v1/admin/trials/$trialId/end': typeof V1AdminTrialsTrialIdEndRoute
+  '/v1/admin/trials/$trialId/revoke': typeof V1AdminTrialsTrialIdRevokeRoute
+  '/v1/admin/users/$userId/reactivate': typeof V1AdminUsersUserIdReactivateRoute
+  '/v1/admin/users/$userId/suspend': typeof V1AdminUsersUserIdSuspendRoute
+  '/v1/advertising/placements/$placementKey/active-ad': typeof V1AdvertisingPlacementsPlacementKeyActiveAdRoute
+  '/v1/me/notifications/$notificationId/read': typeof V1MeNotificationsNotificationIdReadRoute
+  '/v1/admin/advertising/campaigns/': typeof V1AdminAdvertisingCampaignsIndexRoute
+  '/v1/admin/advertising/config/': typeof V1AdminAdvertisingConfigIndexRoute
+  '/v1/admin/advertising/credit-redemptions/': typeof V1AdminAdvertisingCreditRedemptionsIndexRoute
+  '/v1/admin/advertising/placements/': typeof V1AdminAdvertisingPlacementsIndexRoute
+  '/v1/admin/advertising/prices/': typeof V1AdminAdvertisingPricesIndexRoute
+  '/v1/admin/applications/$appId/': typeof V1AdminApplicationsAppIdIndexRoute
+  '/v1/admin/products/$productId/': typeof V1AdminProductsProductIdIndexRoute
+  '/v1/admin/rewards/achievements/': typeof V1AdminRewardsAchievementsIndexRoute
+  '/v1/admin/rewards/action-rules/': typeof V1AdminRewardsActionRulesIndexRoute
+  '/v1/admin/rewards/catalog/': typeof V1AdminRewardsCatalogIndexRoute
+  '/v1/admin/rewards/config/': typeof V1AdminRewardsConfigIndexRoute
+  '/v1/admin/rewards/fulfillment-types/': typeof V1AdminRewardsFulfillmentTypesIndexRoute
+  '/v1/admin/rewards/levels/': typeof V1AdminRewardsLevelsIndexRoute
+  '/v1/admin/users/$userId/': typeof V1AdminUsersUserIdIndexRoute
+  '/v1/conversations/$conversationId/messages/': typeof V1ConversationsConversationIdMessagesIndexRoute
+  '/v1/me/advertising/campaigns/': typeof V1MeAdvertisingCampaignsIndexRoute
+  '/v1/admin/advertising/campaigns/$campaignId/moderate': typeof V1AdminAdvertisingCampaignsCampaignIdModerateRoute
+  '/v1/admin/advertising/credit-redemptions/$redemptionId/fulfill': typeof V1AdminAdvertisingCreditRedemptionsRedemptionIdFulfillRoute
+  '/v1/admin/applications/$appId/capabilities/$key': typeof V1AdminApplicationsAppIdCapabilitiesKeyRoute
+  '/v1/admin/applications/$appId/dashboard-widgets/$key': typeof V1AdminApplicationsAppIdDashboardWidgetsKeyRoute
+  '/v1/admin/applications/$appId/trusted-advertisers/$userId': typeof V1AdminApplicationsAppIdTrustedAdvertisersUserIdRoute
+  '/v1/me/advertising/campaigns/$campaignId/checkout-reference': typeof V1MeAdvertisingCampaignsCampaignIdCheckoutReferenceRoute
+  '/v1/admin/applications/$appId/capabilities/': typeof V1AdminApplicationsAppIdCapabilitiesIndexRoute
+  '/v1/admin/applications/$appId/dashboard-widgets/': typeof V1AdminApplicationsAppIdDashboardWidgetsIndexRoute
+  '/v1/admin/applications/$appId/trusted-advertisers/': typeof V1AdminApplicationsAppIdTrustedAdvertisersIndexRoute
+  '/v1/me/advertising/campaigns/$campaignId/': typeof V1MeAdvertisingCampaignsCampaignIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -225,8 +986,12 @@ export interface FileRoutesByTo {
   '/pricing': typeof PricingRoute
   '/admin/advertising': typeof AdminAdvertisingRoute
   '/admin/applications': typeof AdminApplicationsRoute
+  '/admin/capabilities': typeof AdminCapabilitiesRoute
   '/admin/communication': typeof AdminCommunicationRoute
+  '/admin/dashboard-widgets': typeof AdminDashboardWidgetsRoute
   '/admin/payments': typeof AdminPaymentsRoute
+  '/admin/rewards': typeof AdminRewardsRoute
+  '/admin/trials': typeof AdminTrialsRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -235,18 +1000,115 @@ export interface FileRoutesByTo {
   '/dashboard/messages': typeof DashboardMessagesRouteWithChildren
   '/dashboard/notifications': typeof DashboardNotificationsRoute
   '/dashboard/profile': typeof DashboardProfileRoute
+  '/dashboard/purchases': typeof DashboardPurchasesRoute
   '/dashboard/rewards': typeof DashboardRewardsRoute
   '/dashboard/security': typeof DashboardSecurityRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
-  '/dashboard/subscriptions': typeof DashboardSubscriptionsRoute
   '/payment/success': typeof PaymentSuccessRoute
   '/profile/$username': typeof ProfileUsernameRoute
   '/u/$username': typeof UUsernameRouteWithChildren
   '/dashboard': typeof DashboardIndexRoute
   '/dashboard/messages/$conversationId': typeof DashboardMessagesConversationIdRoute
   '/u/$username/share': typeof UUsernameShareRoute
+  '/v1/applications/$idOrSlug': typeof V1ApplicationsIdOrSlugRoute
+  '/v1/auth/logout': typeof V1AuthLogoutRoute
+  '/v1/auth/refresh': typeof V1AuthRefreshRoute
+  '/v1/auth/session': typeof V1AuthSessionRoute
+  '/v1/me/export': typeof V1MeExportRoute
+  '/v1/me/premium': typeof V1MePremiumRoute
+  '/v1/me/premium-profile': typeof V1MePremiumProfileRoute
+  '/v1/me/purchases': typeof V1MePurchasesRoute
+  '/v1/me/referral': typeof V1MeReferralRoute
+  '/v1/me/trial': typeof V1MeTrialRoute
+  '/v1/me/visible-applications': typeof V1MeVisibleApplicationsRoute
+  '/v1/media/advertising-banner': typeof V1MediaAdvertisingBannerRoute
+  '/v1/media/avatar': typeof V1MediaAvatarRoute
+  '/v1/payments/reference': typeof V1PaymentsReferenceRoute
+  '/v1/profiles/$username': typeof V1ProfilesUsernameRoute
+  '/v1/applications': typeof V1ApplicationsIndexRoute
+  '/v1/capabilities': typeof V1CapabilitiesIndexRoute
+  '/v1/conversations': typeof V1ConversationsIndexRoute
+  '/v1/me': typeof V1MeIndexRoute
+  '/v1/products': typeof V1ProductsIndexRoute
+  '/v1/share-invite': typeof V1ShareInviteIndexRoute
+  '/v1/trial-policy': typeof V1TrialPolicyIndexRoute
   '/api/public/webhooks/paypal': typeof ApiPublicWebhooksPaypalRoute
   '/api/public/webhooks/stripe': typeof ApiPublicWebhooksStripeRoute
+  '/v1/admin/capabilities/$key': typeof V1AdminCapabilitiesKeyRoute
+  '/v1/admin/dashboard-widgets/$key': typeof V1AdminDashboardWidgetsKeyRoute
+  '/v1/admin/media/branding': typeof V1AdminMediaBrandingRoute
+  '/v1/admin/notifications/broadcast': typeof V1AdminNotificationsBroadcastRoute
+  '/v1/admin/premium/grant': typeof V1AdminPremiumGrantRoute
+  '/v1/admin/trials/grant': typeof V1AdminTrialsGrantRoute
+  '/v1/admin/verification/$userId': typeof V1AdminVerificationUserIdRoute
+  '/v1/conversations/$conversationId/hide': typeof V1ConversationsConversationIdHideRoute
+  '/v1/conversations/$conversationId/read': typeof V1ConversationsConversationIdReadRoute
+  '/v1/me/advertising/summary': typeof V1MeAdvertisingSummaryRoute
+  '/v1/me/app-settings/$appId': typeof V1MeAppSettingsAppIdRoute
+  '/v1/me/notifications/read-all': typeof V1MeNotificationsReadAllRoute
+  '/v1/me/rewards/redeem': typeof V1MeRewardsRedeemRoute
+  '/v1/admin/applications': typeof V1AdminApplicationsIndexRoute
+  '/v1/admin/audit-logs': typeof V1AdminAuditLogsIndexRoute
+  '/v1/admin/capabilities': typeof V1AdminCapabilitiesIndexRoute
+  '/v1/admin/dashboard-widgets': typeof V1AdminDashboardWidgetsIndexRoute
+  '/v1/admin/payments': typeof V1AdminPaymentsIndexRoute
+  '/v1/admin/products': typeof V1AdminProductsIndexRoute
+  '/v1/admin/stats': typeof V1AdminStatsIndexRoute
+  '/v1/admin/trial-policy': typeof V1AdminTrialPolicyIndexRoute
+  '/v1/admin/trial-sources': typeof V1AdminTrialSourcesIndexRoute
+  '/v1/admin/trials': typeof V1AdminTrialsIndexRoute
+  '/v1/admin/users': typeof V1AdminUsersIndexRoute
+  '/v1/admin/verification-requests': typeof V1AdminVerificationRequestsIndexRoute
+  '/v1/advertising/placements': typeof V1AdvertisingPlacementsIndexRoute
+  '/v1/dashboard/widgets': typeof V1DashboardWidgetsIndexRoute
+  '/v1/me/app-settings': typeof V1MeAppSettingsIndexRoute
+  '/v1/me/notifications': typeof V1MeNotificationsIndexRoute
+  '/v1/me/rewards': typeof V1MeRewardsIndexRoute
+  '/v1/admin/advertising/placements/$key': typeof V1AdminAdvertisingPlacementsKeyRoute
+  '/v1/admin/advertising/prices/$id': typeof V1AdminAdvertisingPricesIdRoute
+  '/v1/admin/applications/$appId/advertising-settings': typeof V1AdminApplicationsAppIdAdvertisingSettingsRoute
+  '/v1/admin/applications/$appId/share-invite': typeof V1AdminApplicationsAppIdShareInviteRoute
+  '/v1/admin/applications/$appId/visibility': typeof V1AdminApplicationsAppIdVisibilityRoute
+  '/v1/admin/premium/$purchaseId/revoke': typeof V1AdminPremiumPurchaseIdRevokeRoute
+  '/v1/admin/products/$productId/archive': typeof V1AdminProductsProductIdArchiveRoute
+  '/v1/admin/rewards/achievements/$key': typeof V1AdminRewardsAchievementsKeyRoute
+  '/v1/admin/rewards/action-rules/$action': typeof V1AdminRewardsActionRulesActionRoute
+  '/v1/admin/rewards/catalog/$key': typeof V1AdminRewardsCatalogKeyRoute
+  '/v1/admin/rewards/config/$key': typeof V1AdminRewardsConfigKeyRoute
+  '/v1/admin/rewards/fulfillment-types/$key': typeof V1AdminRewardsFulfillmentTypesKeyRoute
+  '/v1/admin/rewards/levels/$key': typeof V1AdminRewardsLevelsKeyRoute
+  '/v1/admin/trials/$trialId/end': typeof V1AdminTrialsTrialIdEndRoute
+  '/v1/admin/trials/$trialId/revoke': typeof V1AdminTrialsTrialIdRevokeRoute
+  '/v1/admin/users/$userId/reactivate': typeof V1AdminUsersUserIdReactivateRoute
+  '/v1/admin/users/$userId/suspend': typeof V1AdminUsersUserIdSuspendRoute
+  '/v1/advertising/placements/$placementKey/active-ad': typeof V1AdvertisingPlacementsPlacementKeyActiveAdRoute
+  '/v1/me/notifications/$notificationId/read': typeof V1MeNotificationsNotificationIdReadRoute
+  '/v1/admin/advertising/campaigns': typeof V1AdminAdvertisingCampaignsIndexRoute
+  '/v1/admin/advertising/config': typeof V1AdminAdvertisingConfigIndexRoute
+  '/v1/admin/advertising/credit-redemptions': typeof V1AdminAdvertisingCreditRedemptionsIndexRoute
+  '/v1/admin/advertising/placements': typeof V1AdminAdvertisingPlacementsIndexRoute
+  '/v1/admin/advertising/prices': typeof V1AdminAdvertisingPricesIndexRoute
+  '/v1/admin/applications/$appId': typeof V1AdminApplicationsAppIdIndexRoute
+  '/v1/admin/products/$productId': typeof V1AdminProductsProductIdIndexRoute
+  '/v1/admin/rewards/achievements': typeof V1AdminRewardsAchievementsIndexRoute
+  '/v1/admin/rewards/action-rules': typeof V1AdminRewardsActionRulesIndexRoute
+  '/v1/admin/rewards/catalog': typeof V1AdminRewardsCatalogIndexRoute
+  '/v1/admin/rewards/config': typeof V1AdminRewardsConfigIndexRoute
+  '/v1/admin/rewards/fulfillment-types': typeof V1AdminRewardsFulfillmentTypesIndexRoute
+  '/v1/admin/rewards/levels': typeof V1AdminRewardsLevelsIndexRoute
+  '/v1/admin/users/$userId': typeof V1AdminUsersUserIdIndexRoute
+  '/v1/conversations/$conversationId/messages': typeof V1ConversationsConversationIdMessagesIndexRoute
+  '/v1/me/advertising/campaigns': typeof V1MeAdvertisingCampaignsIndexRoute
+  '/v1/admin/advertising/campaigns/$campaignId/moderate': typeof V1AdminAdvertisingCampaignsCampaignIdModerateRoute
+  '/v1/admin/advertising/credit-redemptions/$redemptionId/fulfill': typeof V1AdminAdvertisingCreditRedemptionsRedemptionIdFulfillRoute
+  '/v1/admin/applications/$appId/capabilities/$key': typeof V1AdminApplicationsAppIdCapabilitiesKeyRoute
+  '/v1/admin/applications/$appId/dashboard-widgets/$key': typeof V1AdminApplicationsAppIdDashboardWidgetsKeyRoute
+  '/v1/admin/applications/$appId/trusted-advertisers/$userId': typeof V1AdminApplicationsAppIdTrustedAdvertisersUserIdRoute
+  '/v1/me/advertising/campaigns/$campaignId/checkout-reference': typeof V1MeAdvertisingCampaignsCampaignIdCheckoutReferenceRoute
+  '/v1/admin/applications/$appId/capabilities': typeof V1AdminApplicationsAppIdCapabilitiesIndexRoute
+  '/v1/admin/applications/$appId/dashboard-widgets': typeof V1AdminApplicationsAppIdDashboardWidgetsIndexRoute
+  '/v1/admin/applications/$appId/trusted-advertisers': typeof V1AdminApplicationsAppIdTrustedAdvertisersIndexRoute
+  '/v1/me/advertising/campaigns/$campaignId': typeof V1MeAdvertisingCampaignsCampaignIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -257,8 +1119,12 @@ export interface FileRoutesById {
   '/pricing': typeof PricingRoute
   '/admin/advertising': typeof AdminAdvertisingRoute
   '/admin/applications': typeof AdminApplicationsRoute
+  '/admin/capabilities': typeof AdminCapabilitiesRoute
   '/admin/communication': typeof AdminCommunicationRoute
+  '/admin/dashboard-widgets': typeof AdminDashboardWidgetsRoute
   '/admin/payments': typeof AdminPaymentsRoute
+  '/admin/rewards': typeof AdminRewardsRoute
+  '/admin/trials': typeof AdminTrialsRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -267,18 +1133,115 @@ export interface FileRoutesById {
   '/dashboard/messages': typeof DashboardMessagesRouteWithChildren
   '/dashboard/notifications': typeof DashboardNotificationsRoute
   '/dashboard/profile': typeof DashboardProfileRoute
+  '/dashboard/purchases': typeof DashboardPurchasesRoute
   '/dashboard/rewards': typeof DashboardRewardsRoute
   '/dashboard/security': typeof DashboardSecurityRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
-  '/dashboard/subscriptions': typeof DashboardSubscriptionsRoute
   '/payment/success': typeof PaymentSuccessRoute
   '/profile/$username': typeof ProfileUsernameRoute
   '/u/$username': typeof UUsernameRouteWithChildren
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/messages/$conversationId': typeof DashboardMessagesConversationIdRoute
   '/u/$username/share': typeof UUsernameShareRoute
+  '/v1/applications/$idOrSlug': typeof V1ApplicationsIdOrSlugRoute
+  '/v1/auth/logout': typeof V1AuthLogoutRoute
+  '/v1/auth/refresh': typeof V1AuthRefreshRoute
+  '/v1/auth/session': typeof V1AuthSessionRoute
+  '/v1/me/export': typeof V1MeExportRoute
+  '/v1/me/premium': typeof V1MePremiumRoute
+  '/v1/me/premium-profile': typeof V1MePremiumProfileRoute
+  '/v1/me/purchases': typeof V1MePurchasesRoute
+  '/v1/me/referral': typeof V1MeReferralRoute
+  '/v1/me/trial': typeof V1MeTrialRoute
+  '/v1/me/visible-applications': typeof V1MeVisibleApplicationsRoute
+  '/v1/media/advertising-banner': typeof V1MediaAdvertisingBannerRoute
+  '/v1/media/avatar': typeof V1MediaAvatarRoute
+  '/v1/payments/reference': typeof V1PaymentsReferenceRoute
+  '/v1/profiles/$username': typeof V1ProfilesUsernameRoute
+  '/v1/applications/': typeof V1ApplicationsIndexRoute
+  '/v1/capabilities/': typeof V1CapabilitiesIndexRoute
+  '/v1/conversations/': typeof V1ConversationsIndexRoute
+  '/v1/me/': typeof V1MeIndexRoute
+  '/v1/products/': typeof V1ProductsIndexRoute
+  '/v1/share-invite/': typeof V1ShareInviteIndexRoute
+  '/v1/trial-policy/': typeof V1TrialPolicyIndexRoute
   '/api/public/webhooks/paypal': typeof ApiPublicWebhooksPaypalRoute
   '/api/public/webhooks/stripe': typeof ApiPublicWebhooksStripeRoute
+  '/v1/admin/capabilities/$key': typeof V1AdminCapabilitiesKeyRoute
+  '/v1/admin/dashboard-widgets/$key': typeof V1AdminDashboardWidgetsKeyRoute
+  '/v1/admin/media/branding': typeof V1AdminMediaBrandingRoute
+  '/v1/admin/notifications/broadcast': typeof V1AdminNotificationsBroadcastRoute
+  '/v1/admin/premium/grant': typeof V1AdminPremiumGrantRoute
+  '/v1/admin/trials/grant': typeof V1AdminTrialsGrantRoute
+  '/v1/admin/verification/$userId': typeof V1AdminVerificationUserIdRoute
+  '/v1/conversations/$conversationId/hide': typeof V1ConversationsConversationIdHideRoute
+  '/v1/conversations/$conversationId/read': typeof V1ConversationsConversationIdReadRoute
+  '/v1/me/advertising/summary': typeof V1MeAdvertisingSummaryRoute
+  '/v1/me/app-settings/$appId': typeof V1MeAppSettingsAppIdRoute
+  '/v1/me/notifications/read-all': typeof V1MeNotificationsReadAllRoute
+  '/v1/me/rewards/redeem': typeof V1MeRewardsRedeemRoute
+  '/v1/admin/applications/': typeof V1AdminApplicationsIndexRoute
+  '/v1/admin/audit-logs/': typeof V1AdminAuditLogsIndexRoute
+  '/v1/admin/capabilities/': typeof V1AdminCapabilitiesIndexRoute
+  '/v1/admin/dashboard-widgets/': typeof V1AdminDashboardWidgetsIndexRoute
+  '/v1/admin/payments/': typeof V1AdminPaymentsIndexRoute
+  '/v1/admin/products/': typeof V1AdminProductsIndexRoute
+  '/v1/admin/stats/': typeof V1AdminStatsIndexRoute
+  '/v1/admin/trial-policy/': typeof V1AdminTrialPolicyIndexRoute
+  '/v1/admin/trial-sources/': typeof V1AdminTrialSourcesIndexRoute
+  '/v1/admin/trials/': typeof V1AdminTrialsIndexRoute
+  '/v1/admin/users/': typeof V1AdminUsersIndexRoute
+  '/v1/admin/verification-requests/': typeof V1AdminVerificationRequestsIndexRoute
+  '/v1/advertising/placements/': typeof V1AdvertisingPlacementsIndexRoute
+  '/v1/dashboard/widgets/': typeof V1DashboardWidgetsIndexRoute
+  '/v1/me/app-settings/': typeof V1MeAppSettingsIndexRoute
+  '/v1/me/notifications/': typeof V1MeNotificationsIndexRoute
+  '/v1/me/rewards/': typeof V1MeRewardsIndexRoute
+  '/v1/admin/advertising/placements/$key': typeof V1AdminAdvertisingPlacementsKeyRoute
+  '/v1/admin/advertising/prices/$id': typeof V1AdminAdvertisingPricesIdRoute
+  '/v1/admin/applications/$appId/advertising-settings': typeof V1AdminApplicationsAppIdAdvertisingSettingsRoute
+  '/v1/admin/applications/$appId/share-invite': typeof V1AdminApplicationsAppIdShareInviteRoute
+  '/v1/admin/applications/$appId/visibility': typeof V1AdminApplicationsAppIdVisibilityRoute
+  '/v1/admin/premium/$purchaseId/revoke': typeof V1AdminPremiumPurchaseIdRevokeRoute
+  '/v1/admin/products/$productId/archive': typeof V1AdminProductsProductIdArchiveRoute
+  '/v1/admin/rewards/achievements/$key': typeof V1AdminRewardsAchievementsKeyRoute
+  '/v1/admin/rewards/action-rules/$action': typeof V1AdminRewardsActionRulesActionRoute
+  '/v1/admin/rewards/catalog/$key': typeof V1AdminRewardsCatalogKeyRoute
+  '/v1/admin/rewards/config/$key': typeof V1AdminRewardsConfigKeyRoute
+  '/v1/admin/rewards/fulfillment-types/$key': typeof V1AdminRewardsFulfillmentTypesKeyRoute
+  '/v1/admin/rewards/levels/$key': typeof V1AdminRewardsLevelsKeyRoute
+  '/v1/admin/trials/$trialId/end': typeof V1AdminTrialsTrialIdEndRoute
+  '/v1/admin/trials/$trialId/revoke': typeof V1AdminTrialsTrialIdRevokeRoute
+  '/v1/admin/users/$userId/reactivate': typeof V1AdminUsersUserIdReactivateRoute
+  '/v1/admin/users/$userId/suspend': typeof V1AdminUsersUserIdSuspendRoute
+  '/v1/advertising/placements/$placementKey/active-ad': typeof V1AdvertisingPlacementsPlacementKeyActiveAdRoute
+  '/v1/me/notifications/$notificationId/read': typeof V1MeNotificationsNotificationIdReadRoute
+  '/v1/admin/advertising/campaigns/': typeof V1AdminAdvertisingCampaignsIndexRoute
+  '/v1/admin/advertising/config/': typeof V1AdminAdvertisingConfigIndexRoute
+  '/v1/admin/advertising/credit-redemptions/': typeof V1AdminAdvertisingCreditRedemptionsIndexRoute
+  '/v1/admin/advertising/placements/': typeof V1AdminAdvertisingPlacementsIndexRoute
+  '/v1/admin/advertising/prices/': typeof V1AdminAdvertisingPricesIndexRoute
+  '/v1/admin/applications/$appId/': typeof V1AdminApplicationsAppIdIndexRoute
+  '/v1/admin/products/$productId/': typeof V1AdminProductsProductIdIndexRoute
+  '/v1/admin/rewards/achievements/': typeof V1AdminRewardsAchievementsIndexRoute
+  '/v1/admin/rewards/action-rules/': typeof V1AdminRewardsActionRulesIndexRoute
+  '/v1/admin/rewards/catalog/': typeof V1AdminRewardsCatalogIndexRoute
+  '/v1/admin/rewards/config/': typeof V1AdminRewardsConfigIndexRoute
+  '/v1/admin/rewards/fulfillment-types/': typeof V1AdminRewardsFulfillmentTypesIndexRoute
+  '/v1/admin/rewards/levels/': typeof V1AdminRewardsLevelsIndexRoute
+  '/v1/admin/users/$userId/': typeof V1AdminUsersUserIdIndexRoute
+  '/v1/conversations/$conversationId/messages/': typeof V1ConversationsConversationIdMessagesIndexRoute
+  '/v1/me/advertising/campaigns/': typeof V1MeAdvertisingCampaignsIndexRoute
+  '/v1/admin/advertising/campaigns/$campaignId/moderate': typeof V1AdminAdvertisingCampaignsCampaignIdModerateRoute
+  '/v1/admin/advertising/credit-redemptions/$redemptionId/fulfill': typeof V1AdminAdvertisingCreditRedemptionsRedemptionIdFulfillRoute
+  '/v1/admin/applications/$appId/capabilities/$key': typeof V1AdminApplicationsAppIdCapabilitiesKeyRoute
+  '/v1/admin/applications/$appId/dashboard-widgets/$key': typeof V1AdminApplicationsAppIdDashboardWidgetsKeyRoute
+  '/v1/admin/applications/$appId/trusted-advertisers/$userId': typeof V1AdminApplicationsAppIdTrustedAdvertisersUserIdRoute
+  '/v1/me/advertising/campaigns/$campaignId/checkout-reference': typeof V1MeAdvertisingCampaignsCampaignIdCheckoutReferenceRoute
+  '/v1/admin/applications/$appId/capabilities/': typeof V1AdminApplicationsAppIdCapabilitiesIndexRoute
+  '/v1/admin/applications/$appId/dashboard-widgets/': typeof V1AdminApplicationsAppIdDashboardWidgetsIndexRoute
+  '/v1/admin/applications/$appId/trusted-advertisers/': typeof V1AdminApplicationsAppIdTrustedAdvertisersIndexRoute
+  '/v1/me/advertising/campaigns/$campaignId/': typeof V1MeAdvertisingCampaignsCampaignIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -290,8 +1253,12 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/admin/advertising'
     | '/admin/applications'
+    | '/admin/capabilities'
     | '/admin/communication'
+    | '/admin/dashboard-widgets'
     | '/admin/payments'
+    | '/admin/rewards'
+    | '/admin/trials'
     | '/admin/users'
     | '/admin/verification'
     | '/auth/callback'
@@ -300,18 +1267,115 @@ export interface FileRouteTypes {
     | '/dashboard/messages'
     | '/dashboard/notifications'
     | '/dashboard/profile'
+    | '/dashboard/purchases'
     | '/dashboard/rewards'
     | '/dashboard/security'
     | '/dashboard/settings'
-    | '/dashboard/subscriptions'
     | '/payment/success'
     | '/profile/$username'
     | '/u/$username'
     | '/dashboard/'
     | '/dashboard/messages/$conversationId'
     | '/u/$username/share'
+    | '/v1/applications/$idOrSlug'
+    | '/v1/auth/logout'
+    | '/v1/auth/refresh'
+    | '/v1/auth/session'
+    | '/v1/me/export'
+    | '/v1/me/premium'
+    | '/v1/me/premium-profile'
+    | '/v1/me/purchases'
+    | '/v1/me/referral'
+    | '/v1/me/trial'
+    | '/v1/me/visible-applications'
+    | '/v1/media/advertising-banner'
+    | '/v1/media/avatar'
+    | '/v1/payments/reference'
+    | '/v1/profiles/$username'
+    | '/v1/applications/'
+    | '/v1/capabilities/'
+    | '/v1/conversations/'
+    | '/v1/me/'
+    | '/v1/products/'
+    | '/v1/share-invite/'
+    | '/v1/trial-policy/'
     | '/api/public/webhooks/paypal'
     | '/api/public/webhooks/stripe'
+    | '/v1/admin/capabilities/$key'
+    | '/v1/admin/dashboard-widgets/$key'
+    | '/v1/admin/media/branding'
+    | '/v1/admin/notifications/broadcast'
+    | '/v1/admin/premium/grant'
+    | '/v1/admin/trials/grant'
+    | '/v1/admin/verification/$userId'
+    | '/v1/conversations/$conversationId/hide'
+    | '/v1/conversations/$conversationId/read'
+    | '/v1/me/advertising/summary'
+    | '/v1/me/app-settings/$appId'
+    | '/v1/me/notifications/read-all'
+    | '/v1/me/rewards/redeem'
+    | '/v1/admin/applications/'
+    | '/v1/admin/audit-logs/'
+    | '/v1/admin/capabilities/'
+    | '/v1/admin/dashboard-widgets/'
+    | '/v1/admin/payments/'
+    | '/v1/admin/products/'
+    | '/v1/admin/stats/'
+    | '/v1/admin/trial-policy/'
+    | '/v1/admin/trial-sources/'
+    | '/v1/admin/trials/'
+    | '/v1/admin/users/'
+    | '/v1/admin/verification-requests/'
+    | '/v1/advertising/placements/'
+    | '/v1/dashboard/widgets/'
+    | '/v1/me/app-settings/'
+    | '/v1/me/notifications/'
+    | '/v1/me/rewards/'
+    | '/v1/admin/advertising/placements/$key'
+    | '/v1/admin/advertising/prices/$id'
+    | '/v1/admin/applications/$appId/advertising-settings'
+    | '/v1/admin/applications/$appId/share-invite'
+    | '/v1/admin/applications/$appId/visibility'
+    | '/v1/admin/premium/$purchaseId/revoke'
+    | '/v1/admin/products/$productId/archive'
+    | '/v1/admin/rewards/achievements/$key'
+    | '/v1/admin/rewards/action-rules/$action'
+    | '/v1/admin/rewards/catalog/$key'
+    | '/v1/admin/rewards/config/$key'
+    | '/v1/admin/rewards/fulfillment-types/$key'
+    | '/v1/admin/rewards/levels/$key'
+    | '/v1/admin/trials/$trialId/end'
+    | '/v1/admin/trials/$trialId/revoke'
+    | '/v1/admin/users/$userId/reactivate'
+    | '/v1/admin/users/$userId/suspend'
+    | '/v1/advertising/placements/$placementKey/active-ad'
+    | '/v1/me/notifications/$notificationId/read'
+    | '/v1/admin/advertising/campaigns/'
+    | '/v1/admin/advertising/config/'
+    | '/v1/admin/advertising/credit-redemptions/'
+    | '/v1/admin/advertising/placements/'
+    | '/v1/admin/advertising/prices/'
+    | '/v1/admin/applications/$appId/'
+    | '/v1/admin/products/$productId/'
+    | '/v1/admin/rewards/achievements/'
+    | '/v1/admin/rewards/action-rules/'
+    | '/v1/admin/rewards/catalog/'
+    | '/v1/admin/rewards/config/'
+    | '/v1/admin/rewards/fulfillment-types/'
+    | '/v1/admin/rewards/levels/'
+    | '/v1/admin/users/$userId/'
+    | '/v1/conversations/$conversationId/messages/'
+    | '/v1/me/advertising/campaigns/'
+    | '/v1/admin/advertising/campaigns/$campaignId/moderate'
+    | '/v1/admin/advertising/credit-redemptions/$redemptionId/fulfill'
+    | '/v1/admin/applications/$appId/capabilities/$key'
+    | '/v1/admin/applications/$appId/dashboard-widgets/$key'
+    | '/v1/admin/applications/$appId/trusted-advertisers/$userId'
+    | '/v1/me/advertising/campaigns/$campaignId/checkout-reference'
+    | '/v1/admin/applications/$appId/capabilities/'
+    | '/v1/admin/applications/$appId/dashboard-widgets/'
+    | '/v1/admin/applications/$appId/trusted-advertisers/'
+    | '/v1/me/advertising/campaigns/$campaignId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -321,8 +1385,12 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/admin/advertising'
     | '/admin/applications'
+    | '/admin/capabilities'
     | '/admin/communication'
+    | '/admin/dashboard-widgets'
     | '/admin/payments'
+    | '/admin/rewards'
+    | '/admin/trials'
     | '/admin/users'
     | '/admin/verification'
     | '/auth/callback'
@@ -331,18 +1399,115 @@ export interface FileRouteTypes {
     | '/dashboard/messages'
     | '/dashboard/notifications'
     | '/dashboard/profile'
+    | '/dashboard/purchases'
     | '/dashboard/rewards'
     | '/dashboard/security'
     | '/dashboard/settings'
-    | '/dashboard/subscriptions'
     | '/payment/success'
     | '/profile/$username'
     | '/u/$username'
     | '/dashboard'
     | '/dashboard/messages/$conversationId'
     | '/u/$username/share'
+    | '/v1/applications/$idOrSlug'
+    | '/v1/auth/logout'
+    | '/v1/auth/refresh'
+    | '/v1/auth/session'
+    | '/v1/me/export'
+    | '/v1/me/premium'
+    | '/v1/me/premium-profile'
+    | '/v1/me/purchases'
+    | '/v1/me/referral'
+    | '/v1/me/trial'
+    | '/v1/me/visible-applications'
+    | '/v1/media/advertising-banner'
+    | '/v1/media/avatar'
+    | '/v1/payments/reference'
+    | '/v1/profiles/$username'
+    | '/v1/applications'
+    | '/v1/capabilities'
+    | '/v1/conversations'
+    | '/v1/me'
+    | '/v1/products'
+    | '/v1/share-invite'
+    | '/v1/trial-policy'
     | '/api/public/webhooks/paypal'
     | '/api/public/webhooks/stripe'
+    | '/v1/admin/capabilities/$key'
+    | '/v1/admin/dashboard-widgets/$key'
+    | '/v1/admin/media/branding'
+    | '/v1/admin/notifications/broadcast'
+    | '/v1/admin/premium/grant'
+    | '/v1/admin/trials/grant'
+    | '/v1/admin/verification/$userId'
+    | '/v1/conversations/$conversationId/hide'
+    | '/v1/conversations/$conversationId/read'
+    | '/v1/me/advertising/summary'
+    | '/v1/me/app-settings/$appId'
+    | '/v1/me/notifications/read-all'
+    | '/v1/me/rewards/redeem'
+    | '/v1/admin/applications'
+    | '/v1/admin/audit-logs'
+    | '/v1/admin/capabilities'
+    | '/v1/admin/dashboard-widgets'
+    | '/v1/admin/payments'
+    | '/v1/admin/products'
+    | '/v1/admin/stats'
+    | '/v1/admin/trial-policy'
+    | '/v1/admin/trial-sources'
+    | '/v1/admin/trials'
+    | '/v1/admin/users'
+    | '/v1/admin/verification-requests'
+    | '/v1/advertising/placements'
+    | '/v1/dashboard/widgets'
+    | '/v1/me/app-settings'
+    | '/v1/me/notifications'
+    | '/v1/me/rewards'
+    | '/v1/admin/advertising/placements/$key'
+    | '/v1/admin/advertising/prices/$id'
+    | '/v1/admin/applications/$appId/advertising-settings'
+    | '/v1/admin/applications/$appId/share-invite'
+    | '/v1/admin/applications/$appId/visibility'
+    | '/v1/admin/premium/$purchaseId/revoke'
+    | '/v1/admin/products/$productId/archive'
+    | '/v1/admin/rewards/achievements/$key'
+    | '/v1/admin/rewards/action-rules/$action'
+    | '/v1/admin/rewards/catalog/$key'
+    | '/v1/admin/rewards/config/$key'
+    | '/v1/admin/rewards/fulfillment-types/$key'
+    | '/v1/admin/rewards/levels/$key'
+    | '/v1/admin/trials/$trialId/end'
+    | '/v1/admin/trials/$trialId/revoke'
+    | '/v1/admin/users/$userId/reactivate'
+    | '/v1/admin/users/$userId/suspend'
+    | '/v1/advertising/placements/$placementKey/active-ad'
+    | '/v1/me/notifications/$notificationId/read'
+    | '/v1/admin/advertising/campaigns'
+    | '/v1/admin/advertising/config'
+    | '/v1/admin/advertising/credit-redemptions'
+    | '/v1/admin/advertising/placements'
+    | '/v1/admin/advertising/prices'
+    | '/v1/admin/applications/$appId'
+    | '/v1/admin/products/$productId'
+    | '/v1/admin/rewards/achievements'
+    | '/v1/admin/rewards/action-rules'
+    | '/v1/admin/rewards/catalog'
+    | '/v1/admin/rewards/config'
+    | '/v1/admin/rewards/fulfillment-types'
+    | '/v1/admin/rewards/levels'
+    | '/v1/admin/users/$userId'
+    | '/v1/conversations/$conversationId/messages'
+    | '/v1/me/advertising/campaigns'
+    | '/v1/admin/advertising/campaigns/$campaignId/moderate'
+    | '/v1/admin/advertising/credit-redemptions/$redemptionId/fulfill'
+    | '/v1/admin/applications/$appId/capabilities/$key'
+    | '/v1/admin/applications/$appId/dashboard-widgets/$key'
+    | '/v1/admin/applications/$appId/trusted-advertisers/$userId'
+    | '/v1/me/advertising/campaigns/$campaignId/checkout-reference'
+    | '/v1/admin/applications/$appId/capabilities'
+    | '/v1/admin/applications/$appId/dashboard-widgets'
+    | '/v1/admin/applications/$appId/trusted-advertisers'
+    | '/v1/me/advertising/campaigns/$campaignId'
   id:
     | '__root__'
     | '/'
@@ -352,8 +1517,12 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/admin/advertising'
     | '/admin/applications'
+    | '/admin/capabilities'
     | '/admin/communication'
+    | '/admin/dashboard-widgets'
     | '/admin/payments'
+    | '/admin/rewards'
+    | '/admin/trials'
     | '/admin/users'
     | '/admin/verification'
     | '/auth/callback'
@@ -362,18 +1531,115 @@ export interface FileRouteTypes {
     | '/dashboard/messages'
     | '/dashboard/notifications'
     | '/dashboard/profile'
+    | '/dashboard/purchases'
     | '/dashboard/rewards'
     | '/dashboard/security'
     | '/dashboard/settings'
-    | '/dashboard/subscriptions'
     | '/payment/success'
     | '/profile/$username'
     | '/u/$username'
     | '/dashboard/'
     | '/dashboard/messages/$conversationId'
     | '/u/$username/share'
+    | '/v1/applications/$idOrSlug'
+    | '/v1/auth/logout'
+    | '/v1/auth/refresh'
+    | '/v1/auth/session'
+    | '/v1/me/export'
+    | '/v1/me/premium'
+    | '/v1/me/premium-profile'
+    | '/v1/me/purchases'
+    | '/v1/me/referral'
+    | '/v1/me/trial'
+    | '/v1/me/visible-applications'
+    | '/v1/media/advertising-banner'
+    | '/v1/media/avatar'
+    | '/v1/payments/reference'
+    | '/v1/profiles/$username'
+    | '/v1/applications/'
+    | '/v1/capabilities/'
+    | '/v1/conversations/'
+    | '/v1/me/'
+    | '/v1/products/'
+    | '/v1/share-invite/'
+    | '/v1/trial-policy/'
     | '/api/public/webhooks/paypal'
     | '/api/public/webhooks/stripe'
+    | '/v1/admin/capabilities/$key'
+    | '/v1/admin/dashboard-widgets/$key'
+    | '/v1/admin/media/branding'
+    | '/v1/admin/notifications/broadcast'
+    | '/v1/admin/premium/grant'
+    | '/v1/admin/trials/grant'
+    | '/v1/admin/verification/$userId'
+    | '/v1/conversations/$conversationId/hide'
+    | '/v1/conversations/$conversationId/read'
+    | '/v1/me/advertising/summary'
+    | '/v1/me/app-settings/$appId'
+    | '/v1/me/notifications/read-all'
+    | '/v1/me/rewards/redeem'
+    | '/v1/admin/applications/'
+    | '/v1/admin/audit-logs/'
+    | '/v1/admin/capabilities/'
+    | '/v1/admin/dashboard-widgets/'
+    | '/v1/admin/payments/'
+    | '/v1/admin/products/'
+    | '/v1/admin/stats/'
+    | '/v1/admin/trial-policy/'
+    | '/v1/admin/trial-sources/'
+    | '/v1/admin/trials/'
+    | '/v1/admin/users/'
+    | '/v1/admin/verification-requests/'
+    | '/v1/advertising/placements/'
+    | '/v1/dashboard/widgets/'
+    | '/v1/me/app-settings/'
+    | '/v1/me/notifications/'
+    | '/v1/me/rewards/'
+    | '/v1/admin/advertising/placements/$key'
+    | '/v1/admin/advertising/prices/$id'
+    | '/v1/admin/applications/$appId/advertising-settings'
+    | '/v1/admin/applications/$appId/share-invite'
+    | '/v1/admin/applications/$appId/visibility'
+    | '/v1/admin/premium/$purchaseId/revoke'
+    | '/v1/admin/products/$productId/archive'
+    | '/v1/admin/rewards/achievements/$key'
+    | '/v1/admin/rewards/action-rules/$action'
+    | '/v1/admin/rewards/catalog/$key'
+    | '/v1/admin/rewards/config/$key'
+    | '/v1/admin/rewards/fulfillment-types/$key'
+    | '/v1/admin/rewards/levels/$key'
+    | '/v1/admin/trials/$trialId/end'
+    | '/v1/admin/trials/$trialId/revoke'
+    | '/v1/admin/users/$userId/reactivate'
+    | '/v1/admin/users/$userId/suspend'
+    | '/v1/advertising/placements/$placementKey/active-ad'
+    | '/v1/me/notifications/$notificationId/read'
+    | '/v1/admin/advertising/campaigns/'
+    | '/v1/admin/advertising/config/'
+    | '/v1/admin/advertising/credit-redemptions/'
+    | '/v1/admin/advertising/placements/'
+    | '/v1/admin/advertising/prices/'
+    | '/v1/admin/applications/$appId/'
+    | '/v1/admin/products/$productId/'
+    | '/v1/admin/rewards/achievements/'
+    | '/v1/admin/rewards/action-rules/'
+    | '/v1/admin/rewards/catalog/'
+    | '/v1/admin/rewards/config/'
+    | '/v1/admin/rewards/fulfillment-types/'
+    | '/v1/admin/rewards/levels/'
+    | '/v1/admin/users/$userId/'
+    | '/v1/conversations/$conversationId/messages/'
+    | '/v1/me/advertising/campaigns/'
+    | '/v1/admin/advertising/campaigns/$campaignId/moderate'
+    | '/v1/admin/advertising/credit-redemptions/$redemptionId/fulfill'
+    | '/v1/admin/applications/$appId/capabilities/$key'
+    | '/v1/admin/applications/$appId/dashboard-widgets/$key'
+    | '/v1/admin/applications/$appId/trusted-advertisers/$userId'
+    | '/v1/me/advertising/campaigns/$campaignId/checkout-reference'
+    | '/v1/admin/applications/$appId/capabilities/'
+    | '/v1/admin/applications/$appId/dashboard-widgets/'
+    | '/v1/admin/applications/$appId/trusted-advertisers/'
+    | '/v1/me/advertising/campaigns/$campaignId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -388,16 +1654,113 @@ export interface RootRouteChildren {
   DashboardMessagesRoute: typeof DashboardMessagesRouteWithChildren
   DashboardNotificationsRoute: typeof DashboardNotificationsRoute
   DashboardProfileRoute: typeof DashboardProfileRoute
+  DashboardPurchasesRoute: typeof DashboardPurchasesRoute
   DashboardRewardsRoute: typeof DashboardRewardsRoute
   DashboardSecurityRoute: typeof DashboardSecurityRoute
   DashboardSettingsRoute: typeof DashboardSettingsRoute
-  DashboardSubscriptionsRoute: typeof DashboardSubscriptionsRoute
   PaymentSuccessRoute: typeof PaymentSuccessRoute
   ProfileUsernameRoute: typeof ProfileUsernameRoute
   UUsernameRoute: typeof UUsernameRouteWithChildren
   DashboardIndexRoute: typeof DashboardIndexRoute
+  V1ApplicationsIdOrSlugRoute: typeof V1ApplicationsIdOrSlugRoute
+  V1AuthLogoutRoute: typeof V1AuthLogoutRoute
+  V1AuthRefreshRoute: typeof V1AuthRefreshRoute
+  V1AuthSessionRoute: typeof V1AuthSessionRoute
+  V1MeExportRoute: typeof V1MeExportRoute
+  V1MePremiumRoute: typeof V1MePremiumRoute
+  V1MePremiumProfileRoute: typeof V1MePremiumProfileRoute
+  V1MePurchasesRoute: typeof V1MePurchasesRoute
+  V1MeReferralRoute: typeof V1MeReferralRoute
+  V1MeTrialRoute: typeof V1MeTrialRoute
+  V1MeVisibleApplicationsRoute: typeof V1MeVisibleApplicationsRoute
+  V1MediaAdvertisingBannerRoute: typeof V1MediaAdvertisingBannerRoute
+  V1MediaAvatarRoute: typeof V1MediaAvatarRoute
+  V1PaymentsReferenceRoute: typeof V1PaymentsReferenceRoute
+  V1ProfilesUsernameRoute: typeof V1ProfilesUsernameRoute
+  V1ApplicationsIndexRoute: typeof V1ApplicationsIndexRoute
+  V1CapabilitiesIndexRoute: typeof V1CapabilitiesIndexRoute
+  V1ConversationsIndexRoute: typeof V1ConversationsIndexRoute
+  V1MeIndexRoute: typeof V1MeIndexRoute
+  V1ProductsIndexRoute: typeof V1ProductsIndexRoute
+  V1ShareInviteIndexRoute: typeof V1ShareInviteIndexRoute
+  V1TrialPolicyIndexRoute: typeof V1TrialPolicyIndexRoute
   ApiPublicWebhooksPaypalRoute: typeof ApiPublicWebhooksPaypalRoute
   ApiPublicWebhooksStripeRoute: typeof ApiPublicWebhooksStripeRoute
+  V1AdminCapabilitiesKeyRoute: typeof V1AdminCapabilitiesKeyRoute
+  V1AdminDashboardWidgetsKeyRoute: typeof V1AdminDashboardWidgetsKeyRoute
+  V1AdminMediaBrandingRoute: typeof V1AdminMediaBrandingRoute
+  V1AdminNotificationsBroadcastRoute: typeof V1AdminNotificationsBroadcastRoute
+  V1AdminPremiumGrantRoute: typeof V1AdminPremiumGrantRoute
+  V1AdminTrialsGrantRoute: typeof V1AdminTrialsGrantRoute
+  V1AdminVerificationUserIdRoute: typeof V1AdminVerificationUserIdRoute
+  V1ConversationsConversationIdHideRoute: typeof V1ConversationsConversationIdHideRoute
+  V1ConversationsConversationIdReadRoute: typeof V1ConversationsConversationIdReadRoute
+  V1MeAdvertisingSummaryRoute: typeof V1MeAdvertisingSummaryRoute
+  V1MeAppSettingsAppIdRoute: typeof V1MeAppSettingsAppIdRoute
+  V1MeNotificationsReadAllRoute: typeof V1MeNotificationsReadAllRoute
+  V1MeRewardsRedeemRoute: typeof V1MeRewardsRedeemRoute
+  V1AdminApplicationsIndexRoute: typeof V1AdminApplicationsIndexRoute
+  V1AdminAuditLogsIndexRoute: typeof V1AdminAuditLogsIndexRoute
+  V1AdminCapabilitiesIndexRoute: typeof V1AdminCapabilitiesIndexRoute
+  V1AdminDashboardWidgetsIndexRoute: typeof V1AdminDashboardWidgetsIndexRoute
+  V1AdminPaymentsIndexRoute: typeof V1AdminPaymentsIndexRoute
+  V1AdminProductsIndexRoute: typeof V1AdminProductsIndexRoute
+  V1AdminStatsIndexRoute: typeof V1AdminStatsIndexRoute
+  V1AdminTrialPolicyIndexRoute: typeof V1AdminTrialPolicyIndexRoute
+  V1AdminTrialSourcesIndexRoute: typeof V1AdminTrialSourcesIndexRoute
+  V1AdminTrialsIndexRoute: typeof V1AdminTrialsIndexRoute
+  V1AdminUsersIndexRoute: typeof V1AdminUsersIndexRoute
+  V1AdminVerificationRequestsIndexRoute: typeof V1AdminVerificationRequestsIndexRoute
+  V1AdvertisingPlacementsIndexRoute: typeof V1AdvertisingPlacementsIndexRoute
+  V1DashboardWidgetsIndexRoute: typeof V1DashboardWidgetsIndexRoute
+  V1MeAppSettingsIndexRoute: typeof V1MeAppSettingsIndexRoute
+  V1MeNotificationsIndexRoute: typeof V1MeNotificationsIndexRoute
+  V1MeRewardsIndexRoute: typeof V1MeRewardsIndexRoute
+  V1AdminAdvertisingPlacementsKeyRoute: typeof V1AdminAdvertisingPlacementsKeyRoute
+  V1AdminAdvertisingPricesIdRoute: typeof V1AdminAdvertisingPricesIdRoute
+  V1AdminApplicationsAppIdAdvertisingSettingsRoute: typeof V1AdminApplicationsAppIdAdvertisingSettingsRoute
+  V1AdminApplicationsAppIdShareInviteRoute: typeof V1AdminApplicationsAppIdShareInviteRoute
+  V1AdminApplicationsAppIdVisibilityRoute: typeof V1AdminApplicationsAppIdVisibilityRoute
+  V1AdminPremiumPurchaseIdRevokeRoute: typeof V1AdminPremiumPurchaseIdRevokeRoute
+  V1AdminProductsProductIdArchiveRoute: typeof V1AdminProductsProductIdArchiveRoute
+  V1AdminRewardsAchievementsKeyRoute: typeof V1AdminRewardsAchievementsKeyRoute
+  V1AdminRewardsActionRulesActionRoute: typeof V1AdminRewardsActionRulesActionRoute
+  V1AdminRewardsCatalogKeyRoute: typeof V1AdminRewardsCatalogKeyRoute
+  V1AdminRewardsConfigKeyRoute: typeof V1AdminRewardsConfigKeyRoute
+  V1AdminRewardsFulfillmentTypesKeyRoute: typeof V1AdminRewardsFulfillmentTypesKeyRoute
+  V1AdminRewardsLevelsKeyRoute: typeof V1AdminRewardsLevelsKeyRoute
+  V1AdminTrialsTrialIdEndRoute: typeof V1AdminTrialsTrialIdEndRoute
+  V1AdminTrialsTrialIdRevokeRoute: typeof V1AdminTrialsTrialIdRevokeRoute
+  V1AdminUsersUserIdReactivateRoute: typeof V1AdminUsersUserIdReactivateRoute
+  V1AdminUsersUserIdSuspendRoute: typeof V1AdminUsersUserIdSuspendRoute
+  V1AdvertisingPlacementsPlacementKeyActiveAdRoute: typeof V1AdvertisingPlacementsPlacementKeyActiveAdRoute
+  V1MeNotificationsNotificationIdReadRoute: typeof V1MeNotificationsNotificationIdReadRoute
+  V1AdminAdvertisingCampaignsIndexRoute: typeof V1AdminAdvertisingCampaignsIndexRoute
+  V1AdminAdvertisingConfigIndexRoute: typeof V1AdminAdvertisingConfigIndexRoute
+  V1AdminAdvertisingCreditRedemptionsIndexRoute: typeof V1AdminAdvertisingCreditRedemptionsIndexRoute
+  V1AdminAdvertisingPlacementsIndexRoute: typeof V1AdminAdvertisingPlacementsIndexRoute
+  V1AdminAdvertisingPricesIndexRoute: typeof V1AdminAdvertisingPricesIndexRoute
+  V1AdminApplicationsAppIdIndexRoute: typeof V1AdminApplicationsAppIdIndexRoute
+  V1AdminProductsProductIdIndexRoute: typeof V1AdminProductsProductIdIndexRoute
+  V1AdminRewardsAchievementsIndexRoute: typeof V1AdminRewardsAchievementsIndexRoute
+  V1AdminRewardsActionRulesIndexRoute: typeof V1AdminRewardsActionRulesIndexRoute
+  V1AdminRewardsCatalogIndexRoute: typeof V1AdminRewardsCatalogIndexRoute
+  V1AdminRewardsConfigIndexRoute: typeof V1AdminRewardsConfigIndexRoute
+  V1AdminRewardsFulfillmentTypesIndexRoute: typeof V1AdminRewardsFulfillmentTypesIndexRoute
+  V1AdminRewardsLevelsIndexRoute: typeof V1AdminRewardsLevelsIndexRoute
+  V1AdminUsersUserIdIndexRoute: typeof V1AdminUsersUserIdIndexRoute
+  V1ConversationsConversationIdMessagesIndexRoute: typeof V1ConversationsConversationIdMessagesIndexRoute
+  V1MeAdvertisingCampaignsIndexRoute: typeof V1MeAdvertisingCampaignsIndexRoute
+  V1AdminAdvertisingCampaignsCampaignIdModerateRoute: typeof V1AdminAdvertisingCampaignsCampaignIdModerateRoute
+  V1AdminAdvertisingCreditRedemptionsRedemptionIdFulfillRoute: typeof V1AdminAdvertisingCreditRedemptionsRedemptionIdFulfillRoute
+  V1AdminApplicationsAppIdCapabilitiesKeyRoute: typeof V1AdminApplicationsAppIdCapabilitiesKeyRoute
+  V1AdminApplicationsAppIdDashboardWidgetsKeyRoute: typeof V1AdminApplicationsAppIdDashboardWidgetsKeyRoute
+  V1AdminApplicationsAppIdTrustedAdvertisersUserIdRoute: typeof V1AdminApplicationsAppIdTrustedAdvertisersUserIdRoute
+  V1MeAdvertisingCampaignsCampaignIdCheckoutReferenceRoute: typeof V1MeAdvertisingCampaignsCampaignIdCheckoutReferenceRoute
+  V1AdminApplicationsAppIdCapabilitiesIndexRoute: typeof V1AdminApplicationsAppIdCapabilitiesIndexRoute
+  V1AdminApplicationsAppIdDashboardWidgetsIndexRoute: typeof V1AdminApplicationsAppIdDashboardWidgetsIndexRoute
+  V1AdminApplicationsAppIdTrustedAdvertisersIndexRoute: typeof V1AdminApplicationsAppIdTrustedAdvertisersIndexRoute
+  V1MeAdvertisingCampaignsCampaignIdIndexRoute: typeof V1MeAdvertisingCampaignsCampaignIdIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -451,6 +1814,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminApplicationsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/capabilities': {
+      id: '/admin/capabilities'
+      path: '/capabilities'
+      fullPath: '/admin/capabilities'
+      preLoaderRoute: typeof AdminCapabilitiesRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/communication': {
       id: '/admin/communication'
       path: '/communication'
@@ -458,11 +1828,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCommunicationRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/dashboard-widgets': {
+      id: '/admin/dashboard-widgets'
+      path: '/dashboard-widgets'
+      fullPath: '/admin/dashboard-widgets'
+      preLoaderRoute: typeof AdminDashboardWidgetsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/payments': {
       id: '/admin/payments'
       path: '/payments'
       fullPath: '/admin/payments'
       preLoaderRoute: typeof AdminPaymentsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/rewards': {
+      id: '/admin/rewards'
+      path: '/rewards'
+      fullPath: '/admin/rewards'
+      preLoaderRoute: typeof AdminRewardsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/trials': {
+      id: '/admin/trials'
+      path: '/trials'
+      fullPath: '/admin/trials'
+      preLoaderRoute: typeof AdminTrialsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/users': {
@@ -528,6 +1919,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/purchases': {
+      id: '/dashboard/purchases'
+      path: '/dashboard/purchases'
+      fullPath: '/dashboard/purchases'
+      preLoaderRoute: typeof DashboardPurchasesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard/rewards': {
       id: '/dashboard/rewards'
       path: '/dashboard/rewards'
@@ -547,13 +1945,6 @@ declare module '@tanstack/react-router' {
       path: '/dashboard/settings'
       fullPath: '/dashboard/settings'
       preLoaderRoute: typeof DashboardSettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard/subscriptions': {
-      id: '/dashboard/subscriptions'
-      path: '/dashboard/subscriptions'
-      fullPath: '/dashboard/subscriptions'
-      preLoaderRoute: typeof DashboardSubscriptionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/payment/success': {
@@ -591,6 +1982,160 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UUsernameShareRouteImport
       parentRoute: typeof UUsernameRoute
     }
+    '/v1/applications/': {
+      id: '/v1/applications/'
+      path: '/v1/applications'
+      fullPath: '/v1/applications/'
+      preLoaderRoute: typeof V1ApplicationsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/applications/$idOrSlug': {
+      id: '/v1/applications/$idOrSlug'
+      path: '/v1/applications/$idOrSlug'
+      fullPath: '/v1/applications/$idOrSlug'
+      preLoaderRoute: typeof V1ApplicationsIdOrSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/auth/logout': {
+      id: '/v1/auth/logout'
+      path: '/v1/auth/logout'
+      fullPath: '/v1/auth/logout'
+      preLoaderRoute: typeof V1AuthLogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/auth/refresh': {
+      id: '/v1/auth/refresh'
+      path: '/v1/auth/refresh'
+      fullPath: '/v1/auth/refresh'
+      preLoaderRoute: typeof V1AuthRefreshRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/auth/session': {
+      id: '/v1/auth/session'
+      path: '/v1/auth/session'
+      fullPath: '/v1/auth/session'
+      preLoaderRoute: typeof V1AuthSessionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/capabilities/': {
+      id: '/v1/capabilities/'
+      path: '/v1/capabilities'
+      fullPath: '/v1/capabilities/'
+      preLoaderRoute: typeof V1CapabilitiesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/conversations/': {
+      id: '/v1/conversations/'
+      path: '/v1/conversations'
+      fullPath: '/v1/conversations/'
+      preLoaderRoute: typeof V1ConversationsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/me/': {
+      id: '/v1/me/'
+      path: '/v1/me'
+      fullPath: '/v1/me/'
+      preLoaderRoute: typeof V1MeIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/me/export': {
+      id: '/v1/me/export'
+      path: '/v1/me/export'
+      fullPath: '/v1/me/export'
+      preLoaderRoute: typeof V1MeExportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/me/premium': {
+      id: '/v1/me/premium'
+      path: '/v1/me/premium'
+      fullPath: '/v1/me/premium'
+      preLoaderRoute: typeof V1MePremiumRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/me/premium-profile': {
+      id: '/v1/me/premium-profile'
+      path: '/v1/me/premium-profile'
+      fullPath: '/v1/me/premium-profile'
+      preLoaderRoute: typeof V1MePremiumProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/me/purchases': {
+      id: '/v1/me/purchases'
+      path: '/v1/me/purchases'
+      fullPath: '/v1/me/purchases'
+      preLoaderRoute: typeof V1MePurchasesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/me/referral': {
+      id: '/v1/me/referral'
+      path: '/v1/me/referral'
+      fullPath: '/v1/me/referral'
+      preLoaderRoute: typeof V1MeReferralRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/me/trial': {
+      id: '/v1/me/trial'
+      path: '/v1/me/trial'
+      fullPath: '/v1/me/trial'
+      preLoaderRoute: typeof V1MeTrialRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/me/visible-applications': {
+      id: '/v1/me/visible-applications'
+      path: '/v1/me/visible-applications'
+      fullPath: '/v1/me/visible-applications'
+      preLoaderRoute: typeof V1MeVisibleApplicationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/media/advertising-banner': {
+      id: '/v1/media/advertising-banner'
+      path: '/v1/media/advertising-banner'
+      fullPath: '/v1/media/advertising-banner'
+      preLoaderRoute: typeof V1MediaAdvertisingBannerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/media/avatar': {
+      id: '/v1/media/avatar'
+      path: '/v1/media/avatar'
+      fullPath: '/v1/media/avatar'
+      preLoaderRoute: typeof V1MediaAvatarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/payments/reference': {
+      id: '/v1/payments/reference'
+      path: '/v1/payments/reference'
+      fullPath: '/v1/payments/reference'
+      preLoaderRoute: typeof V1PaymentsReferenceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/products/': {
+      id: '/v1/products/'
+      path: '/v1/products'
+      fullPath: '/v1/products/'
+      preLoaderRoute: typeof V1ProductsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/profiles/$username': {
+      id: '/v1/profiles/$username'
+      path: '/v1/profiles/$username'
+      fullPath: '/v1/profiles/$username'
+      preLoaderRoute: typeof V1ProfilesUsernameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/share-invite/': {
+      id: '/v1/share-invite/'
+      path: '/v1/share-invite'
+      fullPath: '/v1/share-invite/'
+      preLoaderRoute: typeof V1ShareInviteIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/trial-policy/': {
+      id: '/v1/trial-policy/'
+      path: '/v1/trial-policy'
+      fullPath: '/v1/trial-policy/'
+      preLoaderRoute: typeof V1TrialPolicyIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/webhooks/paypal': {
       id: '/api/public/webhooks/paypal'
       path: '/api/public/webhooks/paypal'
@@ -605,14 +2150,543 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicWebhooksStripeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/v1/admin/applications/': {
+      id: '/v1/admin/applications/'
+      path: '/v1/admin/applications'
+      fullPath: '/v1/admin/applications/'
+      preLoaderRoute: typeof V1AdminApplicationsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/audit-logs/': {
+      id: '/v1/admin/audit-logs/'
+      path: '/v1/admin/audit-logs'
+      fullPath: '/v1/admin/audit-logs/'
+      preLoaderRoute: typeof V1AdminAuditLogsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/capabilities/': {
+      id: '/v1/admin/capabilities/'
+      path: '/v1/admin/capabilities'
+      fullPath: '/v1/admin/capabilities/'
+      preLoaderRoute: typeof V1AdminCapabilitiesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/capabilities/$key': {
+      id: '/v1/admin/capabilities/$key'
+      path: '/v1/admin/capabilities/$key'
+      fullPath: '/v1/admin/capabilities/$key'
+      preLoaderRoute: typeof V1AdminCapabilitiesKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/dashboard-widgets/': {
+      id: '/v1/admin/dashboard-widgets/'
+      path: '/v1/admin/dashboard-widgets'
+      fullPath: '/v1/admin/dashboard-widgets/'
+      preLoaderRoute: typeof V1AdminDashboardWidgetsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/dashboard-widgets/$key': {
+      id: '/v1/admin/dashboard-widgets/$key'
+      path: '/v1/admin/dashboard-widgets/$key'
+      fullPath: '/v1/admin/dashboard-widgets/$key'
+      preLoaderRoute: typeof V1AdminDashboardWidgetsKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/media/branding': {
+      id: '/v1/admin/media/branding'
+      path: '/v1/admin/media/branding'
+      fullPath: '/v1/admin/media/branding'
+      preLoaderRoute: typeof V1AdminMediaBrandingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/notifications/broadcast': {
+      id: '/v1/admin/notifications/broadcast'
+      path: '/v1/admin/notifications/broadcast'
+      fullPath: '/v1/admin/notifications/broadcast'
+      preLoaderRoute: typeof V1AdminNotificationsBroadcastRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/payments/': {
+      id: '/v1/admin/payments/'
+      path: '/v1/admin/payments'
+      fullPath: '/v1/admin/payments/'
+      preLoaderRoute: typeof V1AdminPaymentsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/premium/grant': {
+      id: '/v1/admin/premium/grant'
+      path: '/v1/admin/premium/grant'
+      fullPath: '/v1/admin/premium/grant'
+      preLoaderRoute: typeof V1AdminPremiumGrantRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/products/': {
+      id: '/v1/admin/products/'
+      path: '/v1/admin/products'
+      fullPath: '/v1/admin/products/'
+      preLoaderRoute: typeof V1AdminProductsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/stats/': {
+      id: '/v1/admin/stats/'
+      path: '/v1/admin/stats'
+      fullPath: '/v1/admin/stats/'
+      preLoaderRoute: typeof V1AdminStatsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/trial-policy/': {
+      id: '/v1/admin/trial-policy/'
+      path: '/v1/admin/trial-policy'
+      fullPath: '/v1/admin/trial-policy/'
+      preLoaderRoute: typeof V1AdminTrialPolicyIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/trial-sources/': {
+      id: '/v1/admin/trial-sources/'
+      path: '/v1/admin/trial-sources'
+      fullPath: '/v1/admin/trial-sources/'
+      preLoaderRoute: typeof V1AdminTrialSourcesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/trials/': {
+      id: '/v1/admin/trials/'
+      path: '/v1/admin/trials'
+      fullPath: '/v1/admin/trials/'
+      preLoaderRoute: typeof V1AdminTrialsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/trials/grant': {
+      id: '/v1/admin/trials/grant'
+      path: '/v1/admin/trials/grant'
+      fullPath: '/v1/admin/trials/grant'
+      preLoaderRoute: typeof V1AdminTrialsGrantRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/users/': {
+      id: '/v1/admin/users/'
+      path: '/v1/admin/users'
+      fullPath: '/v1/admin/users/'
+      preLoaderRoute: typeof V1AdminUsersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/verification-requests/': {
+      id: '/v1/admin/verification-requests/'
+      path: '/v1/admin/verification-requests'
+      fullPath: '/v1/admin/verification-requests/'
+      preLoaderRoute: typeof V1AdminVerificationRequestsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/verification/$userId': {
+      id: '/v1/admin/verification/$userId'
+      path: '/v1/admin/verification/$userId'
+      fullPath: '/v1/admin/verification/$userId'
+      preLoaderRoute: typeof V1AdminVerificationUserIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/advertising/placements/': {
+      id: '/v1/advertising/placements/'
+      path: '/v1/advertising/placements'
+      fullPath: '/v1/advertising/placements/'
+      preLoaderRoute: typeof V1AdvertisingPlacementsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/conversations/$conversationId/hide': {
+      id: '/v1/conversations/$conversationId/hide'
+      path: '/v1/conversations/$conversationId/hide'
+      fullPath: '/v1/conversations/$conversationId/hide'
+      preLoaderRoute: typeof V1ConversationsConversationIdHideRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/conversations/$conversationId/read': {
+      id: '/v1/conversations/$conversationId/read'
+      path: '/v1/conversations/$conversationId/read'
+      fullPath: '/v1/conversations/$conversationId/read'
+      preLoaderRoute: typeof V1ConversationsConversationIdReadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/dashboard/widgets/': {
+      id: '/v1/dashboard/widgets/'
+      path: '/v1/dashboard/widgets'
+      fullPath: '/v1/dashboard/widgets/'
+      preLoaderRoute: typeof V1DashboardWidgetsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/me/advertising/summary': {
+      id: '/v1/me/advertising/summary'
+      path: '/v1/me/advertising/summary'
+      fullPath: '/v1/me/advertising/summary'
+      preLoaderRoute: typeof V1MeAdvertisingSummaryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/me/app-settings/': {
+      id: '/v1/me/app-settings/'
+      path: '/v1/me/app-settings'
+      fullPath: '/v1/me/app-settings/'
+      preLoaderRoute: typeof V1MeAppSettingsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/me/app-settings/$appId': {
+      id: '/v1/me/app-settings/$appId'
+      path: '/v1/me/app-settings/$appId'
+      fullPath: '/v1/me/app-settings/$appId'
+      preLoaderRoute: typeof V1MeAppSettingsAppIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/me/notifications/': {
+      id: '/v1/me/notifications/'
+      path: '/v1/me/notifications'
+      fullPath: '/v1/me/notifications/'
+      preLoaderRoute: typeof V1MeNotificationsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/me/notifications/read-all': {
+      id: '/v1/me/notifications/read-all'
+      path: '/v1/me/notifications/read-all'
+      fullPath: '/v1/me/notifications/read-all'
+      preLoaderRoute: typeof V1MeNotificationsReadAllRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/me/rewards/': {
+      id: '/v1/me/rewards/'
+      path: '/v1/me/rewards'
+      fullPath: '/v1/me/rewards/'
+      preLoaderRoute: typeof V1MeRewardsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/me/rewards/redeem': {
+      id: '/v1/me/rewards/redeem'
+      path: '/v1/me/rewards/redeem'
+      fullPath: '/v1/me/rewards/redeem'
+      preLoaderRoute: typeof V1MeRewardsRedeemRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/advertising/campaigns/': {
+      id: '/v1/admin/advertising/campaigns/'
+      path: '/v1/admin/advertising/campaigns'
+      fullPath: '/v1/admin/advertising/campaigns/'
+      preLoaderRoute: typeof V1AdminAdvertisingCampaignsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/advertising/config/': {
+      id: '/v1/admin/advertising/config/'
+      path: '/v1/admin/advertising/config'
+      fullPath: '/v1/admin/advertising/config/'
+      preLoaderRoute: typeof V1AdminAdvertisingConfigIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/advertising/credit-redemptions/': {
+      id: '/v1/admin/advertising/credit-redemptions/'
+      path: '/v1/admin/advertising/credit-redemptions'
+      fullPath: '/v1/admin/advertising/credit-redemptions/'
+      preLoaderRoute: typeof V1AdminAdvertisingCreditRedemptionsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/advertising/placements/': {
+      id: '/v1/admin/advertising/placements/'
+      path: '/v1/admin/advertising/placements'
+      fullPath: '/v1/admin/advertising/placements/'
+      preLoaderRoute: typeof V1AdminAdvertisingPlacementsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/advertising/placements/$key': {
+      id: '/v1/admin/advertising/placements/$key'
+      path: '/v1/admin/advertising/placements/$key'
+      fullPath: '/v1/admin/advertising/placements/$key'
+      preLoaderRoute: typeof V1AdminAdvertisingPlacementsKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/advertising/prices/': {
+      id: '/v1/admin/advertising/prices/'
+      path: '/v1/admin/advertising/prices'
+      fullPath: '/v1/admin/advertising/prices/'
+      preLoaderRoute: typeof V1AdminAdvertisingPricesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/advertising/prices/$id': {
+      id: '/v1/admin/advertising/prices/$id'
+      path: '/v1/admin/advertising/prices/$id'
+      fullPath: '/v1/admin/advertising/prices/$id'
+      preLoaderRoute: typeof V1AdminAdvertisingPricesIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/applications/$appId/': {
+      id: '/v1/admin/applications/$appId/'
+      path: '/v1/admin/applications/$appId'
+      fullPath: '/v1/admin/applications/$appId/'
+      preLoaderRoute: typeof V1AdminApplicationsAppIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/applications/$appId/advertising-settings': {
+      id: '/v1/admin/applications/$appId/advertising-settings'
+      path: '/v1/admin/applications/$appId/advertising-settings'
+      fullPath: '/v1/admin/applications/$appId/advertising-settings'
+      preLoaderRoute: typeof V1AdminApplicationsAppIdAdvertisingSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/applications/$appId/share-invite': {
+      id: '/v1/admin/applications/$appId/share-invite'
+      path: '/v1/admin/applications/$appId/share-invite'
+      fullPath: '/v1/admin/applications/$appId/share-invite'
+      preLoaderRoute: typeof V1AdminApplicationsAppIdShareInviteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/applications/$appId/visibility': {
+      id: '/v1/admin/applications/$appId/visibility'
+      path: '/v1/admin/applications/$appId/visibility'
+      fullPath: '/v1/admin/applications/$appId/visibility'
+      preLoaderRoute: typeof V1AdminApplicationsAppIdVisibilityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/premium/$purchaseId/revoke': {
+      id: '/v1/admin/premium/$purchaseId/revoke'
+      path: '/v1/admin/premium/$purchaseId/revoke'
+      fullPath: '/v1/admin/premium/$purchaseId/revoke'
+      preLoaderRoute: typeof V1AdminPremiumPurchaseIdRevokeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/products/$productId/': {
+      id: '/v1/admin/products/$productId/'
+      path: '/v1/admin/products/$productId'
+      fullPath: '/v1/admin/products/$productId/'
+      preLoaderRoute: typeof V1AdminProductsProductIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/products/$productId/archive': {
+      id: '/v1/admin/products/$productId/archive'
+      path: '/v1/admin/products/$productId/archive'
+      fullPath: '/v1/admin/products/$productId/archive'
+      preLoaderRoute: typeof V1AdminProductsProductIdArchiveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/rewards/achievements/': {
+      id: '/v1/admin/rewards/achievements/'
+      path: '/v1/admin/rewards/achievements'
+      fullPath: '/v1/admin/rewards/achievements/'
+      preLoaderRoute: typeof V1AdminRewardsAchievementsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/rewards/achievements/$key': {
+      id: '/v1/admin/rewards/achievements/$key'
+      path: '/v1/admin/rewards/achievements/$key'
+      fullPath: '/v1/admin/rewards/achievements/$key'
+      preLoaderRoute: typeof V1AdminRewardsAchievementsKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/rewards/action-rules/': {
+      id: '/v1/admin/rewards/action-rules/'
+      path: '/v1/admin/rewards/action-rules'
+      fullPath: '/v1/admin/rewards/action-rules/'
+      preLoaderRoute: typeof V1AdminRewardsActionRulesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/rewards/action-rules/$action': {
+      id: '/v1/admin/rewards/action-rules/$action'
+      path: '/v1/admin/rewards/action-rules/$action'
+      fullPath: '/v1/admin/rewards/action-rules/$action'
+      preLoaderRoute: typeof V1AdminRewardsActionRulesActionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/rewards/catalog/': {
+      id: '/v1/admin/rewards/catalog/'
+      path: '/v1/admin/rewards/catalog'
+      fullPath: '/v1/admin/rewards/catalog/'
+      preLoaderRoute: typeof V1AdminRewardsCatalogIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/rewards/catalog/$key': {
+      id: '/v1/admin/rewards/catalog/$key'
+      path: '/v1/admin/rewards/catalog/$key'
+      fullPath: '/v1/admin/rewards/catalog/$key'
+      preLoaderRoute: typeof V1AdminRewardsCatalogKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/rewards/config/': {
+      id: '/v1/admin/rewards/config/'
+      path: '/v1/admin/rewards/config'
+      fullPath: '/v1/admin/rewards/config/'
+      preLoaderRoute: typeof V1AdminRewardsConfigIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/rewards/config/$key': {
+      id: '/v1/admin/rewards/config/$key'
+      path: '/v1/admin/rewards/config/$key'
+      fullPath: '/v1/admin/rewards/config/$key'
+      preLoaderRoute: typeof V1AdminRewardsConfigKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/rewards/fulfillment-types/': {
+      id: '/v1/admin/rewards/fulfillment-types/'
+      path: '/v1/admin/rewards/fulfillment-types'
+      fullPath: '/v1/admin/rewards/fulfillment-types/'
+      preLoaderRoute: typeof V1AdminRewardsFulfillmentTypesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/rewards/fulfillment-types/$key': {
+      id: '/v1/admin/rewards/fulfillment-types/$key'
+      path: '/v1/admin/rewards/fulfillment-types/$key'
+      fullPath: '/v1/admin/rewards/fulfillment-types/$key'
+      preLoaderRoute: typeof V1AdminRewardsFulfillmentTypesKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/rewards/levels/': {
+      id: '/v1/admin/rewards/levels/'
+      path: '/v1/admin/rewards/levels'
+      fullPath: '/v1/admin/rewards/levels/'
+      preLoaderRoute: typeof V1AdminRewardsLevelsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/rewards/levels/$key': {
+      id: '/v1/admin/rewards/levels/$key'
+      path: '/v1/admin/rewards/levels/$key'
+      fullPath: '/v1/admin/rewards/levels/$key'
+      preLoaderRoute: typeof V1AdminRewardsLevelsKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/trials/$trialId/end': {
+      id: '/v1/admin/trials/$trialId/end'
+      path: '/v1/admin/trials/$trialId/end'
+      fullPath: '/v1/admin/trials/$trialId/end'
+      preLoaderRoute: typeof V1AdminTrialsTrialIdEndRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/trials/$trialId/revoke': {
+      id: '/v1/admin/trials/$trialId/revoke'
+      path: '/v1/admin/trials/$trialId/revoke'
+      fullPath: '/v1/admin/trials/$trialId/revoke'
+      preLoaderRoute: typeof V1AdminTrialsTrialIdRevokeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/users/$userId/': {
+      id: '/v1/admin/users/$userId/'
+      path: '/v1/admin/users/$userId'
+      fullPath: '/v1/admin/users/$userId/'
+      preLoaderRoute: typeof V1AdminUsersUserIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/users/$userId/reactivate': {
+      id: '/v1/admin/users/$userId/reactivate'
+      path: '/v1/admin/users/$userId/reactivate'
+      fullPath: '/v1/admin/users/$userId/reactivate'
+      preLoaderRoute: typeof V1AdminUsersUserIdReactivateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/users/$userId/suspend': {
+      id: '/v1/admin/users/$userId/suspend'
+      path: '/v1/admin/users/$userId/suspend'
+      fullPath: '/v1/admin/users/$userId/suspend'
+      preLoaderRoute: typeof V1AdminUsersUserIdSuspendRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/advertising/placements/$placementKey/active-ad': {
+      id: '/v1/advertising/placements/$placementKey/active-ad'
+      path: '/v1/advertising/placements/$placementKey/active-ad'
+      fullPath: '/v1/advertising/placements/$placementKey/active-ad'
+      preLoaderRoute: typeof V1AdvertisingPlacementsPlacementKeyActiveAdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/conversations/$conversationId/messages/': {
+      id: '/v1/conversations/$conversationId/messages/'
+      path: '/v1/conversations/$conversationId/messages'
+      fullPath: '/v1/conversations/$conversationId/messages/'
+      preLoaderRoute: typeof V1ConversationsConversationIdMessagesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/me/advertising/campaigns/': {
+      id: '/v1/me/advertising/campaigns/'
+      path: '/v1/me/advertising/campaigns'
+      fullPath: '/v1/me/advertising/campaigns/'
+      preLoaderRoute: typeof V1MeAdvertisingCampaignsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/me/notifications/$notificationId/read': {
+      id: '/v1/me/notifications/$notificationId/read'
+      path: '/v1/me/notifications/$notificationId/read'
+      fullPath: '/v1/me/notifications/$notificationId/read'
+      preLoaderRoute: typeof V1MeNotificationsNotificationIdReadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/advertising/campaigns/$campaignId/moderate': {
+      id: '/v1/admin/advertising/campaigns/$campaignId/moderate'
+      path: '/v1/admin/advertising/campaigns/$campaignId/moderate'
+      fullPath: '/v1/admin/advertising/campaigns/$campaignId/moderate'
+      preLoaderRoute: typeof V1AdminAdvertisingCampaignsCampaignIdModerateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/advertising/credit-redemptions/$redemptionId/fulfill': {
+      id: '/v1/admin/advertising/credit-redemptions/$redemptionId/fulfill'
+      path: '/v1/admin/advertising/credit-redemptions/$redemptionId/fulfill'
+      fullPath: '/v1/admin/advertising/credit-redemptions/$redemptionId/fulfill'
+      preLoaderRoute: typeof V1AdminAdvertisingCreditRedemptionsRedemptionIdFulfillRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/applications/$appId/capabilities/': {
+      id: '/v1/admin/applications/$appId/capabilities/'
+      path: '/v1/admin/applications/$appId/capabilities'
+      fullPath: '/v1/admin/applications/$appId/capabilities/'
+      preLoaderRoute: typeof V1AdminApplicationsAppIdCapabilitiesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/applications/$appId/capabilities/$key': {
+      id: '/v1/admin/applications/$appId/capabilities/$key'
+      path: '/v1/admin/applications/$appId/capabilities/$key'
+      fullPath: '/v1/admin/applications/$appId/capabilities/$key'
+      preLoaderRoute: typeof V1AdminApplicationsAppIdCapabilitiesKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/applications/$appId/dashboard-widgets/': {
+      id: '/v1/admin/applications/$appId/dashboard-widgets/'
+      path: '/v1/admin/applications/$appId/dashboard-widgets'
+      fullPath: '/v1/admin/applications/$appId/dashboard-widgets/'
+      preLoaderRoute: typeof V1AdminApplicationsAppIdDashboardWidgetsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/applications/$appId/dashboard-widgets/$key': {
+      id: '/v1/admin/applications/$appId/dashboard-widgets/$key'
+      path: '/v1/admin/applications/$appId/dashboard-widgets/$key'
+      fullPath: '/v1/admin/applications/$appId/dashboard-widgets/$key'
+      preLoaderRoute: typeof V1AdminApplicationsAppIdDashboardWidgetsKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/applications/$appId/trusted-advertisers/': {
+      id: '/v1/admin/applications/$appId/trusted-advertisers/'
+      path: '/v1/admin/applications/$appId/trusted-advertisers'
+      fullPath: '/v1/admin/applications/$appId/trusted-advertisers/'
+      preLoaderRoute: typeof V1AdminApplicationsAppIdTrustedAdvertisersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/admin/applications/$appId/trusted-advertisers/$userId': {
+      id: '/v1/admin/applications/$appId/trusted-advertisers/$userId'
+      path: '/v1/admin/applications/$appId/trusted-advertisers/$userId'
+      fullPath: '/v1/admin/applications/$appId/trusted-advertisers/$userId'
+      preLoaderRoute: typeof V1AdminApplicationsAppIdTrustedAdvertisersUserIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/me/advertising/campaigns/$campaignId/': {
+      id: '/v1/me/advertising/campaigns/$campaignId/'
+      path: '/v1/me/advertising/campaigns/$campaignId'
+      fullPath: '/v1/me/advertising/campaigns/$campaignId/'
+      preLoaderRoute: typeof V1MeAdvertisingCampaignsCampaignIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/me/advertising/campaigns/$campaignId/checkout-reference': {
+      id: '/v1/me/advertising/campaigns/$campaignId/checkout-reference'
+      path: '/v1/me/advertising/campaigns/$campaignId/checkout-reference'
+      fullPath: '/v1/me/advertising/campaigns/$campaignId/checkout-reference'
+      preLoaderRoute: typeof V1MeAdvertisingCampaignsCampaignIdCheckoutReferenceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface AdminRouteChildren {
   AdminAdvertisingRoute: typeof AdminAdvertisingRoute
   AdminApplicationsRoute: typeof AdminApplicationsRoute
+  AdminCapabilitiesRoute: typeof AdminCapabilitiesRoute
   AdminCommunicationRoute: typeof AdminCommunicationRoute
+  AdminDashboardWidgetsRoute: typeof AdminDashboardWidgetsRoute
   AdminPaymentsRoute: typeof AdminPaymentsRoute
+  AdminRewardsRoute: typeof AdminRewardsRoute
+  AdminTrialsRoute: typeof AdminTrialsRoute
   AdminUsersRoute: typeof AdminUsersRoute
   AdminVerificationRoute: typeof AdminVerificationRoute
 }
@@ -620,8 +2694,12 @@ interface AdminRouteChildren {
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAdvertisingRoute: AdminAdvertisingRoute,
   AdminApplicationsRoute: AdminApplicationsRoute,
+  AdminCapabilitiesRoute: AdminCapabilitiesRoute,
   AdminCommunicationRoute: AdminCommunicationRoute,
+  AdminDashboardWidgetsRoute: AdminDashboardWidgetsRoute,
   AdminPaymentsRoute: AdminPaymentsRoute,
+  AdminRewardsRoute: AdminRewardsRoute,
+  AdminTrialsRoute: AdminTrialsRoute,
   AdminUsersRoute: AdminUsersRoute,
   AdminVerificationRoute: AdminVerificationRoute,
 }
@@ -663,16 +2741,135 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardMessagesRoute: DashboardMessagesRouteWithChildren,
   DashboardNotificationsRoute: DashboardNotificationsRoute,
   DashboardProfileRoute: DashboardProfileRoute,
+  DashboardPurchasesRoute: DashboardPurchasesRoute,
   DashboardRewardsRoute: DashboardRewardsRoute,
   DashboardSecurityRoute: DashboardSecurityRoute,
   DashboardSettingsRoute: DashboardSettingsRoute,
-  DashboardSubscriptionsRoute: DashboardSubscriptionsRoute,
   PaymentSuccessRoute: PaymentSuccessRoute,
   ProfileUsernameRoute: ProfileUsernameRoute,
   UUsernameRoute: UUsernameRouteWithChildren,
   DashboardIndexRoute: DashboardIndexRoute,
+  V1ApplicationsIdOrSlugRoute: V1ApplicationsIdOrSlugRoute,
+  V1AuthLogoutRoute: V1AuthLogoutRoute,
+  V1AuthRefreshRoute: V1AuthRefreshRoute,
+  V1AuthSessionRoute: V1AuthSessionRoute,
+  V1MeExportRoute: V1MeExportRoute,
+  V1MePremiumRoute: V1MePremiumRoute,
+  V1MePremiumProfileRoute: V1MePremiumProfileRoute,
+  V1MePurchasesRoute: V1MePurchasesRoute,
+  V1MeReferralRoute: V1MeReferralRoute,
+  V1MeTrialRoute: V1MeTrialRoute,
+  V1MeVisibleApplicationsRoute: V1MeVisibleApplicationsRoute,
+  V1MediaAdvertisingBannerRoute: V1MediaAdvertisingBannerRoute,
+  V1MediaAvatarRoute: V1MediaAvatarRoute,
+  V1PaymentsReferenceRoute: V1PaymentsReferenceRoute,
+  V1ProfilesUsernameRoute: V1ProfilesUsernameRoute,
+  V1ApplicationsIndexRoute: V1ApplicationsIndexRoute,
+  V1CapabilitiesIndexRoute: V1CapabilitiesIndexRoute,
+  V1ConversationsIndexRoute: V1ConversationsIndexRoute,
+  V1MeIndexRoute: V1MeIndexRoute,
+  V1ProductsIndexRoute: V1ProductsIndexRoute,
+  V1ShareInviteIndexRoute: V1ShareInviteIndexRoute,
+  V1TrialPolicyIndexRoute: V1TrialPolicyIndexRoute,
   ApiPublicWebhooksPaypalRoute: ApiPublicWebhooksPaypalRoute,
   ApiPublicWebhooksStripeRoute: ApiPublicWebhooksStripeRoute,
+  V1AdminCapabilitiesKeyRoute: V1AdminCapabilitiesKeyRoute,
+  V1AdminDashboardWidgetsKeyRoute: V1AdminDashboardWidgetsKeyRoute,
+  V1AdminMediaBrandingRoute: V1AdminMediaBrandingRoute,
+  V1AdminNotificationsBroadcastRoute: V1AdminNotificationsBroadcastRoute,
+  V1AdminPremiumGrantRoute: V1AdminPremiumGrantRoute,
+  V1AdminTrialsGrantRoute: V1AdminTrialsGrantRoute,
+  V1AdminVerificationUserIdRoute: V1AdminVerificationUserIdRoute,
+  V1ConversationsConversationIdHideRoute:
+    V1ConversationsConversationIdHideRoute,
+  V1ConversationsConversationIdReadRoute:
+    V1ConversationsConversationIdReadRoute,
+  V1MeAdvertisingSummaryRoute: V1MeAdvertisingSummaryRoute,
+  V1MeAppSettingsAppIdRoute: V1MeAppSettingsAppIdRoute,
+  V1MeNotificationsReadAllRoute: V1MeNotificationsReadAllRoute,
+  V1MeRewardsRedeemRoute: V1MeRewardsRedeemRoute,
+  V1AdminApplicationsIndexRoute: V1AdminApplicationsIndexRoute,
+  V1AdminAuditLogsIndexRoute: V1AdminAuditLogsIndexRoute,
+  V1AdminCapabilitiesIndexRoute: V1AdminCapabilitiesIndexRoute,
+  V1AdminDashboardWidgetsIndexRoute: V1AdminDashboardWidgetsIndexRoute,
+  V1AdminPaymentsIndexRoute: V1AdminPaymentsIndexRoute,
+  V1AdminProductsIndexRoute: V1AdminProductsIndexRoute,
+  V1AdminStatsIndexRoute: V1AdminStatsIndexRoute,
+  V1AdminTrialPolicyIndexRoute: V1AdminTrialPolicyIndexRoute,
+  V1AdminTrialSourcesIndexRoute: V1AdminTrialSourcesIndexRoute,
+  V1AdminTrialsIndexRoute: V1AdminTrialsIndexRoute,
+  V1AdminUsersIndexRoute: V1AdminUsersIndexRoute,
+  V1AdminVerificationRequestsIndexRoute: V1AdminVerificationRequestsIndexRoute,
+  V1AdvertisingPlacementsIndexRoute: V1AdvertisingPlacementsIndexRoute,
+  V1DashboardWidgetsIndexRoute: V1DashboardWidgetsIndexRoute,
+  V1MeAppSettingsIndexRoute: V1MeAppSettingsIndexRoute,
+  V1MeNotificationsIndexRoute: V1MeNotificationsIndexRoute,
+  V1MeRewardsIndexRoute: V1MeRewardsIndexRoute,
+  V1AdminAdvertisingPlacementsKeyRoute: V1AdminAdvertisingPlacementsKeyRoute,
+  V1AdminAdvertisingPricesIdRoute: V1AdminAdvertisingPricesIdRoute,
+  V1AdminApplicationsAppIdAdvertisingSettingsRoute:
+    V1AdminApplicationsAppIdAdvertisingSettingsRoute,
+  V1AdminApplicationsAppIdShareInviteRoute:
+    V1AdminApplicationsAppIdShareInviteRoute,
+  V1AdminApplicationsAppIdVisibilityRoute:
+    V1AdminApplicationsAppIdVisibilityRoute,
+  V1AdminPremiumPurchaseIdRevokeRoute: V1AdminPremiumPurchaseIdRevokeRoute,
+  V1AdminProductsProductIdArchiveRoute: V1AdminProductsProductIdArchiveRoute,
+  V1AdminRewardsAchievementsKeyRoute: V1AdminRewardsAchievementsKeyRoute,
+  V1AdminRewardsActionRulesActionRoute: V1AdminRewardsActionRulesActionRoute,
+  V1AdminRewardsCatalogKeyRoute: V1AdminRewardsCatalogKeyRoute,
+  V1AdminRewardsConfigKeyRoute: V1AdminRewardsConfigKeyRoute,
+  V1AdminRewardsFulfillmentTypesKeyRoute:
+    V1AdminRewardsFulfillmentTypesKeyRoute,
+  V1AdminRewardsLevelsKeyRoute: V1AdminRewardsLevelsKeyRoute,
+  V1AdminTrialsTrialIdEndRoute: V1AdminTrialsTrialIdEndRoute,
+  V1AdminTrialsTrialIdRevokeRoute: V1AdminTrialsTrialIdRevokeRoute,
+  V1AdminUsersUserIdReactivateRoute: V1AdminUsersUserIdReactivateRoute,
+  V1AdminUsersUserIdSuspendRoute: V1AdminUsersUserIdSuspendRoute,
+  V1AdvertisingPlacementsPlacementKeyActiveAdRoute:
+    V1AdvertisingPlacementsPlacementKeyActiveAdRoute,
+  V1MeNotificationsNotificationIdReadRoute:
+    V1MeNotificationsNotificationIdReadRoute,
+  V1AdminAdvertisingCampaignsIndexRoute: V1AdminAdvertisingCampaignsIndexRoute,
+  V1AdminAdvertisingConfigIndexRoute: V1AdminAdvertisingConfigIndexRoute,
+  V1AdminAdvertisingCreditRedemptionsIndexRoute:
+    V1AdminAdvertisingCreditRedemptionsIndexRoute,
+  V1AdminAdvertisingPlacementsIndexRoute:
+    V1AdminAdvertisingPlacementsIndexRoute,
+  V1AdminAdvertisingPricesIndexRoute: V1AdminAdvertisingPricesIndexRoute,
+  V1AdminApplicationsAppIdIndexRoute: V1AdminApplicationsAppIdIndexRoute,
+  V1AdminProductsProductIdIndexRoute: V1AdminProductsProductIdIndexRoute,
+  V1AdminRewardsAchievementsIndexRoute: V1AdminRewardsAchievementsIndexRoute,
+  V1AdminRewardsActionRulesIndexRoute: V1AdminRewardsActionRulesIndexRoute,
+  V1AdminRewardsCatalogIndexRoute: V1AdminRewardsCatalogIndexRoute,
+  V1AdminRewardsConfigIndexRoute: V1AdminRewardsConfigIndexRoute,
+  V1AdminRewardsFulfillmentTypesIndexRoute:
+    V1AdminRewardsFulfillmentTypesIndexRoute,
+  V1AdminRewardsLevelsIndexRoute: V1AdminRewardsLevelsIndexRoute,
+  V1AdminUsersUserIdIndexRoute: V1AdminUsersUserIdIndexRoute,
+  V1ConversationsConversationIdMessagesIndexRoute:
+    V1ConversationsConversationIdMessagesIndexRoute,
+  V1MeAdvertisingCampaignsIndexRoute: V1MeAdvertisingCampaignsIndexRoute,
+  V1AdminAdvertisingCampaignsCampaignIdModerateRoute:
+    V1AdminAdvertisingCampaignsCampaignIdModerateRoute,
+  V1AdminAdvertisingCreditRedemptionsRedemptionIdFulfillRoute:
+    V1AdminAdvertisingCreditRedemptionsRedemptionIdFulfillRoute,
+  V1AdminApplicationsAppIdCapabilitiesKeyRoute:
+    V1AdminApplicationsAppIdCapabilitiesKeyRoute,
+  V1AdminApplicationsAppIdDashboardWidgetsKeyRoute:
+    V1AdminApplicationsAppIdDashboardWidgetsKeyRoute,
+  V1AdminApplicationsAppIdTrustedAdvertisersUserIdRoute:
+    V1AdminApplicationsAppIdTrustedAdvertisersUserIdRoute,
+  V1MeAdvertisingCampaignsCampaignIdCheckoutReferenceRoute:
+    V1MeAdvertisingCampaignsCampaignIdCheckoutReferenceRoute,
+  V1AdminApplicationsAppIdCapabilitiesIndexRoute:
+    V1AdminApplicationsAppIdCapabilitiesIndexRoute,
+  V1AdminApplicationsAppIdDashboardWidgetsIndexRoute:
+    V1AdminApplicationsAppIdDashboardWidgetsIndexRoute,
+  V1AdminApplicationsAppIdTrustedAdvertisersIndexRoute:
+    V1AdminApplicationsAppIdTrustedAdvertisersIndexRoute,
+  V1MeAdvertisingCampaignsCampaignIdIndexRoute:
+    V1MeAdvertisingCampaignsCampaignIdIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

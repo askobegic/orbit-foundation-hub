@@ -4,10 +4,13 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   BadgeCheck,
+  Clock,
   CreditCard,
+  Gift,
   Image,
   LayoutGrid,
   MegaphoneIcon,
+  Sliders,
   TrendingUp,
   UserPlus,
   Users,
@@ -137,6 +140,30 @@ function AdminGate() {
       icon: Image,
       title: "Advertising",
       desc: "Placements, pricing, moderation, and trusted advertisers.",
+    },
+    {
+      to: "/admin/trials",
+      icon: Clock,
+      title: "Promotional Trials",
+      desc: "Grant, end, revoke, and review Promotional Trial history.",
+    },
+    {
+      to: "/admin/capabilities",
+      icon: Sliders,
+      title: "Capabilities",
+      desc: "Register capabilities and enable them per application.",
+    },
+    {
+      to: "/admin/dashboard-widgets",
+      icon: LayoutGrid,
+      title: "Dashboard Widgets",
+      desc: "Enable or disable dashboard sections, globally or per application.",
+    },
+    {
+      to: "/admin/rewards",
+      icon: Gift,
+      title: "Rewards & Loyalty",
+      desc: "Action rules, levels, achievements, catalog, fulfillment types, config.",
     },
   ] as const;
   return (

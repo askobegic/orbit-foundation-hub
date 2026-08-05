@@ -1,7 +1,12 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { Copy, Check, Share2, UserPlus, X, Facebook, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+
+import { useApplication } from "@/context/ApplicationContext";
+import { getShareInviteConfig } from "@/lib/share-invite.functions";
 
 function InstagramIcon() {
   return (
@@ -30,40 +35,63 @@ function WhatsAppIcon() {
 interface ShareAndInviteProps {
   username: string | null;
   firstName: string | null;
+  lastName: string | null;
 }
 
-export function ShareAndInvite({ username, firstName }: ShareAndInviteProps) {
+// Share is application-focused (a fixed title/description/URL an admin
+// configures once per application, not derived from whichever user
+// happens to be sharing) -- Invite is personal (the inviting user's own
+// public display name plus their existing `?ref=<username>` referral
+// link, filled into an admin-authored template). Both are configurable
+// per application; see share-invite.functions.ts and
+// PROJECT_KNOWLEDGE.md -> Share Profile / Invite a Friend.
+export function ShareAndInvite({ username, firstName, lastName }: ShareAndInviteProps) {
   const { t } = useTranslation();
+  const { application } = useApplication();
   const [copied, setCopied] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteCopied, setInviteCopied] = useState(false);
 
-  const profileUrl = username
-    ? `${window.location.origin}/u/${username}`
-    : window.location.origin;
+  const getConfigFn = useServerFn(getShareInviteConfig);
+  const configQuery = useQuery({
+    queryKey: ["share-invite-config", application?.id],
+    enabled: !!application?.id,
+    queryFn: () => getConfigFn({ data: { appId: application!.id } }),
+  });
+  const config = configQuery.data;
 
-  const inviteUrl = `${window.location.origin}?ref=${username ?? "friend"}`;
-  const shareText = `${t("share.profileText")} ${profileUrl}`;
-  const inviteText = `${t("share.inviteText")} ${inviteUrl}`;
+  const shareTitle = config?.shareTitle ?? application?.name ?? t("share.defaultShareTitle");
+  const shareDescription = config?.shareDescription ?? t("share.defaultShareDescription");
+  const shareUrl =
+    config?.shareUrl ??
+    (application?.domain ? `https://${application.domain}` : window.location.origin);
 
-  async function copyProfile() {
-    await navigator.clipboard.writeText(profileUrl);
+  const displayName = [firstName, lastName].filter(Boolean).join(" ").trim();
+  const userName = displayName || (username ? `@${username}` : t("share.aFriend"));
+  const inviteLink = `${window.location.origin}?ref=${username ?? "friend"}`;
+  const inviteTemplate = config?.inviteTemplate ?? t("share.defaultInviteTemplate");
+  const inviteText = inviteTemplate
+    .replaceAll("{user_name}", userName)
+    .replaceAll("{invite_link}", inviteLink);
+
+  async function copyShareUrl() {
+    await navigator.clipboard.writeText(shareUrl);
     setCopied(true);
     toast.success(t("share.linkCopied"));
     setTimeout(() => setCopied(false), 2000);
   }
 
   async function copyInvite() {
-    await navigator.clipboard.writeText(inviteUrl);
+    await navigator.clipboard.writeText(inviteText);
     setInviteCopied(true);
     toast.success(t("share.linkCopied"));
     setTimeout(() => setInviteCopied(false), 2000);
   }
 
-  async function nativeShare(text: string, url: string) {
+  async function nativeShare(title: string, text: string, url: string) {
     if (navigator.share) {
       try {
-        await navigator.share({ title: "Core Platform", text, url });
+        await navigator.share({ title, text, url });
       } catch {
         // cancelled
       }
@@ -73,19 +101,21 @@ export function ShareAndInvite({ username, firstName }: ShareAndInviteProps) {
     }
   }
 
+  const shareText = `${shareTitle} — ${shareDescription}`;
+
   const socialLinks = [
     {
       name: "Facebook",
       icon: <Facebook size={15} />,
       color: "#1877F2",
-      href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(profileUrl)}`,
+      href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
     },
     {
       name: "Instagram",
       icon: <InstagramIcon />,
       color: "#E1306C",
       onClick: () => {
-        navigator.clipboard.writeText(profileUrl);
+        navigator.clipboard.writeText(shareUrl);
         toast.success(t("share.instagramCopied"));
       },
     },
@@ -94,7 +124,7 @@ export function ShareAndInvite({ username, firstName }: ShareAndInviteProps) {
       icon: <TikTokIcon />,
       color: "#000000",
       onClick: () => {
-        navigator.clipboard.writeText(profileUrl);
+        navigator.clipboard.writeText(shareUrl);
         toast.success(t("share.tiktokCopied"));
       },
     },
@@ -108,7 +138,7 @@ export function ShareAndInvite({ username, firstName }: ShareAndInviteProps) {
       name: "Email",
       icon: <Mail size={15} />,
       color: "#6B7280",
-      href: `mailto:?subject=${encodeURIComponent(t("share.emailSubject"))}&body=${encodeURIComponent(shareText)}`,
+      href: `mailto:?subject=${encodeURIComponent(shareTitle)}&body=${encodeURIComponent(shareText)}`,
     },
   ];
 
@@ -117,9 +147,9 @@ export function ShareAndInvite({ username, firstName }: ShareAndInviteProps) {
       {/* Share To */}
       <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-800">{t("share.shareProfile")}</h3>
+          <h3 className="text-sm font-semibold text-gray-800">{t("share.shareApp")}</h3>
           <button
-            onClick={() => nativeShare(shareText, profileUrl)}
+            onClick={() => nativeShare(shareTitle, shareDescription, shareUrl)}
             className="flex items-center gap-1.5 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#1558D6]"
           >
             <Share2 size={12} />
@@ -127,9 +157,11 @@ export function ShareAndInvite({ username, firstName }: ShareAndInviteProps) {
           </button>
         </div>
 
+        <p className="mb-3 text-xs text-gray-500">{shareDescription}</p>
+
         <div className="mb-4 flex items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
-          <span className="flex-1 truncate text-xs text-gray-500">{profileUrl}</span>
-          <button onClick={copyProfile} className="flex-shrink-0 text-gray-400 hover:text-[#1D6BF3]">
+          <span className="flex-1 truncate text-xs text-gray-500">{shareUrl}</span>
+          <button onClick={copyShareUrl} className="flex-shrink-0 text-gray-400 hover:text-[#1D6BF3]">
             {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
           </button>
         </div>
@@ -181,7 +213,7 @@ export function ShareAndInvite({ username, firstName }: ShareAndInviteProps) {
         </div>
 
         <div className="flex items-center gap-2 rounded-lg border border-dashed border-gray-200 px-3 py-2">
-          <span className="flex-1 truncate text-xs text-gray-400">{inviteUrl}</span>
+          <span className="flex-1 truncate text-xs text-gray-400">{inviteLink}</span>
           <button onClick={copyInvite} className="flex-shrink-0 text-gray-400 hover:text-[#1D6BF3]">
             {inviteCopied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
           </button>
@@ -206,7 +238,7 @@ export function ShareAndInvite({ username, firstName }: ShareAndInviteProps) {
 
             <div className="mb-4 rounded-xl bg-gray-50 p-3">
               <p className="mb-1 text-xs text-gray-400">{t("share.yourInviteLink")}</p>
-              <p className="break-all text-xs font-medium text-gray-700">{inviteUrl}</p>
+              <p className="break-all text-xs font-medium text-gray-700">{inviteText}</p>
             </div>
 
             <div className="flex gap-2">
@@ -218,17 +250,13 @@ export function ShareAndInvite({ username, firstName }: ShareAndInviteProps) {
                 {t("share.copyLink")}
               </button>
               <button
-                onClick={() => nativeShare(inviteText, inviteUrl)}
+                onClick={() => nativeShare(t("share.inviteFriend"), inviteText, inviteLink)}
                 className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#1D6BF3] py-2.5 text-sm font-medium text-white hover:bg-[#1558D6]"
               >
                 <Share2 size={14} />
                 {t("share.share")}
               </button>
             </div>
-
-            <p className="mt-3 text-center text-xs text-gray-400">
-              💡 {t("share.referralComingSoon")}
-            </p>
           </div>
         </div>
       )}

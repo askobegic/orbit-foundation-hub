@@ -35,16 +35,25 @@ async function loadOrCreateProfile(u: User): Promise<ProfileRow | null> {
     .maybeSingle();
 
   if (existing) {
-    // Auto-import missing fields from the identity provider. Only ever
-    // fills gaps -- once a field is set (in particular, once Identity Lock
-    // engages at onboarding completion), this condition is always false,
-    // so this never conflicts with the lock.
+    // Auto-import missing fields from the identity provider. first_name/
+    // last_name/avatar_url only ever fill gaps -- once set (in particular,
+    // once Identity Lock engages at onboarding completion), those three
+    // conditions are always false, so this never conflicts with the lock.
+    //
+    // email is different (Priority 8.7, R-7): the authentication identity
+    // must remain the single source of truth for it, so this always
+    // re-syncs email to match `u.email` (not just fill-once-if-empty) --
+    // self-healing on every session load/auth-state change, the two
+    // places this function is called from. profiles.email is no longer
+    // exposed as an admin-editable field (see admin.functions.ts's
+    // userUpdateSchema) for the same reason: any manual override would
+    // just be silently reverted the next time this runs.
     const identity = extractIdentityFromAuthUser(u);
     const patch: ProfileUpdate = {};
     if (!existing.first_name) patch.first_name = identity.firstName;
     if (!existing.last_name) patch.last_name = identity.lastName;
     if (!existing.avatar_url) patch.avatar_url = identity.avatarUrl;
-    if (!existing.email && u.email) patch.email = u.email;
+    if (u.email && existing.email !== u.email) patch.email = u.email;
 
     if (Object.keys(patch).length > 0) {
       const { data: updated } = await supabase

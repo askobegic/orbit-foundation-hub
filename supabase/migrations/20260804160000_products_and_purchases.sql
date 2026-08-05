@@ -1,0 +1,32 @@
+-- Priority 8.11: Unified Products & Purchases Architecture.
+--
+-- Architecture review conclusion (see PROJECT_KNOWLEDGE.md -> Products &
+-- Purchases and CLAUDE.md -> Priority 8.11 for the full reasoning): the
+-- existing subscription_plans/subscriptions/payments model already IS a
+-- Products & Purchases system in substance -- a subscription_plans row is
+-- already a purchasable, admin-priced item; a subscriptions row already IS
+-- a fixed-duration purchase record; payments already IS the provider
+-- transaction ledger (Stripe/PayPal ids, amount, status). This platform has
+-- no recurring/auto-renewing billing anywhere -- every "subscription" is
+-- already, mechanically, a one-time, fixed-duration purchase. Evolving the
+-- concept to genuinely cover Subscription/Promotion/One-Time products
+-- needs exactly one new column, not a new table or a rename of any
+-- existing one -- table renames were deliberately rejected (Postgres
+-- renames are cheap, but every payment-webhook/admin/dashboard call site
+-- referencing these table names by string would need touching for zero
+-- functional gain, directly contradicting "avoid unnecessary breaking
+-- changes").
+--
+-- product_type classifies what KIND of product a plan represents, for
+-- admin organization and future extensibility -- it does not change
+-- checkout, entitlement, or fulfillment logic in this pass. Every product,
+-- regardless of type, still creates a normal subscriptions row with a real
+-- expires_at and still grants the same one global Premium entitlement via
+-- has_any_active_premium() when active -- Global Premium Visibility is
+-- unchanged, not reopened by this migration. A future product type that
+-- genuinely needs different entitlement semantics (e.g. a lifetime,
+-- non-expiring purchase) is an explicit, separate business-rule decision,
+-- not implied by this column.
+ALTER TABLE public.subscription_plans
+  ADD COLUMN IF NOT EXISTS product_type text NOT NULL DEFAULT 'subscription'
+    CHECK (product_type IN ('subscription', 'promotion', 'one_time'));

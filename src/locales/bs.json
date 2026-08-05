@@ -3,6 +3,7 @@
     "home": "Početna",
     "profile": "Moj profil",
     "applications": "Moje aplikacije",
+    "purchases": "Kupovine",
     "subscriptions": "Moje pretplate",
     "payments": "Historija uplata",
     "settings": "Postavke",
@@ -16,24 +17,26 @@
   },
   "messages": {
     "title": "Poruke",
-    "empty": "Još nema razgovora"
+    "empty": "Još nema razgovora",
+    "unavailable": "Poruke nisu dostupne za ovu aplikaciju"
   },
   "share": {
+    "shareApp": "Podijeli",
     "shareProfile": "Podijeli profil",
     "share": "Podijeli",
     "copyLink": "Kopiraj link",
     "linkCopied": "Link kopiran!",
-    "profileText": "Pogledaj moj profil na Core Platform:",
+    "defaultShareTitle": "Pogledaj ovo",
+    "defaultShareDescription": "Otkrijte ovu platformu.",
     "instagramCopied": "Link kopiran! Zalijepi u Instagram bio.",
     "tiktokCopied": "Link kopiran! Zalijepi u TikTok bio.",
-    "emailSubject": "Moj profil na Core Platform",
     "inviteFriend": "Pozovi prijatelja",
     "inviteSubtitle": "Podijeli pozivnicu sa prijateljima",
     "invite": "Pozovi",
-    "inviteText": "Pridruži se Core Platformi:",
-    "inviteDescription": "Podijeli ovaj link sa prijateljem i pozovi ga na Core Platform.",
-    "yourInviteLink": "Tvoj pozivni link",
-    "referralComingSoon": "Referral program dolazi uskoro"
+    "defaultInviteTemplate": "{user_name} vas poziva da se pridružite. Registrujte se ovdje: {invite_link}",
+    "inviteDescription": "Podijeli ovaj link sa prijateljem i pozovi ga da se pridruži.",
+    "yourInviteLink": "Tvoja pozivna poruka",
+    "aFriend": "Prijatelj"
   },
   "auth": {
     "login": "Prijava",
@@ -143,6 +146,7 @@
     "viewAll": "Prikaži sve",
     "validUntil": "Važi do",
     "comingSoon": "Uskoro dostupno",
+    "launchDate": "Lansiranje",
     "active": "Aktivna",
     "expired": "Istekla",
     "standard": "Standard",
@@ -170,6 +174,23 @@
       "pending": "U toku",
       "expired": "Isteklo",
       "cancelled": "Otkazano"
+    }
+  },
+  "purchases": {
+    "title": "Kupovine",
+    "subtitle": "Kompletna historija kupovina u cijelom ekosistemu.",
+    "products": "Proizvodi",
+    "noProducts": "Još nema kupovina",
+    "paymentHistory": "Historija plaćanja",
+    "noPayments": "Još nema uplata",
+    "transactionId": "ID transakcije",
+    "provider": "Provajder",
+    "adminGrant": "Administratorska dodjela",
+    "advertisingCampaign": "Oglašivačka kampanja",
+    "type": {
+      "subscription": "Pretplata",
+      "promotion": "Promocija",
+      "one_time": "Jednokratno"
     }
   },
   "common": {
@@ -367,9 +388,9 @@
     "cta": "Instaliraj"
   },
   "trial": {
-    "activeTitle": "🎉 Imate 7 dana besplatnog Premium pristupa!",
+    "activeTitle": "🎉 Imate promotivni Premium pristup!",
     "activeExpires": "Istječe",
-    "expiredTitle": "Vaš trial je istekao",
+    "expiredTitle": "Vaš promotivni trial je završen",
     "expiredHint": "Nastavite koristiti sve premium funkcije bez prekida.",
     "upgradeNow": "Nadogradi sada"
   },

@@ -3,20 +3,21 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect } from "react";
-import { ArrowLeft, Plus, Trash2, Save } from "lucide-react";
+import { ArrowLeft, Plus, Archive, Save } from "lucide-react";
 import { toast } from "sonner";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { supabase } from "@/integrations/supabase/client";
 import {
   adminUpsertPlan,
-  adminDeletePlan,
+  adminArchivePlan,
   getMyIsAdmin,
   adminCreateApplication,
-  adminSetAppEnabled,
+  adminSetApplicationVisibility,
   adminUpdateAppSettings,
 } from "@/lib/admin.functions";
-import type { ApplicationRow, SubscriptionPlanRow } from "@/types/database";
+import { adminUpsertShareInviteTemplate, getShareInviteConfig } from "@/lib/share-invite.functions";
+import type { ApplicationRow, ApplicationVisibility, ProductType, SubscriptionPlanRow } from "@/types/database";
 
 export const Route = createFileRoute("/admin/applications")({
   head: () => ({
@@ -78,9 +79,9 @@ function AdminApps() {
   });
 
   const upsert = useServerFn(adminUpsertPlan);
-  const del = useServerFn(adminDeletePlan);
+  const archive = useServerFn(adminArchivePlan);
   const createApp = useServerFn(adminCreateApplication);
-  const setEnabled = useServerFn(adminSetAppEnabled);
+  const setVisibility = useServerFn(adminSetApplicationVisibility);
   const updateSettings = useServerFn(adminUpdateAppSettings);
 
   const createAppMutation = useMutation({
@@ -93,10 +94,10 @@ function AdminApps() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const toggleEnabled = useMutation({
-    mutationFn: (v: { app_id: string; is_enabled: boolean }) => setEnabled({ data: v }),
+  const changeVisibility = useMutation({
+    mutationFn: (v: { app_id: string; visibility: ApplicationVisibility }) => setVisibility({ data: v }),
     onSuccess: () => {
-      toast.success("Updated");
+      toast.success("Visibility updated");
       qc.invalidateQueries({ queryKey: ["admin-apps"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -127,19 +128,20 @@ function AdminApps() {
           features_en: plan.features_en ?? [],
           features_de: plan.features_de ?? [],
           is_active: plan.is_active ?? true,
+          product_type: plan.product_type ?? "subscription",
         },
       }),
     onSuccess: () => {
-      toast.success("Plan saved");
+      toast.success("Product saved");
       qc.invalidateQueries({ queryKey: ["admin-plans", activeAppId] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const removePlan = useMutation({
-    mutationFn: (id: string) => del({ data: { id } }),
+  const archivePlan = useMutation({
+    mutationFn: (id: string) => archive({ data: { id } }),
     onSuccess: () => {
-      toast.success("Deleted");
+      toast.success("Product deactivated");
       qc.invalidateQueries({ queryKey: ["admin-plans", activeAppId] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -207,30 +209,44 @@ function AdminApps() {
               app={activeApp}
               onSave={(v) => saveSettings.mutate({ ...v, app_id: activeApp.id })}
               busy={saveSettings.isPending}
+              onSetVisibility={(visibility) => changeVisibility.mutate({ app_id: activeApp.id, visibility })}
+              visibilityBusy={changeVisibility.isPending}
             />
-            {(plansQ.data ?? []).map((plan) => (
-              <PlanForm
-                key={plan.id}
-                initial={plan}
-                onSave={(p) => savePlan.mutate({ ...p, id: plan.id })}
-                onDelete={() => removePlan.mutate(plan.id)}
-              />
-            ))}
-            <PlanForm
-              key="new"
-              initial={{
-                name: "Premium 12m",
-                duration_months: 12,
-                price: 24,
-                currency: "EUR",
-                is_active: true,
-                features_bs: [],
-                features_en: [],
-                features_de: [],
-              }}
-              isNew
-              onSave={(p) => savePlan.mutate(p)}
-            />
+            <ShareInviteSettings appId={activeApp.id} />
+
+            <div>
+              <h2 className="mb-1 text-sm font-semibold text-gray-900">Products</h2>
+              <p className="mb-3 text-xs text-gray-500">
+                Every purchasable item for this application -- Premium subscriptions, promotions, and
+                one-time purchases are all Products, priced and configured the same way.
+              </p>
+              <div className="space-y-4">
+                {(plansQ.data ?? []).map((plan) => (
+                  <PlanForm
+                    key={plan.id}
+                    initial={plan}
+                    onSave={(p) => savePlan.mutate({ ...p, id: plan.id })}
+                    onArchive={() => archivePlan.mutate(plan.id)}
+                  />
+                ))}
+                <PlanForm
+                  key="new"
+                  initial={{
+                    name: "Premium 12m",
+                    duration_months: 12,
+                    price: 24,
+                    currency: "EUR",
+                    is_active: true,
+                    product_type: "subscription",
+                    features_bs: [],
+                    features_en: [],
+                    features_de: [],
+                  }}
+                  isNew
+                  onSave={(p) => savePlan.mutate(p)}
+                />
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -242,12 +258,12 @@ function PlanForm({
   initial,
   isNew,
   onSave,
-  onDelete,
+  onArchive,
 }: {
   initial: Partial<SubscriptionPlanRow>;
   isNew?: boolean;
   onSave: (p: Partial<SubscriptionPlanRow>) => void;
-  onDelete?: () => void;
+  onArchive?: () => void;
 }) {
   const [p, setP] = useState<Partial<SubscriptionPlanRow>>(initial);
 
@@ -264,18 +280,31 @@ function PlanForm({
   return (
     <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
       <div className="mb-3 flex items-center justify-between">
-        <span className="text-sm font-semibold">{isNew ? "New plan" : p.name}</span>
-        {onDelete && (
+        <span className="text-sm font-semibold">{isNew ? "New product" : p.name}</span>
+        {onArchive && (
           <button
-            onClick={onDelete}
-            className="rounded-lg p-2 text-red-500 hover:bg-red-50"
-            aria-label="Delete"
+            onClick={onArchive}
+            disabled={p.is_active === false}
+            className="rounded-lg p-2 text-red-500 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+            aria-label="Deactivate product"
+            title={p.is_active === false ? "Already inactive" : "Deactivate this product (soft — never deleted)"}
           >
-            <Trash2 className="h-4 w-4" />
+            <Archive className="h-4 w-4" />
           </button>
         )}
       </div>
       <div className="grid gap-3 md:grid-cols-4">
+        <Field label="Product type">
+          <select
+            className="input"
+            value={p.product_type ?? "subscription"}
+            onChange={(e) => setP({ ...p, product_type: e.target.value as ProductType })}
+          >
+            <option value="subscription">Subscription</option>
+            <option value="promotion">Promotion</option>
+            <option value="one_time">One-Time</option>
+          </select>
+        </Field>
         <Field label="Name">
           <input
             className="input"
@@ -493,17 +522,29 @@ type AppSettingsPayload = {
   short_description_bs: string | null;
   short_description_en: string | null;
   short_description_de: string | null;
-  is_enabled: boolean;
+  launch_date: string | null;
+  default_language: "bs" | "en" | "de" | null;
 };
+
+const VISIBILITY_OPTIONS: { value: ApplicationVisibility; label: string; hint: string }[] = [
+  { value: "draft", label: "Draft", hint: "Hidden from all normal users. Visible only to administrators." },
+  { value: "coming_soon", label: "Coming Soon", hint: "Visible on the Dashboard, clearly marked. Users cannot enter." },
+  { value: "active", label: "Active", hint: "Fully visible and accessible." },
+  { value: "archived", label: "Archived", hint: "Hidden from normal users. Preserved for administration and history." },
+];
 
 function AppSettings({
   app,
   onSave,
   busy,
+  onSetVisibility,
+  visibilityBusy,
 }: {
   app: ApplicationRow;
   onSave: (v: AppSettingsPayload) => void;
   busy?: boolean;
+  onSetVisibility: (visibility: ApplicationVisibility) => void;
+  visibilityBusy?: boolean;
 }) {
   const [name, setName] = useState(app.name);
   const [slug, setSlug] = useState(app.slug);
@@ -518,7 +559,9 @@ function AppSettings({
   const [dBs, setDBs] = useState(app.short_description_bs ?? "");
   const [dEn, setDEn] = useState(app.short_description_en ?? "");
   const [dDe, setDDe] = useState(app.short_description_de ?? "");
-  const [enabled, setEnabled] = useState(app.is_enabled !== false);
+  const [launchDate, setLaunchDate] = useState(app.launch_date ? app.launch_date.slice(0, 16) : "");
+  const [defaultLanguage, setDefaultLanguage] = useState<"" | "bs" | "en" | "de">(app.default_language ?? "");
+  const [visibility, setVisibilityLocal] = useState<ApplicationVisibility>(app.visibility);
   const [uploading, setUploading] = useState<null | "logo" | "favicon" | "cover">(null);
   const logoRef = useRef<HTMLInputElement>(null);
   const favRef = useRef<HTMLInputElement>(null);
@@ -538,7 +581,9 @@ function AppSettings({
     setDBs(app.short_description_bs ?? "");
     setDEn(app.short_description_en ?? "");
     setDDe(app.short_description_de ?? "");
-    setEnabled(app.is_enabled !== false);
+    setLaunchDate(app.launch_date ? app.launch_date.slice(0, 16) : "");
+    setDefaultLanguage(app.default_language ?? "");
+    setVisibilityLocal(app.visibility);
   }, [
     app.id,
     app.name,
@@ -554,7 +599,9 @@ function AppSettings({
     app.short_description_bs,
     app.short_description_en,
     app.short_description_de,
-    app.is_enabled,
+    app.launch_date,
+    app.default_language,
+    app.visibility,
   ]);
 
   async function upload(kind: "logo" | "favicon" | "cover", file: File) {
@@ -616,7 +663,8 @@ function AppSettings({
       short_description_bs: dBs.trim() || null,
       short_description_en: dEn.trim() || null,
       short_description_de: dDe.trim() || null,
-      is_enabled: enabled,
+      launch_date: launchDate ? new Date(launchDate).toISOString() : null,
+      default_language: defaultLanguage || null,
     });
   }
 
@@ -785,32 +833,38 @@ function AppSettings({
         </p>
       </div>
 
+      <div className="mb-4 grid gap-3 md:grid-cols-2">
+        <Field label="Launch date (optional)">
+          <input
+            type="datetime-local"
+            className="input"
+            value={launchDate}
+            onChange={(e) => setLaunchDate(e.target.value)}
+          />
+        </Field>
+        <Field label="Default language">
+          <select
+            className="input"
+            value={defaultLanguage}
+            onChange={(e) => setDefaultLanguage(e.target.value as "" | "bs" | "en" | "de")}
+          >
+            <option value="">None (fall through to next resolution step)</option>
+            <option value="bs">Bosnian</option>
+            <option value="en">English</option>
+            <option value="de">German</option>
+          </select>
+        </Field>
+      </div>
+      <p className="mb-4 -mt-2 text-[11px] text-gray-400">
+        Launch date is informational only -- shown next to a "Coming Soon" application, never used to
+        activate it automatically. Default language is step 3 of the API's locale resolution order
+        (Accept-Language header → user's own profile language → this → English).
+      </p>
+
       <div className="grid gap-3">
         <DescField label="Kratki opis (BS)" value={dBs} onChange={setDBs} />
         <DescField label="Kratki opis (EN)" value={dEn} onChange={setDEn} />
         <DescField label="Kratki opis (DE)" value={dDe} onChange={setDDe} />
-      </div>
-
-      <div className="mt-4 border-t border-gray-100 pt-4">
-        <div className="mb-2 text-xs font-medium text-gray-600">Status</div>
-        <label className="inline-flex cursor-pointer items-center gap-3">
-          <span className="relative inline-block h-6 w-11">
-            <input
-              type="checkbox"
-              className="peer sr-only"
-              checked={enabled}
-              onChange={(e) => setEnabled(e.target.checked)}
-            />
-            <span className="absolute inset-0 rounded-full bg-gray-300 transition peer-checked:bg-[#1D6BF3]" />
-            <span className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition peer-checked:translate-x-5" />
-          </span>
-          <span className="text-sm text-gray-800">
-            {enabled ? "Aplikacija aktivna" : "Aplikacija neaktivna"}
-          </span>
-        </label>
-        <p className="mt-2 text-xs text-gray-500">
-          Kada je neaktivna, korisnici vide samo "Uskoro dostupno" badge.
-        </p>
       </div>
 
       <div className="mt-5 flex justify-end">
@@ -822,6 +876,143 @@ function AppSettings({
         >
           <Save className="h-4 w-4" />
           {busy ? "Spremam…" : "Sačuvaj postavke"}
+        </button>
+      </div>
+
+      <div className="mt-4 border-t border-gray-100 pt-4">
+        <div className="mb-2 text-xs font-medium text-gray-600">Visibility</div>
+        <select
+          className="input max-w-sm"
+          value={visibility}
+          onChange={(e) => setVisibilityLocal(e.target.value as ApplicationVisibility)}
+        >
+          {VISIBILITY_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <p className="mt-2 text-xs text-gray-500">
+          {VISIBILITY_OPTIONS.find((o) => o.value === visibility)?.hint}
+        </p>
+        <p className="mt-1 text-xs text-gray-500">
+          Changing visibility is always this one explicit action -- nothing in this codebase ever
+          changes it automatically, even once a launch date has passed.
+        </p>
+        <button
+          type="button"
+          onClick={() => onSetVisibility(visibility)}
+          disabled={visibilityBusy || visibility === app.visibility}
+          className="mt-3 inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {visibilityBusy ? "Updating…" : "Update visibility"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Extends the existing Share & Invite / referral functionality
+// (ShareAndInvite.tsx) with per-application templates. Share is
+// application-focused (fixed title/description/URL); Invite is personal,
+// filled client-side from {user_name}/{invite_link} placeholders. Every
+// field is nullable -- left blank, ShareAndInvite.tsx falls back to a
+// locale-aware default, it never breaks. See PROJECT_KNOWLEDGE.md -> Share
+// Profile / Invite a Friend.
+function ShareInviteSettings({ appId }: { appId: string }) {
+  const qc = useQueryClient();
+  const getConfigFn = useServerFn(getShareInviteConfig);
+  const upsertFn = useServerFn(adminUpsertShareInviteTemplate);
+
+  const configQ = useQuery({
+    queryKey: ["admin-share-invite-config", appId],
+    queryFn: () => getConfigFn({ data: { appId } }),
+  });
+
+  const [shareTitle, setShareTitle] = useState("");
+  const [shareDescription, setShareDescription] = useState("");
+  const [shareUrl, setShareUrl] = useState("");
+  const [inviteTemplate, setInviteTemplate] = useState("");
+
+  useEffectR(() => {
+    setShareTitle(configQ.data?.shareTitle ?? "");
+    setShareDescription(configQ.data?.shareDescription ?? "");
+    setShareUrl(configQ.data?.shareUrl ?? "");
+    setInviteTemplate(configQ.data?.inviteTemplate ?? "");
+  }, [configQ.data]);
+
+  const save = useMutation({
+    mutationFn: () =>
+      upsertFn({
+        data: {
+          appId,
+          shareTitle: shareTitle.trim() || null,
+          shareDescription: shareDescription.trim() || null,
+          shareUrl: shareUrl.trim() || null,
+          inviteTemplate: inviteTemplate.trim() || null,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Share & Invite templates saved");
+      qc.invalidateQueries({ queryKey: ["admin-share-invite-config", appId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
+      <h2 className="mb-1 text-sm font-semibold text-gray-900">Share & Invite</h2>
+      <p className="mb-4 text-xs text-gray-500">
+        Leave a field blank to use the built-in default. Share is application-focused (shown
+        regardless of who is sharing); Invite is personal and supports the placeholders{" "}
+        <code className="rounded bg-gray-100 px-1">{"{user_name}"}</code> and{" "}
+        <code className="rounded bg-gray-100 px-1">{"{invite_link}"}</code>.
+      </p>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <Field label="Share Title">
+          <input
+            className="input"
+            value={shareTitle}
+            onChange={(e) => setShareTitle(e.target.value)}
+            placeholder="Check this out"
+          />
+        </Field>
+        <Field label="Share URL">
+          <input
+            className="input"
+            value={shareUrl}
+            onChange={(e) => setShareUrl(e.target.value)}
+            placeholder="https://your-app.example"
+          />
+        </Field>
+        <Field label="Share Description" wide>
+          <textarea
+            className="input min-h-[60px]"
+            value={shareDescription}
+            onChange={(e) => setShareDescription(e.target.value)}
+            placeholder="Discover this platform."
+          />
+        </Field>
+        <Field label="Invite Template" wide>
+          <textarea
+            className="input min-h-[60px]"
+            value={inviteTemplate}
+            onChange={(e) => setInviteTemplate(e.target.value)}
+            placeholder="{user_name} invited you to join. Sign up here: {invite_link}"
+          />
+        </Field>
+      </div>
+
+      <div className="mt-4 flex justify-end">
+        <button
+          type="button"
+          onClick={() => save.mutate()}
+          disabled={save.isPending}
+          className="inline-flex items-center gap-2 rounded-lg bg-[#1D6BF3] px-4 py-2 text-sm font-medium text-white hover:bg-[#1858cf] disabled:opacity-60"
+        >
+          <Save className="h-4 w-4" />
+          {save.isPending ? "Saving…" : "Save"}
         </button>
       </div>
     </div>

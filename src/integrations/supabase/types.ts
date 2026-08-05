@@ -475,11 +475,12 @@ export type Database = {
         Row: {
           cover_image_url: string | null
           created_at: string | null
+          default_language: string | null
           domain: string | null
           favicon_url: string | null
           google_client_id: string | null
           id: string
-          is_enabled: boolean | null
+          launch_date: string | null
           logo_url: string | null
           name: string
           primary_color: string | null
@@ -489,17 +490,18 @@ export type Database = {
           short_description_en: string | null
           slug: string
           sort_order: number | null
-          status: string | null
           updated_at: string | null
+          visibility: string
         }
         Insert: {
           cover_image_url?: string | null
           created_at?: string | null
+          default_language?: string | null
           domain?: string | null
           favicon_url?: string | null
           google_client_id?: string | null
           id?: string
-          is_enabled?: boolean | null
+          launch_date?: string | null
           logo_url?: string | null
           name: string
           primary_color?: string | null
@@ -509,17 +511,18 @@ export type Database = {
           short_description_en?: string | null
           slug: string
           sort_order?: number | null
-          status?: string | null
           updated_at?: string | null
+          visibility?: string
         }
         Update: {
           cover_image_url?: string | null
           created_at?: string | null
+          default_language?: string | null
           domain?: string | null
           favicon_url?: string | null
           google_client_id?: string | null
           id?: string
-          is_enabled?: boolean | null
+          launch_date?: string | null
           logo_url?: string | null
           name?: string
           primary_color?: string | null
@@ -529,8 +532,8 @@ export type Database = {
           short_description_en?: string | null
           slug?: string
           sort_order?: number | null
-          status?: string | null
           updated_at?: string | null
+          visibility?: string
         }
         Relationships: []
       }
@@ -1212,6 +1215,87 @@ export type Database = {
           },
         ]
       }
+      promotional_trials: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          expires_at: string
+          granted_by: string | null
+          id: string
+          reason: string | null
+          source: string
+          source_reference: string | null
+          starts_at: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          expires_at: string
+          granted_by?: string | null
+          id?: string
+          reason?: string | null
+          source: string
+          source_reference?: string | null
+          starts_at?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          expires_at?: string
+          granted_by?: string | null
+          id?: string
+          reason?: string | null
+          source?: string
+          source_reference?: string | null
+          starts_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotional_trials_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotional_trials_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotional_trials_source_fkey"
+            columns: ["source"]
+            isOneToOne: false
+            referencedRelation: "trial_sources"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "promotional_trials_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotional_trials_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reward_achievements: {
         Row: {
           archived: boolean
@@ -1570,6 +1654,47 @@ export type Database = {
           },
         ]
       }
+      share_invite_templates: {
+        Row: {
+          app_id: string
+          created_at: string
+          id: string
+          invite_template: string | null
+          share_description: string | null
+          share_title: string | null
+          share_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          app_id: string
+          created_at?: string
+          id?: string
+          invite_template?: string | null
+          share_description?: string | null
+          share_title?: string | null
+          share_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          app_id?: string
+          created_at?: string
+          id?: string
+          invite_template?: string | null
+          share_description?: string | null
+          share_title?: string | null
+          share_url?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "share_invite_templates_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: true
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscription_plans: {
         Row: {
           app_id: string | null
@@ -1584,6 +1709,7 @@ export type Database = {
           name: string
           paypal_payment_link: string | null
           price: number
+          product_type: string
           stripe_payment_link: string | null
         }
         Insert: {
@@ -1599,6 +1725,7 @@ export type Database = {
           name: string
           paypal_payment_link?: string | null
           price: number
+          product_type?: string
           stripe_payment_link?: string | null
         }
         Update: {
@@ -1614,6 +1741,7 @@ export type Database = {
           name?: string
           paypal_payment_link?: string | null
           price?: number
+          product_type?: string
           stripe_payment_link?: string | null
         }
         Relationships: [
@@ -1699,6 +1827,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      trial_policy: {
+        Row: {
+          description: string | null
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          description?: string | null
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          description?: string | null
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      trial_sources: {
+        Row: {
+          archived: boolean
+          created_at: string
+          description: string | null
+          display_order: number
+          enabled: boolean
+          id: string
+          key: string
+          label: string
+          updated_at: string
+        }
+        Insert: {
+          archived?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          enabled?: boolean
+          id?: string
+          key: string
+          label: string
+          updated_at?: string
+        }
+        Update: {
+          archived?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          enabled?: boolean
+          id?: string
+          key?: string
+          label?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       user_achievements: {
         Row: {
@@ -1823,6 +2008,68 @@ export type Database = {
             foreignKeyName: "user_roles_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v1_refresh_tokens: {
+        Row: {
+          app_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          replaced_by: string | null
+          revoked_at: string | null
+          token_hash: string
+          user_id: string
+        }
+        Insert: {
+          app_id: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          replaced_by?: string | null
+          revoked_at?: string | null
+          token_hash: string
+          user_id: string
+        }
+        Update: {
+          app_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          replaced_by?: string | null
+          revoked_at?: string | null
+          token_hash?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "v1_refresh_tokens_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "v1_refresh_tokens_replaced_by_fkey"
+            columns: ["replaced_by"]
+            isOneToOne: false
+            referencedRelation: "v1_refresh_tokens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "v1_refresh_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "v1_refresh_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles_public"
             referencedColumns: ["id"]
           },

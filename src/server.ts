@@ -3,6 +3,20 @@ import "./lib/error-capture";
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 
+// API_CONTRACT.md §5 -- GET /v1/.well-known/jwks.json. Handled directly
+// here, before the file-based router even runs, because TanStack Start's
+// file-based route generator skips dot-prefixed folders (`.well-known`
+// never gets picked up as a route no matter how the file is named) --
+// there is no way to place this exact, contract-mandated path under
+// src/routes/. Every other /v1 endpoint is a normal file-based route; this
+// is the one unavoidable exception, not a pattern to repeat.
+async function handleJwks(request: Request): Promise<Response | null> {
+  const url = new URL(request.url);
+  if (request.method !== "GET" || url.pathname !== "/v1/.well-known/jwks.json") return null;
+  const { getJwks } = await import("./lib/v1/jwt.server");
+  return Response.json(getJwks(), { headers: { "Cache-Control": "public, max-age=300" } });
+}
+
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
 };
@@ -47,6 +61,8 @@ function isH3SwallowedErrorBody(body: string): boolean {
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const jwks = await handleJwks(request);
+      if (jwks) return jwks;
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);

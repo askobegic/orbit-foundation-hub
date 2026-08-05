@@ -107,7 +107,7 @@ function HelpPage() {
               { href: "/pricing", label: t("help.docsPricing") },
               { href: "/dashboard/profile", label: t("help.docsProfile") },
               { href: "/dashboard/settings", label: t("help.docsSettings") },
-              { href: "/dashboard/subscriptions", label: t("help.docsSubs") },
+              { href: "/dashboard/purchases", label: t("help.docsSubs") },
             ].map((d) => (
               <a
                 key={d.href}

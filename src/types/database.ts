@@ -4,8 +4,24 @@ export type { Database } from "@/integrations/supabase/types";
 // Domain enums (kept in sync with SQL CHECK constraints)
 export type UserLanguage = "bs" | "en" | "de";
 export type UserType = "standard" | "premium" | "admin";
-export type ApplicationStatus = "active" | "coming_soon" | "archived";
+// Priority 8.9: one single visibility state per application, replacing the
+// earlier status/is_enabled pair (two independently-settable flags
+// answering overlapping questions -- see the migration that dropped both).
+// draft: hidden from all normal users, visible only to administrators.
+// coming_soon: visible on the Dashboard, clearly marked, not enterable.
+// active: fully visible and accessible. archived: hidden from normal
+// users, preserved for administration/history. See PROJECT_KNOWLEDGE.md ->
+// Applications -> Application Visibility.
+export type ApplicationVisibility = "draft" | "coming_soon" | "active" | "archived";
 export type SubscriptionStatus = "active" | "expired" | "cancelled" | "pending";
+// Priority 8.11: classifies what kind of purchasable item a
+// subscription_plans row represents -- "Products & Purchases" evolved from
+// "Subscription Plans" by adding this one column, not by renaming or
+// restructuring anything. Every product still creates a normal
+// subscriptions row and still grants the same one global Premium
+// entitlement when active, regardless of type -- see PROJECT_KNOWLEDGE.md
+// -> Products & Purchases.
+export type ProductType = "subscription" | "promotion" | "one_time";
 export type PaymentStatus = "pending" | "success" | "failed" | "refunded";
 export type PaymentMethod = "stripe" | "paypal";
 export type NotificationType = "info" | "success" | "warning" | "error";
@@ -109,9 +125,16 @@ export interface ApplicationRow {
   short_description_bs: string | null;
   short_description_en: string | null;
   short_description_de: string | null;
-  status: ApplicationStatus;
+  visibility: ApplicationVisibility;
+  // Informational only (Priority 8.9) -- an optional release date shown
+  // alongside a "coming_soon" application. Never read by any activation
+  // logic; moving to "active" is always a separate, explicit admin action.
+  launch_date: string | null;
+  // Localization resolution order step 3 (see PROJECT_KNOWLEDGE.md ->
+  // Authentication -> Localization / API_CONTRACT.md). Nullable -- falls
+  // through to the next resolution step when unset.
+  default_language: UserLanguage | null;
   sort_order: number;
-  is_enabled: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -131,6 +154,10 @@ export interface SubscriptionPlanRow {
   features_en: string[];
   features_de: string[];
   is_active: boolean;
+  // Priority 8.11: Subscription (default, unchanged behavior) | Promotion |
+  // One-Time -- an admin-facing classification only, does not change
+  // checkout/entitlement logic. See ProductType above.
+  product_type: ProductType;
   created_at: string;
 }
 export type SubscriptionPlanInsert = Partial<SubscriptionPlanRow> & {
@@ -160,6 +187,11 @@ export interface PaymentRow {
   user_id: string | null;
   app_id: string | null;
   subscription_id: string | null;
+  // Priority 8.4 (Advertising) -- set for a campaign purchase, mutually
+  // exclusive with subscription_id in practice (a payment is for one or the
+  // other, never both). Missing from this hand-written type until Priority
+  // 8.12 surfaced it via dashboard.purchases.tsx joining ad_campaigns.
+  campaign_id: string | null;
   stripe_payment_id: string | null;
   stripe_payment_intent_id: string | null;
   paypal_payment_id: string | null;

@@ -9,6 +9,7 @@ import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { CountrySelect } from "@/components/ui/CountrySelect";
 import { supabase } from "@/integrations/supabase/client";
 import { extractIdentityFromAuthUser } from "@/lib/identity";
+import { avatarPath, getMediaStorageProvider } from "@/lib/media-storage";
 import { generateUniqueUsername } from "@/lib/username";
 import type { UserLanguage } from "@/types/database";
 import { useServerFn } from "@tanstack/react-start";
@@ -77,17 +78,9 @@ function OnboardingPage() {
     }
     setUploading(true);
     try {
-      const ext = file.name.split(".").pop() || "jpg";
-      const path = `avatars/${user.id}/avatar.${ext}`;
-      const { error } = await supabase.storage.from("core").upload(path, file, {
-        upsert: true,
-        contentType: file.type,
-      });
-      if (error) throw error;
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("core").getPublicUrl(path);
-      setAvatarUrl(publicUrl);
+      const path = avatarPath(user.id, file.name);
+      const { url } = await getMediaStorageProvider().upload(path, file, file.type);
+      setAvatarUrl(url);
     } catch {
       toast.error(t("auth.uploadError"));
     } finally {
@@ -125,7 +118,7 @@ function OnboardingPage() {
         const { data: apps } = await supabase
           .from("applications")
           .select("id")
-          .eq("status", "active");
+          .eq("visibility", "active");
         if (apps && apps.length > 0 && user) {
           const rows = apps.map((a) => ({
             user_id: user.id,

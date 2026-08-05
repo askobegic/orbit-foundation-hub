@@ -77,11 +77,15 @@ Authentication is a Core service. A user signs in once (via Google OAuth today) 
 
 **Application Resolver.** A Core-owned resolver determines which application the current request belongs to, from the request hostname, and supplies that application's branding (name, logo, favicon, colors, Google Client ID) to every surface that needs it — login, onboarding, dashboard, public profile. Nothing in the Core hardcodes a specific application's name or branding. See the Technical Appendix for the resolution/fallback order.
 
+**Localization (Priority 8.9).** Any Core-owned text resolved from more than one stored locale (plan features, notification copy, and anything else shaped like a `_bs`/`_en`/`_de` column triplet) resolves to a single string, server-side, in one fixed order: **(1)** the caller's `Accept-Language` header, **(2)** the signed-in user's own `profiles.language` (skipped when there's no signed-in user), **(3)** the calling application's `applications.default_language` (nullable — contributes nothing when unset), **(4)** English, unconditionally, as the final fallback. This is a Core-wide rule, applied identically everywhere it's relevant — no surface invents its own resolution order. See `API_CONTRACT.md` → Cross-cutting conventions → Localization for the exact mechanism as it applies to the `/v1` API.
+
 ## Identity Lock
 
 The identity provider (Google today) is the trusted source for a user's first name, last name, and profile photo. These are imported once, at first login, and become permanently locked the moment onboarding completes: no in-app "change name" or "change photo" feature exists for a standard user. If the provider supplied no photo, the user may upload exactly one, which then locks the same way. Locked fields render as plain identity information, never as editable form fields — including during onboarding itself, since the point of the lock is that the user never free-types their own name.
 
 Future identity corrections (e.g. a user's legal name changes, or a locked value was wrong) are handled only through an administrator-controlled review process — not built yet, but the Core's Identity Service (see Technical Appendix) is the designated seam for it when it is.
+
+**Email follows the opposite rule from name/photo (Priority 8.7).** `profiles.email` is not locked — it always resyncs from the auth identity (`auth.users.email`) on every login, rather than being imported once and frozen. This is deliberate: name/photo lock because the point is the user never free-types their own identity; email instead needs to keep tracking the live authentication identity, since it's the one identity field a provider can itself change (e.g. the user updates their email with Google) and the Core should never silently diverge from that. There is no admin override for it either — no in-app editing path exists anywhere, so the auth identity is the only source that can ever change it.
 
 ## Profiles
 
@@ -161,12 +165,14 @@ Replaces the earlier "Premium on" concept. Since Premium is no longer applicatio
 ### CORE Premium Service
 
 The single, shared place Premium status is ever checked from (`src/lib/premium.ts`) — components must never issue their own ad hoc RPC/subscription queries. Two methods:
-- `hasAnyActivePremium(userId)` — TRUE if the user holds an active Premium subscription on *any* CORE application. The one and only "is this user Premium" check, used for the Profile Card's tier, Contact Actions eligibility, and every dashboard Premium badge.
+- `hasAnyActivePremium(userId)` — TRUE if the user holds an active Premium subscription on *any* CORE application, **or** an active Promotional Trial (Priority 8.5 — see Promotional Trial above). The one and only "is this user Premium" check, used for the Profile Card's tier, Contact Actions eligibility, and every dashboard Premium badge.
 - `getVisibleApplications(userId)` — the applications where the user currently has `is_visible = true`, ordered by `applications.sort_order`. Backs "Public profile on" above.
 
-Both are backed by dedicated SQL functions (`has_any_active_premium`, `get_visible_application_ids`) using the exact same "active" predicate (`status = 'active' AND expires_at > now()`) that every other subscription-status check in this codebase uses (see `src/lib/subscription.ts`).
+Both are backed by dedicated SQL functions (`has_any_active_premium`, `get_visible_application_ids`) using the exact same "active" predicate (`status = 'active' AND expires_at > now()`) that every other subscription-status check in this codebase uses (see `src/lib/subscription.ts`) — `has_any_active_premium` applies that predicate to `subscriptions` and, independently (`OR`), to `promotional_trials`.
 
 **Removed:** `isUserPremium(userId, appId)` and its backing `is_user_premium(_user_id, _app_id)` SQL function no longer exist — the per-application Premium check they implemented has no meaning under the Global Premium model and had zero remaining call sites. `get_premium_application_ids()` (the SQL function that backed the old "Premium on" list) is left in place, unused, rather than dropped, since nothing requested its removal.
+
+**Premium Status Resolver (`src/lib/premium.server.ts`, Priority 8.7)** — the server-only, bulk-capable sibling to the client-callable `hasAnyActivePremium()` above. Every admin/bulk consumer (`adminListUsers`, `adminOverviewStats`, `adminSendNotification`, `adminListVerificationRequests` in `admin.functions.ts`, and any future `/v1` API endpoint) must resolve Premium status through `resolvePremiumStatusBulk(supabaseAdmin, userIds?)` / `resolvePremiumStatus(supabaseAdmin, userId)` instead of re-querying `subscriptions` directly — the exact "two places compute the same answer differently" pattern `CLAUDE.md` calls a defect (see `PROJECT_AUDIT.md` → `A-5`). Unlike the boolean `hasAnyActivePremium()`, this exposes the complete state — `{ active, source: "subscription" | "trial" | null, expiresAt }` — since a bulk/admin consumer (and a future API client) needs to know not just whether someone is Premium but why and until when. Two queries total regardless of how many users are resolved (one against `subscriptions`, one against `promotional_trials`), never N+1. When a user has both an active subscription and an active trial, the subscription is reported as the source, since it's the paid entitlement (see Promotional Trial below for why the two can never conflict).
 
 ## Profile Card & Messaging System
 
@@ -199,7 +205,8 @@ One-on-one, text-only conversations, built on the foundation Priority 6 added (`
 
 **Who can initiate — eligibility checked once, at creation, never again**
 - A conversation may only be created if the initiator has global Premium, the recipient has global Premium, **and** the recipient's `is_contactable` is true for whichever application is current at that moment (`getOrCreateConversation` in `conversation.functions.ts` re-verifies all three server-side, regardless of what the client already checked via the Profile Card's `canContact`).
-- **Once a conversation exists, this check never runs again.** Sending a further message only requires being a participant in that conversation — not re-verified Premium, not re-verified `is_contactable`. A conversation keeps working even if one side's global Premium later lapses; this is a deliberate simplification (message-sending eligibility is participant-only, not re-derived per message), not an oversight.
+- **`messaging` is a Capability (Priority 8.7)** — `getOrCreateConversation` also checks `getApplicationCapabilities()` against the initiator's current application, exactly like every other module's Capability gating (see Capabilities below), rejecting creation if disabled. Checked at the same point as the Premium/`is_contactable` checks above, so it follows the identical "checked once, at creation, never re-checked afterward" rule — disabling `messaging` for an application later does not affect a conversation that already exists. The Sidebar's Messages nav item, the `/dashboard/messages` inbox page, and the Profile Card's "Send Message" action are all gated the same way (via the `messaging` Dashboard Widget / a direct capability check), matching the treatment Rewards/Advertising already had.
+- **Once a conversation exists, this check never runs again.** Sending a further message only requires being a participant in that conversation — not re-verified Premium, not re-verified `is_contactable`, not re-verified the `messaging` capability. A conversation keeps working even if one side's global Premium later lapses, or the application later disables messaging; this is a deliberate simplification (message-sending eligibility is participant-only, not re-derived per message), not an oversight.
 - The system's one asymmetry: a Standard recipient who received a first message gains full read/reply ability in that one thread — this grants no ability to start any other conversation, since only Premium members can create new ones.
 - Only entry point: the Profile Card's "Send Message" button (gated by the existing Contact Actions rule). No standalone "start a conversation" UI exists.
 
@@ -229,15 +236,44 @@ Reuses the existing, single, shared `notifications` table and the existing `Noti
 
 ### Share Profile / Invite a Friend
 
-Both already exist and are reused as-is, not rebuilt:
-- "Share Profile" → the existing `/u/:username` URL (see Profiles) plus the existing copy-link/native-share behavior already implemented (`ShareAndInvite.tsx`'s `copyProfile`/`nativeShare`, using the Web Share API where available, falling back to copy+toast).
-- "Invite a Friend" → the existing `ShareAndInvite.tsx` invite flow (`?ref=<username>` link, copy/native-share, an explicit "referral program coming soon" notice already present in its own copy) — the Profile Card's compact button opens this same existing flow, not a second implementation of it.
+Two related but distinct features, both reusing the same underlying copy-link/native-share mechanics (Web Share API where available, falling back to copy+toast) rather than each implementing it separately:
+- **"Share Profile"** (Profile Card's compact button, `handleShareProfile` in `ProfileCard.tsx`) — always the individual `/u/:username` URL (see Profiles). Unaffected by the templates below; sharing a specific profile is a different concern from application-level marketing copy.
+- **The Dashboard's Share & Invite widget** (`ShareAndInvite.tsx`) — two halves, each configurable per application (`share_invite_templates`, admin-editable from `/admin/applications`'s "Share & Invite" section, same Field/Card conventions as the rest of that page):
+  - **Share is application-focused, not personal.** `share_title`/`share_description`/`share_url` are fixed admin-authored marketing copy shown identically regardless of which user is sharing — never derived from the sharing user's own profile. Every field is nullable; a blank field falls back to a locale-aware i18n default (`share.defaultShareTitle`/`share.defaultShareDescription`) or, for the URL, the current application's own domain — there is no server-side hardcoded English fallback, keeping the substitution entirely client-side.
+  - **Invite is personal.** `invite_template` is admin-authored free text containing the literal placeholders `{user_name}` and `{invite_link}`, substituted client-side: `{user_name}` is the inviting user's own public display name (first + last name, the same derivation `ProfileCard.tsx` uses for its own display name, falling back to `@username`), `{invite_link}` is the existing `?ref=<username>` referral link unchanged from Priority 8.3 (`referral.ts`/`linkReferral`) — this is genuinely wired to the reward system now, not a placeholder feature, so the older "referral program coming soon" notice was removed as stale copy.
+  - `getShareInviteConfig(appId)` (`src/lib/share-invite.functions.ts`) is the one place this resolves from; a single row per application (`share_invite_templates`, `app_id UNIQUE`), not a global-default-plus-override pair like `ad_config`/`ad_application_settings` — Share is inherently application-specific (a Share URL only ever makes sense for one application), so there's no meaningful platform-wide default to fall back to beyond the client's own i18n strings.
 
 ## Subscription Engine
 
 The Core owns the subscription engine: what a user has purchased, for which application, at what price, for how long. Every application defines its own pricing plans (duration, price, currency) within the Core's shared `subscription_plans`/`subscriptions` model — pricing and duration are application-specific, but the engine that tracks and enforces entitlement is one shared system, not one per application.
 
 A subscription always belongs to a specific `(user, application)` pair. See the Technical Appendix for the current schema and known correctness issues in how subscriptions are created/renewed (`PROJECT_AUDIT.md` → `DB-2`).
+
+## Products & Purchases (Priority 8.10)
+
+**Architecture review conclusion:** the Subscription Engine above already *is* a Products & Purchases system in substance, not just in spirit. This platform has no recurring/auto-renewing billing anywhere — every "subscription" purchase is already, mechanically, a fixed-duration, one-time payment (a Stripe/PayPal Payment Link, not a Stripe Subscription object); `subscription_plans` is already an admin-priced, purchasable catalog item; `subscriptions` already is the resulting purchase/entitlement record; `payments` already is the provider transaction ledger (amount, currency, status, Stripe/PayPal transaction id). Evolving the terminology to Products & Purchases needed exactly **one new column**, not a redesign, not a table rename, and not a second billing/purchase system:
+
+- **`subscription_plans.product_type`** (`subscription` | `promotion` | `one_time`, default `subscription`) — an admin-facing classification of what kind of purchasable item a plan represents. A **Product** is any row in this table, regardless of type: "Premium Member," "Premium Business," "Featured Business" (BosniaFans), "Premium Vendor," "Featured Vendor" (Svadba), "Premium Artist" (Muzika) are all just differently-named, differently-priced Products, configured the same way, through the same admin form, on the same per-application `/admin/applications` page (now with a "Products" heading in place of the previous unlabeled plan list).
+- **Every Product still creates a normal `subscriptions` row and still grants the same one global Premium entitlement when active, via `has_any_active_premium()`, regardless of `product_type` or display name.** This is a deliberate, explicit scope boundary, not an oversight: introducing genuinely *distinct* per-product entitlements (e.g., a "Featured Business" purchase unlocking something a "Premium Member" purchase does not — a featured listing badge, a different visibility tier) would be a new business rule requiring its own explicit approval, exactly like `reward_catalog`'s `featured_slot` fulfillment type already documented as "remains open, unimplemented — deliberately" (see Rewards & Loyalty above). This review evolves *terminology and admin ergonomics*, not *what Premium means* — the Global Premium Visibility & Contact System (Premium Model, above) is unchanged and was not reopened.
+- **Tables deliberately not renamed.** `subscription_plans`, `subscriptions`, and `payments` keep their existing names at the database level — a rename is a cheap Postgres operation in isolation, but every payment-webhook, admin function, and dashboard call site referencing these names by string would need touching for zero functional gain, directly against "avoid unnecessary breaking changes." "Products" and "Purchases" are the *conceptual* names used in the Admin UI, the Dashboard, and `API_CONTRACT.md` — not new tables.
+- **`payments` already is the reference/transaction-history ledger this concept needs.** CORE never stores invoices — Stripe and PayPal remain the systems of record for those — `payments` only ever stores what it already stored: provider, transaction id, amount, currency, status. Nothing new was added to it.
+
+**Purchases (Dashboard, user-facing).** `/dashboard/purchases` (`dashboard.purchases.tsx`, replacing the earlier `/dashboard/subscriptions` page and absorbing the Dashboard's separate "Payment History" widget's "View all" destination, which previously pointed nowhere) is the one Dashboard section showing a user's complete purchase/payment history across every application and across every purchase source — active and expired Products (from `subscriptions`, joined with `subscription_plans`/`applications`) and the **full** payment/transaction ledger (from `payments` — amount, currency, provider, transaction id, status). No new query pattern — this is the same queries the old subscriptions page and the Dashboard payment-history widget already ran, now presented together on one page instead of split across two disconnected views.
+
+**Follow-up refinement: the payment-history half of this page also includes Advertising campaign purchases, by explicit instruction.** A successful campaign purchase is still a purchase — a user should have one complete payment history, not two, regardless of whether a given payment was for a Product or an Advertising campaign. The query that previously excluded `payments.campaign_id IS NOT NULL` now includes it, additionally joining `ad_campaigns.title` so a campaign payment is labeled distinctly ("Advertising Campaign: <title>") rather than showing as an unexplained charge. **This widens only the read-only history view — it does not touch Advertising's architecture.** `/dashboard/advertising` (self-serve campaign creation/management) and `/admin/advertising` (placements, pricing, moderation, trusted advertisers) remain entirely separate, global, and untouched; Advertising is still not a Product, still has no admin surface merged into `/admin/applications`, and still uses the exact same billing primitives it always did (`payments.campaign_id`, no second payment system). Only the *history a user can see about themselves* was widened, not who manages what.
+
+See `API_CONTRACT.md` → Billing, Products & Purchases for the `/v1` contract surface (`GET /v1/products`, `GET /v1/me/purchases` — now including Advertising campaign payments in its `payments` array) built on this same, unchanged underlying data.
+
+## Promotional Trial (Priority 8.5)
+
+**There is no automatic Trial.** Registration always creates a Standard account — nothing in this codebase activates a Trial as a side effect of signing up, logging in, or loading the dashboard. This replaces the earlier model (a 7-day trial auto-granted the first time a user with no subscription loaded the Dashboard), which is now considered a defect, not a variant: an unconditional "give every new user X days" behavior is exactly what this architecture forbids going forward.
+
+- **Promotional Trial is the only Trial model**, and it is granted, never self-activated. A Trial exists only because an explicitly defined business rule created it — `trial_sources` (an admin-extensible registry, same shape as `capability_definitions`/`reward_fulfillment_types`) is that fixed set of rules: `admin_grant` (implemented), `promotional_invitation` and `reward_redemption` (seeded vocabulary — no caller yet, exactly like `reward_action_rules`' `advertising_purchase` was seeded before Advertising existed to call it). A future source is added by registering its key here and calling the same `grantPromotionalTrial()` (`src/lib/trial.server.ts`) every other source will call — never by adding a new table, column, or bespoke grant path.
+- **Administrator-controlled today.** `/admin/trials` grants a Trial to any user (preset or custom duration, bounded by `trial_policy.max_duration_days`), ends one immediately, revokes one, and shows full Trial history — every action audited via `writeAuditLog()`, with an optional reason.
+- **A user cannot have multiple active Trials** — enforced at the database (a partial unique index on `promotional_trials(user_id) WHERE status = 'active'`), not only in application code, so even a race between two concurrent grant attempts can't produce two active trials for the same user.
+- **Trial never extends automatically.** Granting a new trial while one is already active is rejected outright (`already_has_active_trial`) — a longer trial requires ending/revoking the current one first and granting a fresh one, an explicit administrative decision every time, never an automatic top-up.
+- **Promotional Trial and Premium subscription never conflict, because they're independent sources of the same access, not the same record.** A Trial is its own table (`promotional_trials`), never a `subscriptions` row — the old model's fatal flaw was representing a trial as a subscription with a magic `stripe_payment_id = 'trial_7days'` sentinel, which meant a trial and a real purchase could collide on the same `UNIQUE(user_id, app_id)` slot. `has_any_active_premium()` (the one shared "is this user Premium" check — see Premium Model) now checks both sources independently (`OR`, not a merge): an active subscription, an active Promotional Trial, or both — either is sufficient, and having both is harmless. When a Trial ends (naturally via `expires_at`, or via an admin's End/Revoke), the user's access is decided by that same check against whatever remains — back to Standard unless an active paid subscription still exists. Time-based expiry only, exactly like `subscriptions`: neither table has or needs a cron job to flip a status column when `expires_at` passes.
+- **Configuration-First**: the offered quick-select durations and the maximum any single trial may run (`trial_policy`, key/value like `ad_config`/`reward_config`) are admin-editable data, not TypeScript constants — changing them, or adding a duration option, never needs a deployment.
 
 ## Billing
 
@@ -272,22 +308,39 @@ Applications integrate with the Core exclusively through the Core's API surface:
 ## Future Scalability
 
 The platform is designed so that adding a new application means adding a new row to the Core's `applications` registry (and its pricing plans) — not adding new identity, auth, billing, or permission code. A new application should be able to onboard onto the Core by:
-- Registering itself in the applications registry (branding, domain, status).
+- Registering itself in the applications registry (branding, domain, visibility).
 - Defining its own subscription plans, scoped to its own `app_id`.
 - Reading the shared user/profile/entitlement data the Core already provides.
 
 Any design that would require a new application to bring its own auth, its own user table, or its own billing logic is, by definition, not following this architecture and should be treated as a deviation to resolve, not a pattern to repeat.
 
+## Application Visibility (Priority 8.9)
+
+Every application has exactly **one** visibility state — `draft`, `coming_soon`, `active`, or `archived` (`applications.visibility`) — replacing the earlier `status` (`active`/`coming_soon`/`archived`) and `is_enabled` (boolean) pair, two independently-settable flags that could contradict each other (a row could be `status = 'active'` and `is_enabled = false` simultaneously, with no single field answering "is this application visible"). Lifecycle management is independent of development status: an application under active development can sit in `draft` indefinitely, get a public teaser as `coming_soon`, launch by moving to `active`, and eventually retire to `archived` — all without ever being deleted (soft lifecycle, the same convention every Priority 8 registry follows).
+
+- **`draft`** — hidden from every normal user; visible only to administrators (the admin panel's own application picker, e.g. `/admin/advertising`'s or `/admin/rewards`'s application selector, always shows every visibility value, since an admin must be able to configure a not-yet-launched application's capabilities/pricing/plans before it goes live).
+- **`coming_soon`** — visible on the Dashboard's "My Applications," clearly marked, not enterable (rendered disabled/grayscale, same treatment the earlier `is_enabled = false` state already had).
+- **`active`** — fully visible and accessible, the normal case.
+- **`archived`** — hidden from normal users, same as `draft`, but never deleted — existing subscriptions/payments/audit history referencing it continue to resolve its name normally.
+
+**`launch_date` is informational only.** It exists to display an optional release date next to a `coming_soon` application and to allow a future countdown/announcement UI — it is never read by any activation logic anywhere in this codebase (no cron infrastructure exists here, matching the same standing convention Rewards/Advertising/Promotional Trial already follow). **Moving an application from `coming_soon` to `active` is always a separate, explicit administrator action** (`adminSetApplicationVisibility`, `/admin/applications`'s "Update visibility" control) — nothing in this codebase ever flips visibility automatically based on `launch_date` or any other signal, matching the "no automatic activation" rule Priority 8.5 already established for Promotional Trial.
+
+**Enforcement boundary, deliberately scoped:** visibility filtering happens at the query/business-logic layer (the Dashboard's own applications query, and the future `/v1 GET /v1/applications` — `API_CONTRACT.md` → Applications), not by narrowing the `applications` table's RLS `SELECT` policy — see RLS policies → Applications below for why (the Application Resolver must still be able to resolve a `draft` application's branding when hit directly on its own real domain, so an admin can preview/configure it before launch).
+
+**No application name is ever hardcoded** in any visibility-aware surface — the Dashboard's "My Applications" widget and the future Applications API both render whatever the registry currently contains, filtered generically by `visibility`, with zero code changes required when a new application is added (`Future Scalability`, above).
+
 ## Capabilities (Priority 8 — Final CORE Architecture)
 
-**CORE never branches on which application is calling it by name.** No code path anywhere in this repository may read as "if BosniaFans" / "if Ticketaria" — the mechanism that makes this enforceable rather than aspirational is **capabilities**: a controlled, admin-extensible vocabulary of feature keys (`premium`, `messaging`, `advertising`, `rewards`, `featured_business`, `featured_event`, `business_directory`, `events`, `discover`, `community`, and any future key an admin registers), each independently enabled or disabled per application.
+**CORE never branches on which application is calling it by name.** No code path anywhere in this repository may read as "if BosniaFans" / "if Ticketaria" — the mechanism that makes this enforceable rather than aspirational is **capabilities**: a controlled, admin-extensible vocabulary of feature keys (`messaging`, `advertising`, `rewards`, `featured_business`, `featured_event`, `business_directory`, `events`, `discover`, `community`, and any future key an admin registers), each independently enabled or disabled per application.
+
+**Mandatory features are not capabilities (Priority 8.7).** `premium` was originally seeded as a capability key but was never actually gated by anything (Billing/Premium is a mandatory Core Responsibility, not an optional module — see Core Responsibilities above) — it has been **archived** in `capability_definitions` (soft-lifecycle, not deleted) rather than left as a togglable-looking entry that silently did nothing. `messaging`, by contrast, is a genuinely optional module and is now genuinely enforced (see Text Messaging above). The rule going forward: a feature only belongs in this vocabulary if some module actually checks it — a capability nobody reads is a defect, not a placeholder.
 
 - `capability_definitions` is the vocabulary itself — `key` (stable, e.g. `advertising`), `label`, `displayOrder`, and a soft lifecycle (`enabled`/`archived`, never a hard delete once a capability may be referenced elsewhere). New capabilities are added by an admin inserting a row here — **never by a deployment**, which is the concrete mechanism behind "administrator can change business rules without code changes."
 - `application_capabilities` is the per-application on/off switch — one row per `(app, capability)` pair. An application's enabled set is publicly readable (the calling application itself, and cross-application UI, both need it without an admin session) but only admin-writable.
 - **A capability being disabled for an application must disable that feature completely and consistently** — dashboard widget, navigation entry, the ability to create new records, the API's own responses, and any background processing all have to agree. This is each *consuming* module's own responsibility (the capability flag is the single source of truth every one of those surfaces reads from), not something `capability_definitions`/`application_capabilities` themselves enforce structurally — there is no automatic mechanism that hides a dashboard widget just because a database row changed; every module that has a capability-gated surface must actually check it. This is a correctness obligation on every future module, called out here so it isn't missed silently as new modules are added.
 - A definition being **archived** always wins over an application's own `enabled=true` row — archiving a capability platform-wide takes precedence over any per-application setting.
 
-**CORE Capabilities Service** (`src/lib/capabilities.functions.ts`): `getApplicationCapabilities(appId)` is the one and only place an enabled-capability set is ever read from — components/modules must never query `application_capabilities` directly. Admin-only: `adminListCapabilityDefinitions`, `adminUpsertCapabilityDefinition`, `adminSetApplicationCapability`, `adminListApplicationCapabilities`.
+**CORE Capabilities Service** (`src/lib/capabilities.functions.ts`): `getApplicationCapabilities(appId)` is the one and only place an enabled-capability set is ever read from — components/modules must never query `application_capabilities` directly. Admin-only: `adminListCapabilityDefinitions`, `adminUpsertCapabilityDefinition`, `adminSetApplicationCapability`, `adminListApplicationCapabilities` — all configurable through `/admin/capabilities` (Priority 8.7); no SQL is required for normal administration.
 
 ## Dashboard Widget Modularity (Priority 8.2)
 
@@ -296,7 +349,8 @@ The CORE Dashboard (`/dashboard`) is composed of independent, admin-toggleable w
 - `dashboard_widgets` — the widget registry (`key`, `label`, `displayOrder`, soft-lifecycle `enabled`/`archived`), seeded with the six sections that already exist on the dashboard today: `trial_banner`, `my_applications`, `active_subscription`, `payment_history`, `quick_links`, `share_and_invite`. The identity/profile header and the trust-badge footer are not widgets — they're permanent chrome, not optional sections.
 - `dashboard_widget_settings` — per-application override (`widget_key`, `app_id`, `enabled`); a missing row means "use the registry's global default," exactly like `application_capabilities`.
 - **`requiresCapability`** (nullable, on the registry row): a widget can declare that it only makes sense when a given capability is enabled for the application — this is the dependency-validation hook a dashboard widget plugs into, so disabling that capability hides its widget automatically, with no separate check to remember. First consumer: the `rewards` widget added in Priority 8.3, gated on the `rewards` capability.
-- `getDashboardWidgets(appId)` (`src/lib/dashboard-widgets.functions.ts`) is the one place this is ever resolved — `DashboardPage.tsx` fetches it once (keyed on the currently-resolved application via `useApplication()`) and conditionally renders each section, and the Rewards nav/quick-link entry, from that single result, rather than each surface deciding independently whether to render.
+- `getDashboardWidgets(appId)` (`src/lib/dashboard-widgets.functions.ts`) is the one place this is ever resolved — `DashboardPage.tsx` fetches it once (keyed on the currently-resolved application via `useApplication()`) and conditionally renders each section, and the Rewards/Advertising/Messaging nav/quick-link entries, from that single result, rather than each surface deciding independently whether to render. A seventh widget, `messaging`, was added in Priority 8.7 (`requiresCapability: "messaging"`), gating the Sidebar's Messages nav item the same way `rewards`/`advertising` already were.
+- **Admin UI (Priority 8.7):** `adminListDashboardWidgets`, `adminUpsertDashboardWidget`, `adminSetDashboardWidgetAppSetting`, `adminListDashboardWidgetSettings` are all configurable through `/admin/dashboard-widgets` — no SQL required for normal administration.
 
 ## Rewards & Loyalty (Priority 8.3)
 
@@ -312,10 +366,11 @@ Entirely action-driven: applications and CORE flows never report point values, o
 - **Fulfillment abstraction — Rewards records, it never fulfills.** `reward_catalog.grant_type` names a **fulfillment type** resolved against `reward_fulfillment_types`, an admin-extensible registry (same shape as `capability_definitions`) rather than a hardcoded literal union — a later module registers its own type there without a CORE deployment, and Rewards never needs to know what that type *means*. `redeemReward` validates eligibility, deducts points immediately (via the `reward_redemptions` insert), and records `grant_result: { status: "pending_fulfillment", grantType, grantValue }` — full stop. It does not extend Premium, credit Advertising, or create a Featured slot; turning `pending_fulfillment` into an actual granted benefit is entirely the responsibility of whichever module owns that `grant_type`, built whenever that module is built. **Priority 8.4 is the first concrete proof of this boundary**: Advertising owns `advertising_credit` and implements its fulfillment (`adminFulfillAdvertisingCreditRedemption`, see Advertising below) without Rewards' code changing at all. `featured_slot` fulfillment and a Premium-duration fulfillment path (including which application a redeemed duration should attach to, given `subscriptions` still has `UNIQUE(user_id, app_id)` while Premium itself is ecosystem-wide) remain open, unimplemented — deliberately, not overlooked. This is a durable architectural boundary, not a temporary gap: it's what keeps Rewards from ever needing to know about Advertising or any future module.
 - **Catalog items can require a capability** (`reward_catalog.requires_capability`, nullable FK to `capability_definitions.key`) — same dependency-validation mechanism as `dashboard_widgets.requires_capability`. `getRewardsMe` filters the returned catalog to items whose required capability (if any) is enabled for the caller's current application; `redeemReward` re-checks the same condition server-side before allowing the redemption (fails closed if the reward requires a capability but no application context was provided). With no application context at all, nothing is filtered — matching the same "no application context = don't hide anything" fallback `DashboardPage.tsx`'s `isWidgetEnabled` uses.
 - Reward-granting call sites: `invite_registration` (onboarding, via `linkReferral`), `premium_purchase`/`premium_renewal` (Stripe/PayPal webhooks — first purchase vs. renewal is distinguished by whether a `subscriptions` row already existed for that `(user, app)` pair *before* the webhook's upsert, not by a separate flag), `advertising_purchase` (Stripe/PayPal webhooks, campaign checkout — see Advertising below). The application-reported actions (`business_approved`, etc.) still have no caller — seeded in `reward_action_rules` ahead of whichever application features eventually report them, matching this table's "seed the vocabulary, not hardcode who uses it" design.
+- **Admin UI (Priority 8.7):** every registry in this module — action rules, levels, achievements, the redemption catalog, fulfillment types, and `reward_config` (including the referral-verification-period setting) — is configurable through `/admin/rewards`, following the same Card-based pattern as `/admin/advertising`. `adminUpsertRewardLevel`/`adminListRewardLevels`, `adminUpsertRewardAchievement`/`adminListRewardAchievements`, and `adminListRewardConfig` were added in this pass — the other functions (`adminUpsertRewardActionRule`, `adminUpsertRewardFulfillmentType`, `adminUpsertRewardCatalogItem`, `adminSetRewardConfig`) already existed but had no page making them reachable. No SQL is required for normal administration of this module anymore.
 
 ## Advertising (Priority 8.4)
 
-Placements, pricing, and moderation are all configuration; campaign checkout reuses CORE's existing billing engine rather than introducing a second one.
+Placements, pricing, and moderation are all configuration; campaign checkout reuses CORE's existing billing engine rather than introducing a second one. Administration and campaign management remain their own separate, global module — not a Product, not merged into `/admin/applications` — unaffected by Products & Purchases (above); only the user-facing `/dashboard/purchases` read-only history was widened to also list a user's own campaign payments, since a successful campaign purchase is still a purchase.
 
 - **Placements** (`ad_placements`) — an admin-extensible registry (`hero_banner`, `sidebar_banner`, `profile_footer` seeded), same soft-lifecycle shape as every other Priority 8 registry.
 - **Pricing is a replaceable strategy, not a hardcoded model.** `ad_pricing_strategies` is the vocabulary (only `fixed_duration` has a resolver implemented this phase — CPM/CPC/credit-ledger/usage-based billing were explicitly scoped out, not silently deferred). `ad_placement_prices` is the actual price list: `app_id` nullable (`NULL` = global default), `placement_key`, `duration_days`, `price`/`currency`, plus `stripe_payment_link`/`paypal_payment_link` (see Checkout below). When both a global and an app-specific row exist for the same `duration_days`, the app-specific one wins — `resolvePlacementPrices()` (`src/lib/advertising.server.ts`) is the one place this merge happens.
@@ -335,17 +390,17 @@ Placements, pricing, and moderation are all configuration; campaign checkout reu
 
 ## Configuration-First Principle (Priority 8)
 
-**If a business rule may reasonably change in the future, it is not hardcoded.** Concretely: pricing, placements, limits, reward values, referral requirements, verification periods, upload restrictions, validation rules, display order, and capabilities all live in admin-editable database tables, never in a TypeScript constant or an environment variable — a value only belongs in code/env when it genuinely cannot differ by application, by time, or by admin decision (e.g. `SUPABASE_URL`). `TRIAL_DAYS = 7` (`trial.functions.ts`) and the `duration_months` default of `12` (`admin.functions.ts`, both webhook handlers) predate this principle and are known, tracked exceptions — see `PROJECT_AUDIT.md`, not silently fixed as a side effect of unrelated work.
+**If a business rule may reasonably change in the future, it is not hardcoded.** Concretely: pricing, placements, limits, reward values, referral requirements, verification periods, trial durations, upload restrictions, validation rules, display order, and capabilities all live in admin-editable database tables, never in a TypeScript constant or an environment variable — a value only belongs in code/env when it genuinely cannot differ by application, by time, or by admin decision (e.g. `SUPABASE_URL`). The `duration_months` default of `12` (`admin.functions.ts`, both webhook handlers) predates this principle and is a known, tracked exception — see `PROJECT_AUDIT.md`, not silently fixed as a side effect of unrelated work. `TRIAL_DAYS = 7` (`trial.functions.ts`) was the same kind of exception; it no longer exists at all as of Priority 8.5 — Trial duration is now `trial_policy`-configured data, and the surrounding automatic-activation behavior it powered was removed outright, not merely made configurable.
 
 **Soft lifecycle** is the standing convention for every new configuration entity introduced from Priority 8 onward: `enabled` (is this currently active) and, where the entity might be superseded rather than merely toggled, `archived` (permanently retired, never resurrected) plus a `displayOrder` — never a hard `DELETE`, so historical references (a redemption against a since-retired reward, a campaign against a since-removed placement) never dangle. `capability_definitions` is the reference implementation this pattern follows.
 
 ## Audit Strategy (Priority 8)
 
-Every configuration change is auditable: who, when, the previous value, the new value, and an optional reason — this was already substantially true (`writeAuditLog()`/`audit_logs` already captured who/when/old/new for every admin action), extended with an optional `reason` column so any config-mutating endpoint can record why, not just what changed. This applies uniformly to every configurable module (Applications, Premium/Billing, Capabilities, Dashboard Widgets, Rewards & Loyalty, Advertising) through the same one shared `writeAuditLog()` call, never a per-module bespoke audit mechanism.
+Every configuration change is auditable: who, when, the previous value, the new value, and an optional reason — this was already substantially true (`writeAuditLog()`/`audit_logs` already captured who/when/old/new for every admin action), extended with an optional `reason` column so any config-mutating endpoint can record why, not just what changed. This applies uniformly to every configurable module (Applications, Premium/Billing, Capabilities, Dashboard Widgets, Rewards & Loyalty, Advertising, Promotional Trials) through the same one shared `writeAuditLog()` call, never a per-module bespoke audit mechanism.
 
 ## Media Strategy (Priority 8)
 
-Two tiers. **Tier 1 — stays in the existing `core` Supabase Storage bucket, unchanged**: application logos, application covers, default/system assets, and (Priority 8.4) advertising campaign banners — CORE-owned or user-uploaded, all currently on the same working bucket. **Tier 2 — moves outside Supabase (planned, provider not yet chosen)**: avatars, profile covers, business/event images, documents — genuinely new user-generated-content infrastructure this codebase doesn't have yet. Campaign banners are Tier-2-*shaped* content (user-generated, not CORE-curated) temporarily running on Tier-1 infrastructure via the replaceable `MediaStorageProvider` adapter (`src/lib/media-storage.ts`, see Advertising above) — swapping the backing provider later touches only that one file, never campaign/business logic. Upload endpoints (`POST /v1/me/avatar`, the Advertising module's banner upload) are specified to have the same shape regardless of which tier backs them — the storage provider is an implementation detail the API hides, per the same "hide the internal structure" principle as everything else in this document.
+Two tiers. **Tier 1 — stays in the existing `core` Supabase Storage bucket, unchanged**: application logos, application covers, default/system assets — CORE-owned/admin-uploaded branding content, all currently on the same working bucket, and never routed through `MediaStorageProvider` (there is no future provider swap to insulate against for CORE-owned assets). **Tier 2 — moves outside Supabase (planned, provider not yet chosen)**: avatars, profile covers, business/event images, documents — genuinely new user-generated-content infrastructure this codebase doesn't have yet. Campaign banners (Priority 8.4) and avatars (Priority 8.7) are both Tier-2-*shaped* content (user-generated, not CORE-curated) temporarily running on Tier-1 infrastructure via the replaceable `MediaStorageProvider` adapter (`src/lib/media-storage.ts`, see Advertising above) — swapping the backing provider later touches only that one file, never upload call sites. Every avatar upload call site (`AvatarUpload.tsx`, `onboarding.tsx`) now goes through `getMediaStorageProvider()` via a shared `avatarPath(userId, fileName)` helper, rather than calling `supabase.storage` directly — a provider swap for avatars now migrates automatically alongside campaign banners instead of stranding two independent call sites on the old bucket. Upload endpoints (`POST /v1/me/avatar`, the Advertising module's banner upload) are specified to have the same shape regardless of which tier backs them — the storage provider is an implementation detail the API hides, per the same "hide the internal structure" principle as everything else in this document.
 
 ---
 
@@ -475,14 +530,15 @@ The database schema is defined in `/supabase/migrations`.
 - `premium_profiles`
   - extended premium contact details and social links (`user_id` unique, no `app_id` — one shared contact record per user; visibility/usability of that record is gated per application at the application layer, see Premium Model → Public Profile Contact Gating)
 - `applications`
-  - platform/app definitions and visual metadata: `id`, `name`, `slug`, `domain`, `logo_url`, `favicon_url`, `cover_image_url`, `primary_color`, `secondary_color`, `google_client_id`, localized short descriptions, `status`, `sort_order`
+  - platform/app definitions and visual metadata: `id`, `name`, `slug`, `domain`, `logo_url`, `favicon_url`, `cover_image_url`, `primary_color`, `secondary_color`, `google_client_id`, localized short descriptions, `visibility`, `launch_date`, `default_language`, `sort_order`
   - `google_client_id`: this application's own Google Cloud OAuth Client ID, consumed by the Application Resolver. Not secret (publicly readable, same as the rest of this table) — the Google Client Secret is never stored in the database, only in Supabase Auth's own Google provider configuration.
-- `subscription_plans`
-  - `app_id`-scoped: prices, currency, plan duration, Stripe/PayPal payment links, localized feature lists
+  - `visibility`/`launch_date`/`default_language`: Priority 8.9 — see Application Visibility above and Authentication → Localization above. `visibility` replaced the earlier `status`/`is_enabled` pair outright (both columns dropped in the same migration, after backfilling `visibility` from their combined prior values) — this is one of the few places in this codebase where an existing column was actually dropped rather than left in place unused, since keeping either alongside `visibility` would have directly contradicted "one visibility state."
+- `subscription_plans` (conceptually "Products" as of Priority 8.10 — see Products & Purchases above; table name unchanged)
+  - `app_id`-scoped: prices, currency, plan duration, Stripe/PayPal payment links, localized feature lists, `product_type` (`subscription`/`promotion`/`one_time`, Priority 8.10 — admin-facing classification only, does not change checkout/entitlement logic)
 - `subscriptions`
   - user subscriptions: `user_id`, `app_id`, `plan_id`, status, payment identifiers, amount, expiry; `UNIQUE(user_id, app_id)`
 - `payments`
-  - payment records for Stripe and PayPal, linked to `user_id`, `app_id`, `subscription_id`; `stripe_payment_id` and `paypal_payment_id` are both unique; `stripe_payment_intent_id` (nullable) is captured at fulfillment time so a later Stripe refund event can be matched back to this row
+  - payment records for Stripe and PayPal, linked to `user_id`, `app_id`, and either `subscription_id` (a Product purchase) or `campaign_id` (an Advertising campaign purchase, Priority 8.4) — the two are mutually exclusive per row, both surfaced together in `/dashboard/purchases`' payment history; `stripe_payment_id` and `paypal_payment_id` are both unique; `stripe_payment_intent_id` (nullable) is captured at fulfillment time so a later Stripe refund event can be matched back to this row
 - `notifications`
   - localized notifications per user and app (`app_id` nullable)
 - `audit_logs`
@@ -543,6 +599,14 @@ The database schema is defined in `/supabase/migrations`.
   - append-only, signed-amount ledger: `id`, `user_id`, `amount` (positive = credited, negative = spent), `currency`, `source` (`reward_redemption`/`campaign_purchase`/`admin_adjustment`), `source_id`, `created_at`. Balance = `SUM(amount)`.
 - `payments.campaign_id` (Priority 8.4)
   - nullable FK to `ad_campaigns.id`, alongside the existing nullable `subscription_id` — one shared `payments` table records both kinds of purchase, not a parallel `ad_payments` table.
+- `share_invite_templates`
+  - per-application Share & Invite copy: `id`, `app_id` (`UNIQUE`), `share_title`, `share_description`, `share_url`, `invite_template` (all nullable — see Share Profile / Invite a Friend above for the fallback behavior when unset).
+- `trial_sources` (Priority 8.5)
+  - the trial-source vocabulary: `id`, `key` (unique — `admin_grant`, `promotional_invitation`, `reward_redemption`), `label`, `description`, `display_order`, `enabled`, `archived` — same shape as `capability_definitions`.
+- `trial_policy` (Priority 8.5)
+  - global settings, free-form key/value (jsonb) — seeded `preset_days` (`[1, 3, 7, 14]`) and `max_duration_days` (`90`).
+- `promotional_trials` (Priority 8.5)
+  - `id`, `user_id`, `status` (`active`/`ended`/`revoked`), `source` (FK to `trial_sources.key`), `source_reference` (nullable), `granted_by` (nullable FK to `profiles.id` — null for a non-admin-driven source), `starts_at`, `expires_at`, `ended_at` (nullable — set on End/Revoke), `reason` (nullable, admin-supplied). A partial unique index on `(user_id) WHERE status = 'active'` enforces "no multiple active Trials" at the database, not only in application code.
 
 ### Storage
 
@@ -573,13 +637,13 @@ Row-level security is enabled for tables and storage policies.
 
 ### Applications
 
-- Publicly readable.
-- Admins may manage all application records.
+- Publicly readable at the RLS level (unchanged) — visibility filtering (Priority 8.9, see Application Visibility above) is enforced at the query/business-logic layer, not by narrowing this base policy. This is a deliberate boundary, not an oversight: the Application Resolver (`resolveApplication()`) must still be able to resolve a `draft` application's branding when hit directly on its own configured domain — an administrator setting up and testing a new application's login/branding page before flipping it to `active` — which a stricter RLS policy would silently break. What "hidden from normal users" actually means in practice is documented per-surface: `DashboardPage.tsx`'s own applications query explicitly excludes `draft`/`archived` (`.in("visibility", ["coming_soon", "active"])`), and the future `/v1 GET /v1/applications` (`API_CONTRACT.md` → Applications) does the same for any non-admin caller.
+- Admins may manage all application records, including `visibility`, `launch_date`, and `default_language`.
 
 ### Subscription plans
 
 - Publicly readable only when `is_active = true`; `anon` reads a restricted column set (payment links excluded).
-- Admins may manage all plans.
+- Admins may manage all plans. **Soft lifecycle only (Priority 8.7)** — `adminArchivePlan` (was `adminDeletePlan`) sets `is_active = false` instead of issuing a hard `DELETE`, matching the `enabled`/`archived` convention every other Priority 8 registry follows; a plan referenced by an existing subscription can no longer fail on a raw FK constraint violation, since nothing is ever actually deleted.
 
 ### Subscriptions
 
@@ -641,6 +705,15 @@ Row-level security is enabled for tables and storage policies.
 - `ad_campaigns`: the owner may `SELECT` only their own rows (`user_id = auth.uid()`); not publicly readable at all — ad serving goes through `getActivePlacementAd` (service_role), not a direct table read.
 - `ad_account_credits`: `authenticated` may `SELECT` only their own rows; writes are `service_role`-only.
 
+### Share & Invite templates
+
+- `share_invite_templates`: publicly readable (`anon`, `authenticated` — the Dashboard widget needs it without an admin session); writable only by `service_role`.
+
+### Promotional Trials (Priority 8.5)
+
+- `trial_sources`, `trial_policy`: registry/config tables, same shape as Capabilities/Rewards — publicly readable, writable only by `service_role`.
+- `promotional_trials`: `authenticated` may `SELECT` only their own rows (`user_id = auth.uid()`); all writes are `service_role`-only — there is no client-side insert path, matching `ad_campaigns`/`reward_redemptions`' pattern.
+
 ### Storage
 
 - All objects live in the one `core` bucket; RLS is scoped by top-level folder prefix (`storage.foldername(name)[1]`), not by bucket id.
@@ -655,12 +728,12 @@ The app uses TanStack Start server functions in `/src/lib`.
 ### Admin server functions
 
 Defined in `src/lib/admin.functions.ts`:
-- `adminUpsertPlan`
-- `adminDeletePlan`
+- `adminUpsertPlan` (creates/edits a Product — `product_type` field added Priority 8.10)
+- `adminArchivePlan` (was `adminDeletePlan` — soft-lifecycle `is_active = false`, not a hard `DELETE`, Priority 8.7)
 - `adminGrantPremium`
 - `adminRevokePremium`
-- `adminListUsers` (paginated: `page`/`pageSize`; filterable by `search`, `premiumFilter` ("premium"/"standard", resolved live against `subscriptions` — not `profiles.user_type`), `is_verified`, `is_active`; each returned row carries a computed `is_premium` boolean)
-- `adminUpdateUser` (edits `city`/`country`/`bio`/`username`/`email` only — `first_name`/`last_name`/`avatar_url` are excluded; those are under Identity Lock and reserved for a future administrator identity-review workflow, not general user-management editing)
+- `adminListUsers` (paginated: `page`/`pageSize`; filterable by `search`, `premiumFilter` ("premium"/"standard", resolved live via `resolvePremiumStatusBulk()` — `subscriptions` OR `promotional_trials`, not `profiles.user_type`), `is_verified`, `is_active`; each returned row carries a computed `is_premium` boolean)
+- `adminUpdateUser` (edits `city`/`country`/`bio`/`username` only — `first_name`/`last_name`/`avatar_url` are excluded under Identity Lock, and `email` is excluded as of Priority 8.7 since it now always resyncs from the auth identity instead of being admin-editable, see Identity Lock above)
 - `adminSetUserActive` (suspend/reactivate — sets `profiles.is_active`; an admin cannot suspend their own account through this function)
 - `adminDeleteUser` (admin-initiated deletion; shares its cascade-delete implementation — `deleteUserAccountCascade` in `admin.server.ts` — with the self-service GDPR deletion in `gdpr.functions.ts`, rather than duplicating it; an admin cannot delete their own account through this function)
 - `adminListAuditLogs`
@@ -670,9 +743,9 @@ Defined in `src/lib/admin.functions.ts`:
 - `adminListPayments`
 - `adminListVerificationRequests`
 - `adminSetVerified`
-- `adminCreateApplication`
-- `adminSetAppEnabled`
-- `adminUpdateAppSettings` (covers identity/branding fields — `name`, `slug`, `domain`, `primary_color`, `secondary_color`, `cover_image_url`, `sort_order`, `google_client_id` — in addition to logo/favicon/descriptions/enabled)
+- `adminCreateApplication` (new applications always start `visibility: "draft"`, the column's own DB default)
+- `adminSetApplicationVisibility` (was `adminSetAppEnabled`, Priority 8.9 — the one dedicated action that moves an application between `draft`/`coming_soon`/`active`/`archived`, kept separate from `adminUpdateAppSettings` below, matching the same pattern `adminSetVerified`/`adminSetUserActive` already follow)
+- `adminUpdateAppSettings` (covers identity/branding fields — `name`, `slug`, `domain`, `primary_color`, `secondary_color`, `cover_image_url`, `sort_order`, `google_client_id`, `launch_date`, `default_language` — in addition to logo/favicon/descriptions; deliberately excludes `visibility` itself)
 
 These functions use `requireSupabaseAuth` middleware, validate inputs with Zod, then either enforce admin status or execute service-role operations.
 
@@ -685,11 +758,14 @@ Defined in `src/lib/notifications.functions.ts`:
 - `markNotificationRead`
 - `sendSupportRequest`
 
-### Trial activation
+### Promotional Trial functions (Priority 8.5)
 
-Defined in `src/lib/trial.functions.ts`:
-- `activateTrialIfEligible`
-- Activates a 7-day trial when the user has no existing active subscription and has not used a trial before.
+Core logic in `src/lib/trial.server.ts` (plain server-only helper, not a `createServerFn`): `grantPromotionalTrial({ userId, days, source, grantedBy?, sourceReference?, reason? })` — the one place a Trial is ever created. Validates `days` against `trial_policy.max_duration_days`, rejects a grant if the user already has an active Trial (`already_has_active_trial`), and relies on `promotional_trials`' partial unique index as the actual race-safe guarantee (a `23505` unique-violation on insert is caught and reported the same way as the pre-check). Called today only from `adminGrantPromotionalTrial` below; a future `promotional_invitation`/`reward_redemption` source calls this same function with a different `source` key, never a copy of its logic.
+
+Public surface in `src/lib/trial.functions.ts`:
+- `getMyActiveTrial()` — authenticated; the caller's own current (or most recent) Trial, read-only. Powers `TrialBanner.tsx`; never activates anything.
+- `getTrialPolicy()` — the current preset durations and maximum duration, for the admin grant form.
+- `adminGrantPromotionalTrial({ userId, days, reason? })`, `adminEndTrial({ trialId, reason? })`, `adminRevokeTrial({ trialId, reason? })`, `adminListTrialHistory({ userId? })`, `adminListTrialSources()`, `adminSetTrialPolicy({ presetDays?, maxDurationDays?, reason? })` — each audited via `writeAuditLog()`. `adminEndTrial`/`adminRevokeTrial` are mechanically identical (both set a terminal status + `ended_at`) but kept as two distinct actions because they carry different administrative meaning — see Promotional Trial above.
 
 ### GDPR functions
 
@@ -727,7 +803,7 @@ Defined in `src/lib/dashboard-widgets.functions.ts`:
 - `adminSetDashboardWidgetAppSetting` — the per-application on/off switch, audited with the previous and new `enabled` value.
 - `adminListDashboardWidgetSettings` — every non-archived widget joined with one application's current settings, for admin UI.
 
-`DashboardPage.tsx` consumes `getDashboardWidgets` once, keyed on the application resolved via `useApplication()`, and conditionally renders each of the six seeded sections from that one result.
+`DashboardPage.tsx` consumes `getDashboardWidgets` once, keyed on the application resolved via `useApplication()`, and conditionally renders each of the seven seeded sections (the original six plus `messaging`, Priority 8.7) from that one result.
 
 ### Rewards & Loyalty functions (Priority 8.3)
 
@@ -740,7 +816,7 @@ Public surface in `src/lib/rewards.functions.ts`:
 - `getRewardsMe({ appId? })` — the one aggregated Rewards Dashboard call: reward/lifetime points, current level, achievements, verified-referral count, the catalog (filtered by `requires_capability` when `appId` is given, annotated with per-item `canRedeem`), and redemption history. Runs `promotePendingReferralVerifications` as a side effect first.
 - `redeemReward({ catalogKey, appId? })` — validates the catalog item, its capability gate (if any — fails closed without `appId`), and both eligibility conditions (points balance AND verified-referral count), then records the redemption via a service-role write (`reward_redemptions` grants `authenticated` `SELECT` only) — see Rewards & Loyalty above for why fulfillment itself is deferred.
 - `linkReferral({ referrerUsername })` — service-role-only; sets `profiles.referred_by_user_id` once and grants `invite_registration` to the referrer. Called once from `onboarding.tsx` after profile completion, consuming the `?ref=` value captured by `src/lib/referral.ts`.
-- Admin CRUD, same pattern as Capabilities/Dashboard Widgets: `adminUpsertRewardActionRule`/`adminListRewardActionRules`, `adminUpsertRewardFulfillmentType`/`adminListRewardFulfillmentTypes`, `adminUpsertRewardCatalogItem`/`adminListRewardCatalog`, `adminSetRewardConfig` — each audited via `writeAuditLog()`.
+- Admin CRUD, same pattern as Capabilities/Dashboard Widgets: `adminUpsertRewardActionRule`/`adminListRewardActionRules`, `adminUpsertRewardLevel`/`adminListRewardLevels` (Priority 8.7), `adminUpsertRewardAchievement`/`adminListRewardAchievements` (Priority 8.7), `adminUpsertRewardFulfillmentType`/`adminListRewardFulfillmentTypes`, `adminUpsertRewardCatalogItem`/`adminListRewardCatalog`, `adminSetRewardConfig`/`adminListRewardConfig` (getter added Priority 8.7) — each audited via `writeAuditLog()`, all reachable from `/admin/rewards` (Priority 8.7).
 
 ### Advertising functions (Priority 8.4)
 
@@ -766,6 +842,12 @@ Public surface in `src/lib/advertising.functions.ts`:
 - Admin: `adminUpsertAdPlacement`/`adminListAdPlacements`, `adminUpsertAdPlacementPrice`/`adminListAdPlacementPrices`, `adminSetAdConfig`, `adminSetAdDraftExpiryHours`, `adminSetAdApplicationSettings`, `adminSetTrustedAdvertiser`/`adminListTrustedAdvertisers` (both `appId`-scoped), `adminListCampaigns`/`adminModerateCampaign` (the moderation queue), `adminListPendingAdvertisingCreditRedemptions`/`adminFulfillAdvertisingCreditRedemption` (the Rewards fulfillment bridge) — each audited via `writeAuditLog()`.
 
 `src/lib/media-storage.ts` — the replaceable upload adapter (`MediaStorageProvider` interface, `getMediaStorageProvider()`); today's only implementation targets the existing `core` Supabase Storage bucket. `src/lib/payment-reference.server.ts` gained `signCampaignReference`/`verifyCampaignReference`, a distinct HMAC-signed shape (leading `"campaign"` tag) from the subscription reference — the two can never be confused by either webhook, and the original `signPaymentReference`/`verifyPaymentReference` are untouched.
+
+### Share & Invite template functions
+
+Defined in `src/lib/share-invite.functions.ts`:
+- `getShareInviteConfig({ appId })` — public; whatever is configured for that application (each field nullable), or `null` per field if nothing has been set. No server-side hardcoded English fallback — `ShareAndInvite.tsx` fills any gap with an i18n default.
+- `adminUpsertShareInviteTemplate({ appId, shareTitle, shareDescription, shareUrl, inviteTemplate, reason? })` — upserts the single per-application row (`onConflict: "app_id"`), audited via `writeAuditLog()`. Edited from `/admin/applications`'s "Share & Invite" section (scoped to whichever application is currently selected there), not a separate admin page.
 
 ### Server helpers
 
@@ -926,11 +1008,16 @@ All three locale files must be updated together for any new key — never one la
 ### Admin panels
 
 - `/admin`: admin overview and quick links
-- `/admin/applications`: manage apps and subscription plans
+- `/admin/applications`: manage apps and Products (`subscription_plans`, Priority 8.10 — Subscription/Promotion/One-Time)
 - `/admin/users`: search/filter/paginate users, edit profile fields, suspend/reactivate/delete accounts, approve/revoke verification, grant/revoke premium, view audit logs
 - `/admin/communication`: broadcast notifications to users
 - `/admin/payments`: payments history via server function
 - `/admin/verification`: approve or revoke verified user status
+- `/admin/advertising`: placements, pricing, moderation/eligibility config, trusted advertisers, moderation queue, advertising-credit fulfillment
+- `/admin/trials`: grant/end/revoke Promotional Trials, view history, edit trial policy
+- `/admin/capabilities` (Priority 8.7): register capability definitions, enable/disable per application
+- `/admin/dashboard-widgets` (Priority 8.7): register widget definitions (including `requiresCapability`), enable/disable per application
+- `/admin/rewards` (Priority 8.7): action rules, levels, achievements, redemption catalog, fulfillment types, configuration
 
 ### Admin data flow
 
@@ -939,16 +1026,17 @@ All three locale files must be updated together for any new key — never one la
 
 ## Subscription system (implementation)
 
-### Pricing and plans
+### Pricing and plans (Products, Priority 8.10)
 
-- Plans are stored in `subscription_plans` and belong to applications.
+- Plans/Products are stored in `subscription_plans` and belong to applications; `product_type` (`subscription`/`promotion`/`one_time`) classifies each one for admin organization — checkout/entitlement logic is identical regardless of type.
 - `pricing.tsx` lists active plans by app; on clicking "Pay with Stripe/PayPal" it calls `createPaymentReference` (server function) to obtain a signed reference, then redirects to the plan's stored payment link with that reference attached.
 - Both Stripe (`client_reference_id`) and PayPal (`custom_id`) use the same signed format: `userId__appId__planId__hmac` (see Billing above).
 
-### Trial activation
+### Promotional Trial (Priority 8.5)
 
-- `activateTrialIfEligible` grants a 7-day active subscription for all active apps when a user has no active subscription.
-- It prevents reuse by checking for an existing `stripe_payment_id = 'trial_7days'` record.
+- No auto-activation anywhere — `DashboardPage.tsx` no longer calls anything on load to grant a trial. `TrialBanner.tsx` only ever reads (`getMyActiveTrial`).
+- `/admin/trials` is the only way a Trial is created: `adminGrantPromotionalTrial` → `grantPromotionalTrial()` (`trial.server.ts`) → an insert into `promotional_trials`, entirely separate from `subscriptions`.
+- `has_any_active_premium()` checks `promotional_trials` independently of `subscriptions` — see Promotional Trial in the architecture section above for why this matters.
 
 ### Subscription persistence
 
@@ -956,9 +1044,9 @@ All three locale files must be updated together for any new key — never one la
 - Admin revoke operations, and a Stripe refund, update the existing row's `status`/`expires_at`.
 - Subscriptions store expiry, payment ids, amount, currency, and status.
 
-### Subscription UI
+### Purchases UI (Priority 8.10 — was "Subscription UI")
 
-- Dashboard and `/dashboard/subscriptions` show current subscriptions, expiry, and status.
+- `/dashboard/purchases` (`dashboard.purchases.tsx`, replacing the earlier `/dashboard/subscriptions`) shows the complete purchase history: current/expired Products (subscriptions joined with plans/applications) and the full payment/transaction ledger (provider, transaction id, status) — including Advertising campaign payments, labeled distinctly via `ad_campaigns.title`.
 - `payment.success.tsx` polls for active subscription after checkout.
 
 ## Notification system (implementation)

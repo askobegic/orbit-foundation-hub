@@ -29,17 +29,17 @@ A separate, non-severity tag, **Architecture Deviation**, marks findings where t
 
 | Area | Critical | High | Medium | Low |
 |---|---|---|---|---|
-| Architecture | 0 | 1 | 2 | 1 |
-| Authentication | 1 | 2 | 3 | 2 |
+| Architecture | 0 | 1 | 4 | 2 |
+| Authentication | 1 | 2 | 4 | 2 |
 | Dashboard | 0 | 1 | 6 | 4 |
-| Admin Panel | 0 | 0 | 5 | 5 |
-| Database | 2 | 0 | 1 | 4 |
-| Routing | 0 | 0 | 0 | 2 |
-| Components | 0 | 1 | 3 | 2 |
+| Admin Panel | 1 | 0 | 8 | 5 |
+| Database | 2 | 0 | 1 | 5 |
+| Routing | 0 | 0 | 0 | 3 |
+| Components | 0 | 1 | 4 | 2 |
 | Security (cross-cutting + payments) | 4 | 2 | 5 | 4 |
 | Performance | 0 | 0 | 2 | 5 |
 | Billing / Subscription Lifecycle | 0 | 1 | 0 | 0 |
-| Messaging | 0 | 0 | 0 | 1 |
+| Messaging | 0 | 0 | 1 | 2 |
 
 Several issues are cross-cutting (e.g. the profile self-escalation bug is a Database/RLS root cause with an Authentication code path and a Security consequence). Each is written up **once**, in the section that owns its root cause, with short cross-reference entries elsewhere.
 
@@ -85,6 +85,26 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 - **Commit:** —
 - **Date:** 2026-07-26
 
+**A-5 — No shared "Premium source + expiry" resolver, so bulk/admin consumers re-derive Premium status ad hoc**
+- **Status:** ✅ Resolved (2026-08-03)
+- **Files:** `src/lib/premium.server.ts` (new); consumed by `src/lib/admin.functions.ts` (`adminListUsers`, `adminOverviewStats`, `adminSendNotification`, `adminListVerificationRequests`)
+- **Description:** Found during the Priority 8.6 architecture audit: `hasAnyActivePremium()` (`src/lib/premium.ts`) is the correct single-user, client-callable check, but it has no bulk/server-only sibling — any admin surface needing "which of these N users are Premium, and via what" had nothing to call, so each one re-queried `subscriptions` directly and missed Promotional Trials entirely (tracked separately as **AD-13**, the concrete call-site consequence). A future `/v1` API endpoint reporting "am I premium, until when, via what" would have had the same problem.
+- **Classification:** Architecture Deviation — the "two places compute the same answer differently" pattern `CLAUDE.md` calls out, one step removed from **AD-1**/**AD-10** (which fixed the single-user path but never the bulk/admin path).
+- **Recommendation:** Add one shared, bulk-capable resolver exposing `{ active, source: "subscription" | "trial", expiresAt }`, and route every admin/bulk consumer through it instead of querying `subscriptions` directly.
+- **Resolution:** New `src/lib/premium.server.ts` exports `resolvePremiumStatusBulk(supabaseAdmin, userIds?)` (two queries total, not N+1 — one against `subscriptions`, one against `promotional_trials`, both optionally scoped to a `userIds` list) and `resolvePremiumStatus(supabaseAdmin, userId)`. When a user has both an active subscription and an active trial, the subscription is reported as `source` (the paid entitlement takes precedence for display purposes; both remain valid per `PROJECT_KNOWLEDGE.md` → Promotional Trial's trial/premium-never-conflict rule). All four call sites in `admin.functions.ts` now resolve through it: `adminListUsers`'s premium filter and per-page badge, `adminOverviewStats`'s Active Premium stat (replacing an unrelated `MIN_MS`/`amount_paid > 0` heuristic that was itself a second, incorrect re-derivation), `adminSendNotification`'s "Premium users" broadcast target, and `adminListVerificationRequests`'s candidate list.
+- **Commit:** —
+- **Date:** Logged 2026-08-02, resolved 2026-08-03
+
+**A-6 — `capability_definitions` conflated always-on base features with genuinely optional modules**
+- **Status:** ✅ Resolved (2026-08-03)
+- **Files:** `supabase/migrations/20260804100000_core_audit_resolution.sql`; `src/lib/conversation.functions.ts`, `src/components/dashboard/DashboardPage.tsx`, `src/routes/dashboard.messages.tsx`, `src/components/profile/ProfileCard.tsx`
+- **Description:** Found during the Priority 8.6 audit: `premium` and `messaging` were both seeded as capability keys, but neither was ever actually checked anywhere (`getApplicationCapabilities()` was called only from Advertising/Dashboard-Widgets/Rewards code) — meaning disabling either did nothing, while genuinely optional capabilities like `rewards`/`advertising` behaved correctly. A future `/v1` endpoint listing "this app's enabled capabilities" would have included two keys that never do anything, and an admin toggling `messaging` off would see no effect (a silent no-op, not an error).
+- **Risk:** Confusing/misleading vocabulary for whoever configures capabilities, and a structurally-inert entry that looks configurable but isn't.
+- **Recommendation:** Archive `premium` (Billing is a mandatory Core responsibility per `PROJECT_KNOWLEDGE.md`, never meant to be togglable) rather than deleting it (soft-lifecycle convention), and make `messaging` a genuinely enforced capability instead of removing it, since messaging *is* a legitimate optional module.
+- **Resolution:** `premium` archived (`archived = true`) in `capability_definitions` — an archived definition always wins over any per-application override (see `PROJECT_KNOWLEDGE.md` → Capabilities), so it can never resurface as togglable. `messaging` is now genuinely enforced end to end (see **MSG-2**): a new `messaging` `dashboard_widgets` row gates the Messages nav item exactly like `rewards`/`advertising`; `getOrCreateConversation` rejects new conversations when the capability is disabled for the initiator's current application; `/dashboard/messages` shows an "unavailable" state instead of the inbox when disabled; `ProfileCard`'s Send Message action is hidden entirely (not just locked) when disabled.
+- **Commit:** —
+- **Date:** Logged 2026-08-02, resolved 2026-08-03
+
 ### Low
 
 **A-4 — `errorMiddleware` and `server.ts`'s fallback both render `renderErrorPage()` independently**
@@ -96,6 +116,17 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 - **Resolution:** —
 - **Commit:** —
 - **Date:** 2026-07-26
+
+**A-7 — Naming inconsistencies introduced across Phases 8.3–8.5**
+- **Status:** 🚫 Deferred (2026-08-03)
+- **Files:** `supabase/migrations/20260802120000_promotional_trials.sql` (`promotional_trials`/`trial_sources`/`trial_policy`); `src/lib/rewards.functions.ts` (`getRewardsMe`); `src/lib/advertising.functions.ts`/`src/lib/advertising.server.ts` (`ad_config` visibility)
+- **Description:** Found during the Priority 8.6 audit, self-reported: **(1)** `promotional_trials` doesn't share a prefix with its own module's `trial_sources`/`trial_policy` tables, unlike `reward_*`/`ad_*` which are internally consistent. **(2)** `getRewardsMe` reverses the `getMyX` ordering used everywhere else (`getMyCampaigns`, `getMyActiveTrial`, `getMyAdvertisingSummary`). **(3)** `ad_config` is service-role-only readable while the structurally identical `reward_config`/`trial_policy` are publicly readable, with no functional reason for the difference.
+- **Risk:** No functional bug in any of the three — purely a naming/consistency smell that makes the codebase slightly harder to navigate by pattern-matching.
+- **Recommendation:** Rename for consistency in a future pass; not worth a migration/rename churn on its own.
+- **Deferral rationale:** Explicitly out of scope for Priority 8.7 by owner instruction ("do not implement" R-12) — renaming a live table/function used across multiple modules is exactly the kind of change that should be batched deliberately, not done as a drive-by alongside unrelated fixes.
+- **Resolution:** —
+- **Commit:** —
+- **Date:** 2026-08-03
 
 ---
 
@@ -169,6 +200,16 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 - **Resolution:** —
 - **Commit:** —
 - **Date:** 2026-07-26
+
+**AU-9 — `profiles.email` could silently diverge from the real Google-auth identity**
+- **Status:** ✅ Resolved (2026-08-03)
+- **Files:** `src/context/AuthContext.tsx` (`loadOrCreateProfile`); `src/lib/admin.functions.ts` (`userUpdateSchema`); `src/routes/admin.users.tsx`
+- **Description:** Found during the Priority 8.6 audit: unlike `first_name`/`last_name`/`avatar_url` (covered by Identity Lock), `email` had nothing reconciling it against `auth.users.email` after first sign-in, and `admin.users.tsx`'s edit modal let an admin overwrite it directly — a second, independently-editable copy of what should be one identity fact. Not exploitable today (auth is Google-OAuth-only, so `auth.users.email` itself can't be spoofed), but a real Single-Source-of-Truth gap that matters once a public API treats `profiles.email` as authoritative.
+- **Classification:** Architecture Deviation — auth identity is supposed to be the single source of truth for identity fields (`PROJECT_KNOWLEDGE.md` → Single Source of Truth).
+- **Recommendation:** Always resync `profiles.email` from the auth identity on login (self-healing, no schema change needed), and remove the one admin override path so nothing else can make it diverge again.
+- **Resolution:** `loadOrCreateProfile`'s patch logic changed from "fill in only if empty" (`if (!existing.email && u.email)`) to "always resync when different" (`if (u.email && existing.email !== u.email)`) — deliberately the opposite rule from Identity Lock's name/photo fields (which fill once and then lock), since email needs to track the live auth identity, not freeze the first-seen value. `admin.users.tsx`'s edit modal no longer exposes an editable Email field (now read-only display); `admin.functions.ts`'s `userUpdateSchema` had the `email` field removed entirely, so no admin server call can write it anymore. No dashboard-facing form (`dashboard.profile.tsx`, `dashboard.settings.tsx`) ever exposed an editable `profiles.email` field either (confirmed via grep), so the admin modal was the only override path to close.
+- **Commit:** —
+- **Date:** Logged 2026-08-02, resolved 2026-08-03
 
 ### Low
 
@@ -276,14 +317,14 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 ### Low
 
 **DA-8 — `activateTrial` failure permanently blocks retry for the browser session, error swallowed silently**
-- **Status:** Open
-- **Files:** `src/components/dashboard/DashboardPage.tsx:93-107`
+- **Status:** ✅ Resolved (2026-08-03)
+- **Files:** `src/components/dashboard/DashboardPage.tsx:93-107` (as of the original finding)
 - **Description:** `triedTrialRef.current = true` is set synchronously (line 98) before `activateTrial()` resolves/rejects, and failures are swallowed by an empty `.catch(() => {})` (line 106).
 - **Risk:** A transient failure (network blip) leaves the ref `true` for the component's lifetime, so an eligible user never gets the trial activated that session, with no error surfaced anywhere.
 - **Recommendation:** Only set the ref on success (or a definitive "not eligible" response); log/surface failures instead of swallowing them.
-- **Resolution:** —
+- **Resolution:** Not fixed in place — resolved by architectural removal (Priority 8.5, Promotional Trial Policy). The entire automatic-activation mechanism this finding describes (`activateTrialIfEligible`, `triedTrialRef`, the client-side effect in `DashboardPage.tsx`) no longer exists: registration always creates a Standard account, and a Trial is only ever created explicitly via `/admin/trials` (`adminGrantPromotionalTrial`). There is nothing left for a client-side retry bug to affect.
 - **Commit:** —
-- **Date:** 2026-07-26
+- **Date:** 2026-07-26 (opened) / 2026-08-03 (resolved)
 
 **DA-9 — Hardcoded, non-localized delete-confirmation phrase**
 - **Status:** ✅ Resolved (2026-07-30)
@@ -319,7 +360,19 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 
 ## 4. Admin Panel
 
-**Flow:** `src/routes/admin.tsx` (`AdminGate`) is the parent layout for all `/admin/*` child routes and blocks the `<Outlet/>` for non-admins — confirmed via `routeTree.gen.ts` that every admin page (`admin.applications`, `admin.communication`, `admin.payments`, `admin.users`, `admin.verification`) is a child of it. Every mutating server function in `src/lib/admin.functions.ts` independently calls `assertAdmin()` (`src/lib/admin.server.ts`) which checks the `user_roles` table server-side. **This layered gating is correctly implemented** — no IDOR/auth-bypass was found on admin routes.
+**Flow:** `src/routes/admin.tsx` (`AdminGate`) is the parent layout for all `/admin/*` child routes and blocks the `<Outlet/>` for non-admins — confirmed via `routeTree.gen.ts` that every admin page (`admin.applications`, `admin.communication`, `admin.payments`, `admin.users`, `admin.verification`, `admin.advertising`, `admin.trials`, `admin.capabilities`, `admin.dashboard-widgets`, `admin.rewards`) is a child of it. Every mutating server function in `src/lib/admin.functions.ts` independently calls `assertAdmin()` (`src/lib/admin.server.ts`) which checks the `user_roles` table server-side. **This layered gating is correctly implemented** — no IDOR/auth-bypass was found on admin routes.
+
+### Critical
+
+**AD-11 — Capabilities, Dashboard Widgets, and most of Rewards & Loyalty had zero admin UI — configurable only via direct SQL**
+- **Status:** ✅ Resolved (2026-08-03)
+- **Files:** `src/routes/admin.capabilities.tsx` (new), `src/routes/admin.dashboard-widgets.tsx` (new), `src/routes/admin.rewards.tsx` (new), `src/routes/admin.tsx` (hub wiring); `src/lib/rewards.functions.ts` (`adminUpsertRewardLevel`/`adminListRewardLevels`, `adminUpsertRewardAchievement`/`adminListRewardAchievements`, `adminListRewardConfig`, all new)
+- **Description:** Found during the Priority 8.6 audit: `adminListCapabilityDefinitions`/`adminUpsertCapabilityDefinition`/`adminSetApplicationCapability` (Phase 8.1) and `adminListDashboardWidgets`/`adminUpsertDashboardWidget`/`adminSetDashboardWidgetAppSetting` (Phase 8.2) were never imported by any route file — confirmed by grep across the whole `src/routes/` tree, zero matches. `application_capabilities` therefore defaulted to no rows for every application, and since `dashboard_widgets`' `rewards`/`advertising` entries both declare `requires_capability`, `getDashboardWidgets()` hid both widgets for every application until someone manually inserted a row via direct Supabase access. The same gap existed one level deeper in Rewards: `adminUpsertRewardActionRule`/`adminUpsertRewardFulfillmentType`/`adminUpsertRewardCatalogItem`/`adminSetRewardConfig` all existed and worked, but no `admin.rewards.tsx` page made any of them reachable, and `reward_levels`/`reward_achievements` had no admin server function at all — not even the backend half existed.
+- **Risk:** Two Core Development Priorities marked ✅ Completed (Capabilities, Dashboard Widget Modularity), plus half of two more (Rewards & Loyalty, Advertising), were non-operational in practice — every application's Rewards/Advertising widgets stayed invisible to end users, and no administrator could configure any of it without raw database access. Not a security defect — an operational completeness gap large enough to block using what had already been built.
+- **Recommendation:** Build the missing admin UI for all of the above before or alongside `/v1` API design.
+- **Resolution:** Three new admin pages, following the exact Card-based pattern already established by `/admin/advertising`: **`/admin/capabilities`** (register/enable/archive capability definitions; toggle a capability per application). **`/admin/dashboard-widgets`** (register/enable widget definitions including `requiresCapability`; toggle a widget per application). **`/admin/rewards`** (action rules, levels, achievements, redemption catalog, fulfillment types, and configuration — including the referral-verification-period setting `rewards.server.ts` reads). The two missing backend halves (`reward_levels`, `reward_achievements`) were added to `rewards.functions.ts` first, following the identical `assertAdmin()` + `writeAuditLog()` + upsert-by-id pattern every other registry CRUD function in this repo already uses — no new pattern introduced. All three pages wired into the `/admin` hub's card grid. No SQL is required for normal administration of any of these systems anymore.
+- **Commit:** —
+- **Date:** Logged 2026-08-02, resolved 2026-08-03
 
 ### Medium
 
@@ -366,6 +419,35 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 - **Resolution:** —
 - **Commit:** —
 - **Date:** 2026-07-26
+
+**AD-12 — `applications.domain` isn't case-normalized at write time**
+- **Status:** ✅ Resolved (2026-08-03)
+- **Files:** `src/lib/admin.functions.ts` (`domainSchema`, shared by `appCreateSchema`/`appSettingsSchema`); `supabase/migrations/20260804100000_core_audit_resolution.sql` (data fix for already-stored rows)
+- **Description:** Found during the Priority 8.6 audit: the Application Resolver lowercases the incoming `Host` header at read time (`extractHostname()`), but nothing normalized what an admin typed when creating/editing an application's `domain`. A domain entered with any uppercase would silently and permanently break brand resolution for that application — the single mechanism the entire multi-brand architecture depends on.
+- **Risk:** A typo an admin wouldn't notice (case is usually invisible in casual reading) permanently breaks an application's domain resolution until someone finds and fixes the stored value.
+- **Recommendation:** Normalize to lowercase in the same Zod schema that validates the admin's create/update payload, and backfill any already-stored mixed-case value.
+- **Resolution:** A shared `domainSchema` (`z.string().trim().toLowerCase()...`) now backs both `appCreateSchema.domain` and `appSettingsSchema.domain`, so every future write is normalized before it reaches the database regardless of what the admin typed. The accompanying migration additionally backfills any already-stored mixed-case `domain` to lowercase (`UPDATE ... SET domain = lower(domain) WHERE domain <> lower(domain)`) — a pure data-consistency fix, no application relying on an already-correct lowercase domain is affected.
+- **Commit:** —
+- **Date:** Logged 2026-08-02, resolved 2026-08-03
+
+**AD-13 — Four admin surfaces didn't count Promotional Trial as Premium**
+- **Status:** ✅ Resolved (2026-08-03)
+- **Files:** `src/lib/admin.functions.ts` (`adminListUsers`, `adminOverviewStats`, `adminSendNotification`, `adminListVerificationRequests`)
+- **Description:** Found during the Priority 8.6 audit: all four functions queried `subscriptions` directly for "is this user Premium" and never joined `promotional_trials`, so a user who was Premium only via a Trial was invisible to admin filtering, the dashboard's Active Premium stat, "Premium-only" broadcasts, and verification-request eligibility. Priority 8.5 updated the one shared SQL function (`has_any_active_premium()`) but never revisited these four call sites — the same "two places compute the same answer differently" pattern as **AD-1**.
+- **Classification:** Architecture Deviation — see **A-5** for the root-cause fix (no shared bulk resolver existed).
+- **Recommendation:** Route all four through the same shared resolver `has_any_active_premium()` uses.
+- **Resolution:** All four now resolve Premium status through `resolvePremiumStatusBulk()`/`resolvePremiumStatus()` (**A-5**'s new `src/lib/premium.server.ts`), which correctly ORs `subscriptions` and `promotional_trials` exactly like the shared SQL function. `adminOverviewStats`'s Active Premium stat also had its own separate bug fixed in the same pass: it was computing "active" via a `MIN_MS = 28 days` heuristic combined with `amount_paid > 0` (a leftover proxy from before Promotional Trials existed as a separate table) instead of an actual active-subscription check — replaced with the resolver's count, so the stat's definition now matches `hasAnyActivePremium()` exactly.
+- **Commit:** —
+- **Date:** Logged 2026-08-02, resolved 2026-08-03
+
+**AD-14 — `adminDeletePlan` performed a real hard `DELETE` on subscription plans, the only one found in the audit**
+- **Status:** ✅ Resolved (2026-08-03)
+- **Files:** `src/lib/admin.functions.ts` (`adminArchivePlan`, was `adminDeletePlan`); `src/routes/admin.applications.tsx`
+- **Description:** Found during the Priority 8.6 audit: `subscription_plans` already has an `is_active` column for exactly this purpose, yet the admin UI wired a `Trash2` button straight to `DELETE FROM subscription_plans` — inconsistent with the soft-lifecycle convention every other registry table in this repo follows. A plan referenced by any subscription would fail with a raw, unhandled Postgres FK error surfaced directly to the admin.
+- **Recommendation:** Replace the hard delete with `UPDATE ... SET is_active = false`, matching the convention `enabled`/`archived` tables already use.
+- **Resolution:** `adminDeletePlan` renamed to `adminArchivePlan`; its body changed from `.delete()` to `.update({ is_active: false })`, action renamed `"plan.archive"`, and it now returns the updated row instead of a bare `{ ok: true }`. `admin.applications.tsx`'s delete button was replaced with an archive button (`Archive` icon, `disabled` once already archived) — no FK error is reachable anymore since nothing is ever actually deleted.
+- **Commit:** —
+- **Date:** Logged 2026-08-02, resolved 2026-08-03
 
 ### Low
 
@@ -429,6 +511,16 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 - **Resolution:** Removed the `user_type` write from `adminGrantPremium`, both webhooks' fulfillment paths, and Stripe's refund-revert block entirely (nothing left to revert once nothing writes it). `adminListUsers` now resolves a `premiumFilter` ("premium"/"standard") against `subscriptions` directly and returns each row with a computed `is_premium` boolean; `admin.users.tsx`'s badge, filter dropdown, and detail modal all consume `is_premium` instead of `user_type`. The filter dropdown's "Admin"/"Super admin" options were also dropped — they filtered against `user_type` values no code has ever written (see **DB-3**), so they always returned zero rows; removing them alongside the rest of this same column's filter logic was in scope, not a separate change. `profiles.user_type` itself is left in the schema, unused, pending an explicit decision on whether to drop it (see `PROJECT_KNOWLEDGE.md` → Database tables).
 - **Commit:** —
 - **Date:** 2026-07-31
+
+**AD-15 — `adminUpsertAdPlacementPrice` never exposes `stripe_payment_link`/`paypal_payment_link` for editing**
+- **Status:** Open
+- **Files:** `src/lib/advertising.functions.ts` (`placementPriceSchema`, `adminUpsertAdPlacementPrice`)
+- **Description:** Discovered while implementing `PATCH /v1/admin/advertising/prices/{id}` (Priority 8.11): `ad_placement_prices.stripe_payment_link`/`.paypal_payment_link` are real, populated columns (every other Payment-Link-bearing row in this codebase, e.g. `subscription_plans`, sets them at creation), but `placementPriceSchema` never accepts them, so an admin can create/edit a price row with every other field except its own checkout links through the existing Admin panel surface.
+- **Risk:** Low — an admin can still set these two columns directly via SQL/database access, and the `/v1` admin endpoint now documented in `API_CONTRACT.md` §14 does expose them correctly. But the pre-existing in-app Admin panel path for Advertising pricing remains incomplete for this one surface.
+- **Recommendation:** Add `stripePaymentLink`/`paypalPaymentLink` to `placementPriceSchema` and thread them through to the `ad_placement_prices` upsert, matching the shape `/v1/admin/advertising/prices` already uses.
+- **Resolution:** —
+- **Commit:** —
+- **Date:** 2026-08-05
 
 ---
 
@@ -514,6 +606,17 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 - **Commit:** —
 - **Date:** 2026-07-26
 
+**DB-9 — `subscription_plans.duration_months` is a closed enum (`1|3|6|12`)**
+- **Status:** 🚫 Deferred (2026-08-03)
+- **Files:** `src/lib/admin.functions.ts` (`planInputSchema`/`durationMonths`)
+- **Description:** Found during the Priority 8.6 audit: stricter than the already-tracked `duration_months = 12` default exception — adding a 2-month or 18-month plan requires a code deploy, not an admin action, contrary to the Configuration-First philosophy the rest of Phase 8 follows.
+- **Risk:** Low — no incorrect behavior today, just an admin-facing rigidity.
+- **Recommendation:** Widen to a validated positive integer instead of a fixed enum, once there's an actual need for a non-standard duration.
+- **Deferral rationale:** Explicitly out of scope for Priority 8.7 by owner instruction ("do not implement" R-5) — no non-standard-duration plan is needed today, and widening this now would be speculative.
+- **Resolution:** —
+- **Commit:** —
+- **Date:** 2026-08-03
+
 ---
 
 ## 6. Routing
@@ -551,6 +654,17 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 - **Resolution:** —
 - **Commit:** —
 - **Date:** 2026-08-01
+
+**RT-4 — Public profile page's `head()` metadata is hardcoded "Core Platform" regardless of the serving application**
+- **Status:** 🚫 Deferred (2026-08-03)
+- **Files:** `src/routes/u.$username.tsx` (`head()`)
+- **Description:** Found during the Priority 8.6 audit: `head()` runs outside component context and so can't call `useApplication()` the way the component body does (the mechanism Priority 6.1 used to fix the *visible* branding). Every social-preview unfurl (WhatsApp/Facebook/iMessage) of a profile link shows generic "Core Platform" branding regardless of which application actually served the page.
+- **Risk:** Cosmetic/branding-only — no functional or security impact, but undermines the multi-brand positioning for exactly the moment (a shared link preview) where an application's identity matters most.
+- **Recommendation:** Resolve the application server-side before `head()` runs (e.g. via a route loader keyed on the request's `Host` header) so `head()` can read branding without needing component context.
+- **Deferral rationale:** Explicitly out of scope for Priority 8.7 by owner instruction ("do not implement" R-8) — resolving branding before `head()` runs needs a server-side loader change to this route, a large enough shift in this route's data-flow to warrant its own scoped approval rather than a drive-by fix.
+- **Resolution:** —
+- **Commit:** —
+- **Date:** 2026-08-03
 
 **Note (strength):** Admin route authorization is correctly layered — client-side `AdminGate` blocks the `<Outlet/>` and every admin server function independently re-verifies via `assertAdmin()`. No IDOR was found on `$username`/`$id`-parameterized routes; public profile pages correctly gate private contact fields behind both owner opt-in flags and viewer/owner state, and never render email addresses.
 
@@ -613,6 +727,16 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 - **Resolution:** —
 - **Commit:** —
 - **Date:** 2026-07-26
+
+**CO-8 — Avatar upload (Tier 2 content per `PROJECT_KNOWLEDGE.md`) bypassed the `MediaStorageProvider` adapter**
+- **Status:** ⚠️ Partially Resolved (2026-08-03)
+- **Files:** `src/lib/media-storage.ts` (`avatarPath`, new); `src/components/profile/AvatarUpload.tsx`, `src/routes/onboarding.tsx`
+- **Description:** Found during the Priority 8.6 audit: `AvatarUpload.tsx` and `onboarding.tsx` both called `supabase.storage` directly instead of going through the adapter Advertising banners already use, independently reimplementing the same unsafe-extension-from-filename logic tracked at **CO-2**. When a Tier-2 storage provider is eventually chosen, swapping the adapter would migrate campaign banners but silently strand both avatar call sites on the old bucket.
+- **Risk:** A future storage-provider swap requires remembering to also update these two call sites by hand instead of it happening automatically through the adapter.
+- **Recommendation:** Route both avatar upload call sites through `getMediaStorageProvider()`, consolidating the path-building logic into one shared function.
+- **Resolution:** New `avatarPath(userId, fileName)` in `media-storage.ts` (preserving the exact pre-existing path shape and extension-derivation logic, deliberately unchanged) is now the single function both `AvatarUpload.tsx` and `onboarding.tsx` call, and both upload through `getMediaStorageProvider().upload(...)` instead of `supabase.storage` directly — a provider swap now only touches this one file for avatars, same as it already does for campaign banners. **Not resolved as part of this fix, and intentionally left open:** the underlying unsafe-extension-from-filename bug itself (still deriving the extension from `file.name` rather than the validated `file.type`) — that remains tracked at **CO-2**, since fixing the bug's logic was out of scope for this pass, which only addressed the adapter-bypass/duplication half of the finding. `admin.applications.tsx`'s logo/favicon/cover uploads were confirmed out of scope and left untouched — Tier 1 branding content per `PROJECT_KNOWLEDGE.md` → Media Strategy, not a Tier-2 violation.
+- **Commit:** —
+- **Date:** Logged 2026-08-02, resolved 2026-08-03
 
 ### Low
 
@@ -935,6 +1059,18 @@ This section aggregates the highest-impact, trust-boundary-crossing issues found
 
 **Scope:** The one-on-one messaging system (`conversations`/`messages` tables, `conversation.functions.ts`/`message.functions.ts`). Verified against the actual implementation, not assumed, as part of a pre-commit edge-case review: self-conversation prevention, concurrent conversation creation, hide/auto-restore, notification-vs-realtime interaction, and Inbox ordering were all traced through the real code. Four of six checked scenarios were already correct by design; two were real gaps and were fixed in the same pass (self-messaging UI guard in `ProfileCard.tsx`; a race-condition-safe re-fetch on `23505` unique-violation in `getOrCreateConversation`). This entry records the one gap deliberately left open.
 
+### Medium
+
+**MSG-2 — `messaging` capability was seeded but had zero enforcement**
+- **Status:** ✅ Resolved (2026-08-03)
+- **Files:** `src/lib/conversation.functions.ts` (`getOrCreateConversation`), `src/components/dashboard/DashboardPage.tsx` (Sidebar nav), `src/routes/dashboard.messages.tsx`, `src/components/profile/ProfileCard.tsx`; `supabase/migrations/20260804100000_core_audit_resolution.sql` (`messaging` `dashboard_widgets` row)
+- **Description:** Found during the Priority 8.6 audit: `getApplicationCapabilities()` was called only from Advertising/Dashboard-Widgets/Rewards code, never from any messaging code path — confirmed by grep. The sidebar rendered the Messages nav item unconditionally, unlike the adjacent Rewards/Advertising items which were correctly gated. Disabling `messaging` for an application did nothing.
+- **Classification:** Architecture Deviation — see **A-6** for the companion fix (the capability vocabulary itself conflated this with the always-on `premium` entry).
+- **Recommendation:** Gate messaging the same way Rewards/Advertising are gated: nav, pages, server functions, and UI actions.
+- **Resolution:** A new `messaging` `dashboard_widgets` row (`requires_capability: 'messaging'`) drives `DashboardPage.tsx`'s Sidebar exactly like the existing `rewards`/`advertising` items. `getOrCreateConversation` now checks the capability against the initiator's current application — placed alongside the existing Premium/`is_contactable` checks, after the existing-conversation short-circuit, so it only gates *new* conversations, matching the pre-existing rule that eligibility is "checked once, at creation, never re-checked afterward" (an existing conversation keeps working even if messaging is later disabled for that application). `/dashboard/messages` shows an "unavailable" state instead of the inbox when the capability is disabled for the current application (a direct-URL visit can't bypass the nav gating). `ProfileCard`'s Send Message action is hidden entirely (not just locked, since there's nothing to upgrade into) when disabled.
+- **Commit:** —
+- **Date:** Logged 2026-08-02, resolved 2026-08-03
+
 ### Low
 
 **MSG-1 — `sendMessage` has no idempotency guard against a duplicate call for the same logical message**
@@ -946,6 +1082,17 @@ This section aggregates the highest-impact, trust-boundary-crossing issues found
 - **Resolution:** —
 - **Commit:** —
 - **Date:** 2026-07-31
+
+**MSG-3 — No deep link from a "new message" notification to its conversation**
+- **Status:** 🚫 Deferred (2026-08-03)
+- **Files:** `supabase/migrations` (`notifications` table schema); consumed at `src/components/dashboard/NotificationBell.tsx`
+- **Description:** Found during the Priority 8.6 audit: `notifications` has no `conversation_id`/target column, so clicking a "new message" notification does nothing but mark it read — it doesn't take the user to the conversation.
+- **Risk:** UX gap only — no data-integrity or security impact.
+- **Recommendation:** Add a nullable target/reference column to `notifications` (or a generic `link_to` path) once notification deep-linking is prioritized for more than one notification type.
+- **Deferral rationale:** Explicitly out of scope for Priority 8.7 by owner instruction ("do not implement" R-13) — adding a notification schema column for one call site is a shared-table change that deserves its own scoped design (e.g., should it generalize to every notification type, or stay messaging-specific) rather than a drive-by addition here.
+- **Resolution:** —
+- **Commit:** —
+- **Date:** 2026-08-03
 
 ---
 

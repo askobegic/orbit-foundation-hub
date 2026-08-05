@@ -50,3 +50,18 @@ export function campaignBannerPath(userId: string, fileName: string): string {
   const ext = fileName.split(".").pop() || "jpg";
   return `advertising/${userId}/${Date.now()}.${ext}`;
 }
+
+// Priority 8.7 (R-6/R-10): avatars are Tier-2-classified content per
+// PROJECT_KNOWLEDGE.md -> Media Strategy, same as campaign banners, but
+// were still calling `supabase.storage` directly from two independent
+// places (AvatarUpload.tsx, onboarding.tsx) instead of going through this
+// adapter -- meaning a future Tier-2 provider swap would silently miss
+// both. Same path shape as before (a fixed `avatar.<ext>` filename, so a
+// re-upload replaces the existing file via `upsert: true` rather than
+// accumulating one per upload, unlike campaignBannerPath's timestamped
+// name) -- this only changes which function performs the upload, not the
+// storage layout or behavior.
+export function avatarPath(userId: string, fileName: string): string {
+  const ext = fileName.split(".").pop() || "jpg";
+  return `avatars/${userId}/avatar.${ext}`;
+}

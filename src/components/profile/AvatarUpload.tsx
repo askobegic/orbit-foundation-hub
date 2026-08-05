@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
-import { supabase } from "@/integrations/supabase/client";
+import { avatarPath, getMediaStorageProvider } from "@/lib/media-storage";
 
 interface Props {
   userId: string;
@@ -27,16 +27,9 @@ export function AvatarUpload({ userId, value, onChange, size = 96 }: Props) {
     }
     setUploading(true);
     try {
-      const ext = file.name.split(".").pop() || "jpg";
-      const path = `avatars/${userId}/avatar.${ext}`;
-      const { error } = await supabase.storage
-        .from("core")
-        .upload(path, file, { upsert: true, contentType: file.type });
-      if (error) throw error;
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("core").getPublicUrl(path);
-      onChange(publicUrl);
+      const path = avatarPath(userId, file.name);
+      const { url } = await getMediaStorageProvider().upload(path, file, file.type);
+      onChange(url);
     } catch {
       toast.error(t("auth.uploadError"));
     } finally {

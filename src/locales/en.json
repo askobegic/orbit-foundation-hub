@@ -3,6 +3,7 @@
     "home": "Home",
     "profile": "My Profile",
     "applications": "My Applications",
+    "purchases": "Purchases",
     "subscriptions": "My Subscriptions",
     "payments": "Payment History",
     "settings": "Settings",
@@ -16,7 +17,8 @@
   },
   "messages": {
     "title": "Messages",
-    "empty": "No conversations yet"
+    "empty": "No conversations yet",
+    "unavailable": "Messaging is not available for this application"
   },
   "auth": {
     "login": "Sign In",
@@ -43,21 +45,22 @@
     "backToDashboard": "Back to Dashboard"
   },
   "share": {
+    "shareApp": "Share",
     "shareProfile": "Share profile",
     "share": "Share",
     "copyLink": "Copy link",
     "linkCopied": "Link copied!",
-    "profileText": "Check out my profile on Core Platform:",
+    "defaultShareTitle": "Check this out",
+    "defaultShareDescription": "Discover this platform.",
     "instagramCopied": "Link copied! Paste it in your Instagram bio.",
     "tiktokCopied": "Link copied! Paste it in your TikTok bio.",
-    "emailSubject": "My profile on Core Platform",
     "inviteFriend": "Invite a friend",
     "inviteSubtitle": "Share your invitation with friends",
     "invite": "Invite",
-    "inviteText": "Join Core Platform:",
-    "inviteDescription": "Share this link with a friend and invite them to Core Platform.",
-    "yourInviteLink": "Your invite link",
-    "referralComingSoon": "Referral program coming soon"
+    "defaultInviteTemplate": "{user_name} invited you to join. Sign up here: {invite_link}",
+    "inviteDescription": "Share this link with a friend and invite them to join.",
+    "yourInviteLink": "Your invite message",
+    "aFriend": "A friend"
   },
   "profile": {
     "title": "My Profile",
@@ -143,6 +146,7 @@
     "viewAll": "View All",
     "validUntil": "Valid until",
     "comingSoon": "Coming Soon",
+    "launchDate": "Launching",
     "active": "Active",
     "expired": "Expired",
     "standard": "Standard",
@@ -170,6 +174,23 @@
       "pending": "Pending",
       "expired": "Expired",
       "cancelled": "Cancelled"
+    }
+  },
+  "purchases": {
+    "title": "Purchases",
+    "subtitle": "Your complete purchase history across the ecosystem.",
+    "products": "Products",
+    "noProducts": "No purchases yet",
+    "paymentHistory": "Payment History",
+    "noPayments": "No payments yet",
+    "transactionId": "Transaction ID",
+    "provider": "Provider",
+    "adminGrant": "Admin Grant",
+    "advertisingCampaign": "Advertising Campaign",
+    "type": {
+      "subscription": "Subscription",
+      "promotion": "Promotion",
+      "one_time": "One-Time"
     }
   },
   "common": {
@@ -367,9 +388,9 @@
     "cta": "Install"
   },
   "trial": {
-    "activeTitle": "🎉 You have 7 days of free Premium access!",
+    "activeTitle": "🎉 You have Promotional Premium access!",
     "activeExpires": "Expires",
-    "expiredTitle": "Your trial has expired",
+    "expiredTitle": "Your Promotional Trial has ended",
     "expiredHint": "Keep using all premium features without interruption.",
     "upgradeNow": "Upgrade now"
   },
