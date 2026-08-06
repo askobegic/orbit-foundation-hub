@@ -30,7 +30,7 @@ export function ToggleField({
           type="button"
           disabled={disabled}
           onClick={() => onToggle(!isPublic)}
-          className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+          className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
             isPublic
               ? "bg-green-100 text-green-700"
               : "bg-gray-100 text-gray-600"
@@ -45,7 +45,7 @@ export function ToggleField({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         disabled={disabled}
-        className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#1D6BF3] disabled:bg-gray-50"
+        className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#1D6BF3] focus-visible:ring-2 focus-visible:ring-[#1D6BF3]/40 disabled:bg-gray-50"
       />
     </div>
   );

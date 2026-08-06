@@ -427,12 +427,12 @@ function Row({
         role="switch"
         aria-checked={value}
         onClick={() => onChange(!value)}
-        className={`relative h-6 w-11 rounded-full transition ${
+        className={`relative h-7 w-12 rounded-full transition ${
           value ? "bg-[#1D6BF3]" : "bg-gray-300"
         }`}
       >
         <span
-          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ${
+          className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition ${
             value ? "left-[22px]" : "left-0.5"
           }`}
         />
@@ -460,12 +460,12 @@ function MiniToggle({
         aria-checked={value}
         disabled={disabled}
         onClick={() => onChange(!value)}
-        className={`relative h-5 w-9 rounded-full transition disabled:opacity-60 ${
+        className={`relative h-6 w-10 rounded-full transition disabled:opacity-60 ${
           value ? "bg-[#1D6BF3]" : "bg-gray-300"
         }`}
       >
         <span
-          className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition ${
+          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ${
             value ? "left-[18px]" : "left-0.5"
           }`}
         />

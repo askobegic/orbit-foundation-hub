@@ -58,11 +58,11 @@ export function AvatarUpload({ userId, value, onChange, size = 96 }: Props) {
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+          className="rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
         >
           {uploading ? t("common.loading") : value ? t("auth.changePhoto") : t("auth.uploadPhoto")}
         </button>
-        <span className="text-xs text-gray-400">JPG, PNG, WEBP · max 5MB</span>
+        <span className="text-xs text-gray-500">JPG, PNG, WEBP · max 5MB</span>
       </div>
       <input
         ref={inputRef}

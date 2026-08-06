@@ -204,7 +204,7 @@ function EditProfilePage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-8 sm:px-6">
+    <main className="min-h-screen bg-[#F7F8FA] px-4 py-8 sm:px-6">
       <div className="mx-auto flex max-w-3xl flex-col gap-6">
         <header className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -221,7 +221,7 @@ function EditProfilePage() {
 
         <ProfileCompletionBar profile={profile} />
 
-        <section className="rounded-2xl bg-white p-6 shadow-sm">
+        <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
           <h2 className="mb-4 text-lg font-semibold text-gray-900">
             {t("profile.standardProfile")}
           </h2>
@@ -230,8 +230,8 @@ function EditProfilePage() {
                 provider (or set once, if none was supplied) and are
                 permanently locked -- displayed as plain identity
                 information, never as editable controls. */}
-            <div className="flex items-center gap-4">
-              <div className="h-20 w-20 overflow-hidden rounded-full bg-gray-100">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full bg-gray-100">
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
                 ) : (
@@ -240,7 +240,7 @@ function EditProfilePage() {
                   </div>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+              <div className="grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
                 <IdentityField label={t("profile.firstName")} value={firstName} />
                 <IdentityField label={t("profile.lastName")} value={lastName} />
               </div>
@@ -262,13 +262,14 @@ function EditProfilePage() {
               <span className="text-sm font-medium text-gray-700">{t("common.language")}</span>
               <div className="mt-2 flex gap-3">
                 {(["bs", "en", "de"] as UserLanguage[]).map((l) => (
-                  <label key={l} className="flex items-center gap-1 text-sm text-gray-700">
+                  <label key={l} className="flex items-center gap-1.5 py-1 text-sm text-gray-700">
                     <input
                       type="radio"
                       name="lang"
                       value={l}
                       checked={language === l}
                       onChange={() => setLanguage(l)}
+                      className="h-4 w-4"
                     />
                     {l.toUpperCase()}
                   </label>
@@ -289,7 +290,7 @@ function EditProfilePage() {
           </div>
         </section>
 
-        <section className="rounded-2xl bg-white p-6 shadow-sm">
+        <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
           <h2 className="mb-4 text-lg font-semibold text-gray-900">
             {t("profile.premiumProfile")}
           </h2>

@@ -112,7 +112,7 @@ function PricingPage() {
   return (
     <main className="min-h-screen bg-[#F7F8FA] px-4 py-10">
       <div className="mx-auto max-w-6xl">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
           <Link
             to="/dashboard"
             className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
@@ -120,7 +120,7 @@ function PricingPage() {
             <ArrowLeft className="h-4 w-4" />
             {t("auth.backToDashboard")}
           </Link>
-          <span className="text-xs text-gray-500">
+          <span className="min-w-0 truncate text-xs text-gray-500">
             {profile?.first_name ? `${profile.first_name} · ` : ""}
             {user?.email}
           </span>
@@ -247,14 +247,14 @@ function PricingPage() {
                       type="button"
                       disabled={isPaying}
                       onClick={() => void handlePay(plan, "stripe")}
-                      className="block w-full rounded-lg bg-[#1D6BF3] px-4 py-2 text-center text-sm font-medium text-white hover:bg-[#1858cf] disabled:opacity-60"
+                      className="block w-full rounded-lg bg-[#1D6BF3] px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-[#1858cf] disabled:opacity-60"
                     >
                       {isPaying ? t("common.loading") : t("pricing.payStripe")}
                     </button>
                   ) : (
                     <button
                       disabled
-                      className="block w-full rounded-lg bg-gray-100 px-4 py-2 text-center text-sm text-gray-400"
+                      className="block w-full rounded-lg bg-gray-100 px-4 py-2.5 text-center text-sm text-gray-400"
                     >
                       {t("pricing.stripeUnavailable")}
                     </button>
@@ -264,14 +264,14 @@ function PricingPage() {
                       type="button"
                       disabled={isPaying}
                       onClick={() => void handlePay(plan, "paypal")}
-                      className="block w-full rounded-lg border border-[#F59E0B] px-4 py-2 text-center text-sm font-medium text-[#F59E0B] hover:bg-[#F59E0B]/10 disabled:opacity-60"
+                      className="block w-full rounded-lg border border-[#F59E0B] px-4 py-2.5 text-center text-sm font-medium text-[#F59E0B] hover:bg-[#F59E0B]/10 disabled:opacity-60"
                     >
                       {isPaying ? t("common.loading") : t("pricing.payPaypal")}
                     </button>
                   ) : (
                     <button
                       disabled
-                      className="block w-full rounded-lg border border-gray-200 px-4 py-2 text-center text-sm text-gray-400"
+                      className="block w-full rounded-lg border border-gray-200 px-4 py-2.5 text-center text-sm text-gray-400"
                     >
                       {t("pricing.paypalUnavailable")}
                     </button>

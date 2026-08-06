@@ -142,7 +142,7 @@ function LoginPage() {
         type: "standard",
         theme: "outline",
         size: "large",
-        width: 340,
+        width: Math.min(340, googleButtonRef.current.offsetWidth || 340),
         text: "signin_with",
         shape: "rectangular",
         logo_alignment: "left",
@@ -175,7 +175,7 @@ function LoginPage() {
       style={{ background: "linear-gradient(135deg, #EEF2FF 0%, #F0F9FF 50%, #F0FDF4 100%)" }}
     >
       <div
-        className="w-full max-w-[400px] rounded-2xl bg-white p-10"
+        className="w-full max-w-[400px] rounded-2xl bg-white p-6 sm:p-10"
         style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}
       >
         <div className="mb-6 flex justify-center">

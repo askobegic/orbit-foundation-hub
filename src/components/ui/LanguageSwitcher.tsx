@@ -14,7 +14,7 @@ export function LanguageSwitcher({ className = "" }: { className?: string }) {
             key={lang}
             type="button"
             onClick={() => void setLanguage(lang)}
-            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
               active
                 ? "border-transparent bg-[#1D6BF3] text-white"
                 : "border-[#E5E7EB] bg-white text-[#6B7280] hover:bg-gray-50"

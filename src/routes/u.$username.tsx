@@ -115,26 +115,26 @@ function PublicBioCard() {
       className="min-h-screen px-4 py-6"
       style={{ background: "linear-gradient(135deg, #EEF2FF 0%, #F0F9FF 50%, #F0FDF4 100%)" }}
     >
-      <nav className="mx-auto mb-6 flex max-w-[420px] items-center justify-between">
-        <Link to="/" className="flex items-center gap-2">
+      <nav className="mx-auto mb-6 flex max-w-[420px] flex-wrap items-center justify-between gap-2">
+        <Link to="/" className="flex min-w-0 items-center gap-2">
           {application?.logo_url ? (
             <img
               src={application.logo_url}
               alt={application.name}
-              className="h-7 w-7 rounded-lg object-contain"
+              className="h-7 w-7 shrink-0 rounded-lg object-contain"
             />
           ) : (
             <div
-              className="flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold text-white"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
               style={{ backgroundColor: application?.primary_color ?? "#1D6BF3" }}
             >
               {application?.name.slice(0, 1) ?? ""}
             </div>
           )}
-          <span className="text-lg font-bold text-gray-900">{application?.name ?? ""}</span>
+          <span className="truncate text-lg font-bold text-gray-900">{application?.name ?? ""}</span>
         </Link>
         {!user && (
-          <div className="flex gap-2">
+          <div className="flex shrink-0 gap-2">
             <Link
               to="/login"
               className="rounded-lg px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-white/60"

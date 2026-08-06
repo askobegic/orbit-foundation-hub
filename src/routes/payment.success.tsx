@@ -60,7 +60,7 @@ function SuccessPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#F7F8FA] px-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-sm ring-1 ring-gray-100">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-sm ring-1 ring-gray-100 sm:p-8">
         {activated ? (
           <>
             <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-500" />

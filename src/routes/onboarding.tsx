@@ -161,7 +161,7 @@ function OnboardingPage() {
       style={{ background: "linear-gradient(135deg, #EEF2FF 0%, #F0F9FF 50%, #F0FDF4 100%)" }}
     >
       <div
-        className="w-full max-w-[440px] rounded-2xl bg-white p-8"
+        className="w-full max-w-[440px] rounded-2xl bg-white p-6 sm:p-8"
         style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}
       >
         <div className="mb-6 flex items-center gap-2 text-xs font-medium text-gray-500">
@@ -206,7 +206,7 @@ function OnboardingPage() {
                   type="button"
                   onClick={() => fileRef.current?.click()}
                   disabled={uploading}
-                  className="rounded-lg border border-[#E5E7EB] bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                  className="rounded-lg border border-[#E5E7EB] bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
                 >
                   {uploading ? t("common.loading") : t("auth.uploadPhoto")}
                 </button>
@@ -239,7 +239,7 @@ function OnboardingPage() {
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
                 placeholder={t("profile.cityPlaceholder")}
-                className="mt-1 w-full rounded-lg border border-[#E5E7EB] px-3 py-2 text-sm outline-none focus:border-[#1D6BF3]"
+                className="mt-1 w-full rounded-lg border border-[#E5E7EB] px-3 py-2 text-sm outline-none focus:border-[#1D6BF3] focus-visible:ring-2 focus-visible:ring-[#1D6BF3]/40"
               />
             </label>
             <label className="text-sm font-medium text-gray-700">
@@ -252,21 +252,22 @@ function OnboardingPage() {
                 value={bio}
                 onChange={(e) => setBio(e.target.value.slice(0, 300))}
                 rows={3}
-                className="mt-1 w-full rounded-lg border border-[#E5E7EB] px-3 py-2 text-sm outline-none focus:border-[#1D6BF3]"
+                className="mt-1 w-full rounded-lg border border-[#E5E7EB] px-3 py-2 text-sm outline-none focus:border-[#1D6BF3] focus-visible:ring-2 focus-visible:ring-[#1D6BF3]/40"
               />
-              <span className="text-xs text-gray-400">{bio.length}/300</span>
+              <span className="text-xs text-gray-500">{bio.length}/300</span>
             </label>
             <div>
               <span className="text-sm font-medium text-gray-700">{t("common.language")}</span>
               <div className="mt-2 flex gap-3">
                 {(["bs", "en", "de"] as UserLanguage[]).map((l) => (
-                  <label key={l} className="flex items-center gap-1 text-sm text-gray-700">
+                  <label key={l} className="flex items-center gap-1.5 py-1 text-sm text-gray-700">
                     <input
                       type="radio"
                       name="lang"
                       value={l}
                       checked={lang === l}
                       onChange={() => setLang(l)}
+                      className="h-4 w-4"
                     />
                     {l.toUpperCase()}
                   </label>

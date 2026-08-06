@@ -161,7 +161,11 @@ export function ShareAndInvite({ username, firstName, lastName }: ShareAndInvite
 
         <div className="mb-4 flex items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
           <span className="flex-1 truncate text-xs text-gray-500">{shareUrl}</span>
-          <button onClick={copyShareUrl} className="flex-shrink-0 text-gray-400 hover:text-[#1D6BF3]">
+          <button
+            onClick={copyShareUrl}
+            aria-label={t("share.copyLink")}
+            className="flex h-8 w-8 flex-shrink-0 items-center justify-center text-gray-400 hover:text-[#1D6BF3]"
+          >
             {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
           </button>
         </div>
@@ -174,7 +178,7 @@ export function ShareAndInvite({ username, firstName, lastName }: ShareAndInvite
               target={s.onClick ? undefined : "_blank"}
               rel="noopener noreferrer"
               onClick={s.onClick ? (e) => { e.preventDefault(); s.onClick?.(); } : undefined}
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-all duration-200 hover:border-transparent hover:text-white"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-all duration-200 hover:border-transparent hover:text-white"
               onMouseEnter={(e) => {
                 const el = e.currentTarget as HTMLElement;
                 el.style.backgroundColor = s.color;
@@ -214,7 +218,11 @@ export function ShareAndInvite({ username, firstName, lastName }: ShareAndInvite
 
         <div className="flex items-center gap-2 rounded-lg border border-dashed border-gray-200 px-3 py-2">
           <span className="flex-1 truncate text-xs text-gray-400">{inviteLink}</span>
-          <button onClick={copyInvite} className="flex-shrink-0 text-gray-400 hover:text-[#1D6BF3]">
+          <button
+            onClick={copyInvite}
+            aria-label={t("share.copyLink")}
+            className="flex h-8 w-8 flex-shrink-0 items-center justify-center text-gray-400 hover:text-[#1D6BF3]"
+          >
             {inviteCopied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
           </button>
         </div>
@@ -229,7 +237,11 @@ export function ShareAndInvite({ username, firstName, lastName }: ShareAndInvite
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-base font-semibold text-gray-900">{t("share.inviteFriend")}</h2>
-              <button onClick={() => setInviteOpen(false)} className="rounded-full p-1 text-gray-400 hover:bg-gray-100">
+              <button
+                onClick={() => setInviteOpen(false)}
+                aria-label={t("common.close")}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100"
+              >
                 <X size={16} />
               </button>
             </div>
