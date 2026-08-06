@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Bell, CheckCheck } from "lucide-react";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { DashboardMobileNav } from "@/components/dashboard/DashboardNav";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -109,10 +110,13 @@ function NotificationsPage() {
   return (
     <div className="min-h-screen bg-[#F7F8FA] px-4 py-8 lg:px-8">
       <div className="mx-auto max-w-3xl">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">{t("notifications.title")}</h1>
-            <p className="text-sm text-gray-500">{t("notifications.subtitle")}</p>
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <DashboardMobileNav />
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900">{t("notifications.title")}</h1>
+              <p className="text-sm text-gray-500">{t("notifications.subtitle")}</p>
+            </div>
           </div>
           <button
             type="button"

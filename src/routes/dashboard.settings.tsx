@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Save, Download, Trash2, Loader2 } from "lucide-react";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { DashboardMobileNav } from "@/components/dashboard/DashboardNav";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { updateUserSettings } from "@/lib/notifications.functions";
@@ -201,9 +202,12 @@ function SettingsPage() {
   return (
     <div className="min-h-screen bg-[#F7F8FA] px-4 py-8 lg:px-8">
       <div className="mx-auto max-w-2xl">
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-gray-900">{t("settings.title")}</h1>
-          <p className="text-sm text-gray-500">{t("settings.subtitle")}</p>
+        <div className="mb-6 flex items-center gap-2">
+          <DashboardMobileNav />
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">{t("settings.title")}</h1>
+            <p className="text-sm text-gray-500">{t("settings.subtitle")}</p>
+          </div>
         </div>
 
         <section className="mb-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">

@@ -9,6 +9,7 @@ import { ArrowLeft } from "lucide-react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ChatComposer } from "@/components/messaging/ChatComposer";
 import { MessageBubble } from "@/components/messaging/MessageBubble";
+import { DashboardMobileNav } from "@/components/dashboard/DashboardNav";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getMessages, markConversationRead, sendMessage } from "@/lib/message.functions";
@@ -127,7 +128,10 @@ function ChatThread() {
             <div className="flex h-full w-full items-center justify-center text-gray-400">?</div>
           )}
         </div>
-        <span className="text-sm font-semibold text-gray-900">{displayName}</span>
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-gray-900">
+          {displayName}
+        </span>
+        <DashboardMobileNav />
       </header>
 
       <div className="flex-1 space-y-3 overflow-y-auto p-4">

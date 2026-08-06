@@ -19,6 +19,7 @@ import { useTranslation } from "react-i18next";
 import { ArrowLeft, Crown, Receipt } from "lucide-react";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { DashboardMobileNav } from "@/components/dashboard/DashboardNav";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { effectiveSubscriptionStatus } from "@/lib/subscription";
@@ -92,13 +93,16 @@ function PurchasesPage() {
   return (
     <main className="min-h-screen bg-[#F7F8FA] px-4 py-8">
       <div className="mx-auto max-w-4xl">
-        <Link
-          to="/dashboard"
-          className="mb-6 inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          {t("auth.backToDashboard")}
-        </Link>
+        <div className="mb-6 flex items-center gap-2">
+          <DashboardMobileNav />
+          <Link
+            to="/dashboard"
+            className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            {t("auth.backToDashboard")}
+          </Link>
+        </div>
         <h1 className="text-2xl font-semibold text-gray-900">{t("purchases.title")}</h1>
         <p className="mb-6 text-sm text-gray-500">{t("purchases.subtitle")}</p>
 

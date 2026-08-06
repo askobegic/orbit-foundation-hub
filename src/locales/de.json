@@ -13,7 +13,9 @@
     "notifications": "Benachrichtigungen",
     "messages": "Nachrichten",
     "help": "Hilfe & Support",
-    "logout": "Abmelden"
+    "logout": "Abmelden",
+    "openMenu": "Menü öffnen",
+    "closeMenu": "Menü schließen"
   },
   "messages": {
     "title": "Nachrichten",

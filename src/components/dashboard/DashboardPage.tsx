@@ -6,13 +6,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useTranslation } from "react-i18next";
 import {
-  Home,
   User,
-  LayoutGrid,
-  CreditCard,
   Settings,
   Shield,
-  Bell,
   HelpCircle,
   LogOut,
   Crown,
@@ -21,7 +17,6 @@ import {
   ChevronRight,
   Lock,
   BadgeCheck,
-  MessageSquare,
   Gift,
   Megaphone,
 } from "lucide-react";
@@ -31,6 +26,8 @@ import { useApplication } from "@/context/ApplicationContext";
 import { supabase } from "@/integrations/supabase/client";
 import { hasAnyActivePremium } from "@/lib/premium";
 import { getDashboardWidgets } from "@/lib/dashboard-widgets.functions";
+import { DashboardMobileNav } from "@/components/dashboard/DashboardNav";
+import { getDashboardNavItems } from "@/lib/dashboard-nav";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrialBanner } from "@/components/dashboard/TrialBanner";
@@ -170,15 +167,18 @@ export function DashboardPage() {
       <div className="lg:pl-64">
         <InstallPrompt />
         {/* Header */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-gray-100 bg-white/80 px-4 backdrop-blur lg:px-8">
-          <div>
-            <h1 className="text-lg font-semibold">
-              {t("dashboard.welcome")}
-              {profile?.first_name ? `, ${profile.first_name}` : ""} 👋
-            </h1>
-            <p className="hidden text-xs text-gray-500 sm:block">{t("dashboard.subtitle")}</p>
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-gray-100 bg-white/80 px-4 backdrop-blur lg:px-8">
+          <div className="flex min-w-0 items-center gap-2">
+            <DashboardMobileNav />
+            <div className="min-w-0">
+              <h1 className="truncate text-lg font-semibold">
+                {t("dashboard.welcome")}
+                {profile?.first_name ? `, ${profile.first_name}` : ""} 👋
+              </h1>
+              <p className="hidden truncate text-xs text-gray-500 sm:block">{t("dashboard.subtitle")}</p>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-3">
             <LanguageSwitcher />
             <NotificationBell />
             <div className="flex items-center gap-2 rounded-full border border-gray-200 bg-white py-1 pl-1 pr-3">
@@ -603,25 +603,7 @@ function Sidebar({
   messagingEnabled: boolean;
 }) {
   const { t } = useTranslation();
-  const items = [
-    { to: "/dashboard", icon: Home, label: t("nav.home") },
-    { to: "/dashboard/profile", icon: User, label: t("nav.profile") },
-    { to: "/dashboard", icon: LayoutGrid, label: t("nav.applications") },
-    { to: "/dashboard/purchases", icon: CreditCard, label: t("nav.purchases") },
-    ...(rewardsEnabled
-      ? [{ to: "/dashboard/rewards" as const, icon: Gift, label: t("nav.rewards") }]
-      : []),
-    ...(advertisingEnabled
-      ? [{ to: "/dashboard/advertising" as const, icon: Megaphone, label: t("nav.advertising") }]
-      : []),
-    { to: "/dashboard/settings", icon: Settings, label: t("nav.settings") },
-    { to: "/dashboard/security", icon: Shield, label: t("nav.security") },
-    { to: "/dashboard/notifications", icon: Bell, label: t("nav.notifications") },
-    ...(messagingEnabled
-      ? [{ to: "/dashboard/messages" as const, icon: MessageSquare, label: t("nav.messages") }]
-      : []),
-    { to: "/dashboard/help", icon: HelpCircle, label: t("nav.help") },
-  ] as const;
+  const items = getDashboardNavItems(t, { rewardsEnabled, advertisingEnabled, messagingEnabled });
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-gray-100 bg-white lg:flex">

@@ -13,7 +13,9 @@
     "notifications": "Obavještenja",
     "messages": "Poruke",
     "help": "Pomoć i podrška",
-    "logout": "Odjavi se"
+    "logout": "Odjavi se",
+    "openMenu": "Otvori meni",
+    "closeMenu": "Zatvori meni"
   },
   "messages": {
     "title": "Poruke",

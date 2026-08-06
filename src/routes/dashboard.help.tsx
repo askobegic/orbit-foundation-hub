@@ -6,6 +6,7 @@ import { ArrowLeft, HelpCircle, Send, BookOpen, ChevronDown } from "lucide-react
 import { toast } from "sonner";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { DashboardMobileNav } from "@/components/dashboard/DashboardNav";
 import { sendSupportRequest } from "@/lib/notifications.functions";
 
 export const Route = createFileRoute("/dashboard/help")({
@@ -66,6 +67,7 @@ function HelpPage() {
         </Link>
 
         <header className="mt-4 flex items-center gap-3">
+          <DashboardMobileNav />
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F59E0B]/10 text-[#F59E0B]">
             <HelpCircle className="h-5 w-5" />
           </div>

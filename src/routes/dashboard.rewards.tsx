@@ -6,6 +6,7 @@ import { ArrowLeft, Gift, Trophy, Star, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { DashboardMobileNav } from "@/components/dashboard/DashboardNav";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useApplication } from "@/context/ApplicationContext";
 import { getRewardsMe, redeemReward } from "@/lib/rewards.functions";
@@ -74,6 +75,7 @@ function RewardsPage() {
         </Link>
 
         <header className="mt-4 flex items-center gap-3">
+          <DashboardMobileNav />
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1D6BF3]/10 text-[#1D6BF3]">
             <Gift className="h-5 w-5" />
           </div>

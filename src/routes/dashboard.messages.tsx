@@ -8,6 +8,7 @@ import { MessageSquare } from "lucide-react";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ConversationListItem } from "@/components/messaging/ConversationListItem";
+import { DashboardMobileNav } from "@/components/dashboard/DashboardNav";
 import { useAuth } from "@/context/AuthContext";
 import { useApplication } from "@/context/ApplicationContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -97,7 +98,10 @@ function MessagesInbox() {
   return (
     <div className="min-h-screen bg-[#F7F8FA] px-4 py-8 lg:px-8">
       <div className="mx-auto max-w-2xl">
-        <h1 className="mb-6 text-2xl font-semibold text-gray-900">{t("messages.title")}</h1>
+        <div className="mb-6 flex items-center gap-2">
+          <DashboardMobileNav />
+          <h1 className="text-2xl font-semibold text-gray-900">{t("messages.title")}</h1>
+        </div>
         <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-100">
           {!messagingEnabled ? (
             <div className="flex flex-col items-center justify-center gap-3 p-12 text-center">

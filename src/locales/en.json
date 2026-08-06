@@ -13,7 +13,9 @@
     "notifications": "Notifications",
     "messages": "Messages",
     "help": "Help & Support",
-    "logout": "Sign Out"
+    "logout": "Sign Out",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
   },
   "messages": {
     "title": "Messages",

@@ -8,6 +8,7 @@ import { ToggleField } from "@/components/profile/ToggleField";
 import { ProfessionTagInput } from "@/components/profile/ProfessionTagInput";
 import { SocialLinksSection, type SocialLinks } from "@/components/profile/SocialLinksSection";
 import { ProfileCompletionBar } from "@/components/profile/ProfileCompletionBar";
+import { DashboardMobileNav } from "@/components/dashboard/DashboardNav";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { CountrySelect } from "@/components/ui/CountrySelect";
 import { useAuth } from "@/context/AuthContext";
@@ -205,12 +206,15 @@ function EditProfilePage() {
   return (
     <main className="min-h-screen bg-gray-50 px-4 py-8 sm:px-6">
       <div className="mx-auto flex max-w-3xl flex-col gap-6">
-        <header className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">{t("profile.editProfile")}</h1>
-            <Link to="/dashboard" className="text-sm text-gray-500 hover:underline">
-              ← {t("nav.home")}
-            </Link>
+        <header className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <DashboardMobileNav />
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900">{t("profile.editProfile")}</h1>
+              <Link to="/dashboard" className="text-sm text-gray-500 hover:underline">
+                ← {t("nav.home")}
+              </Link>
+            </div>
           </div>
           <LanguageSwitcher />
         </header>
