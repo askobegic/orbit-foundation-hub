@@ -4,19 +4,41 @@
 // its branding (name, logo, favicon, colors, Google Client ID). No
 // application is ever privileged as a "default" -- every application is
 // equally reachable. Resolution order:
-//   1. Exact hostname match against `applications.domain` (production;
-//      always wins -- unchanged, authoritative).
-//   2. An explicit override: `overrideSlug` passed in (set once by picking
-//      an application in the dev-only Application Selector, or via
-//      `?app=<slug>` on the very first request), persisted in a cookie so
-//      the choice sticks across the whole session (login -> onboarding ->
-//      dashboard), or the same cookie read back on a later request with no
-//      override input.
-//   3. If neither resolves anything, return null -- the caller (see
+//   1. Explicit application identification: `app` (the application's
+//      `slug`), passed as `?app=<slug>` on the shared login flow
+//      (`/login`) by whichever application is redirecting the user in --
+//      the "who is asking" signal. Stateless, no cookie, always wins when
+//      present, identically in every environment (a development-only
+//      convenience -- remembering an explicitly-picked application across
+//      a session via a cookie -- is layered on top of this, never a
+//      precondition for it; see step 3). This is what lets CORE live on
+//      its own domain (core.logid.pro) while still knowing which relying
+//      application actually initiated the login. Works for any number of
+//      future applications with zero code changes here -- it's a single
+//      lookup by `slug`, nothing app-specific.
+//      `clientId` is accepted as a deprecated fallback alias for `app`
+//      (the parameter's original name, before it was renamed to avoid
+//      colliding with the unrelated OAuth/OIDC term "client ID") -- new
+//      code must use `app`; `clientId` exists only so a link built against
+//      the old name keeps working.
+//   2. Exact hostname match against `applications.domain` -- used only
+//      when no explicit `app` was given. This is what makes visiting an
+//      application's own domain directly (including Core's own,
+//      core.logid.pro) resolve correctly with no query param at all.
+//   3. Development-only convenience: the application last explicitly
+//      picked (via `?app=<slug>` or the dev-only Application Selector) is
+//      remembered in a cookie so it keeps resolving across a whole session
+//      without repeating the query param on every page. Reading (and
+//      writing) this cookie is structurally unreachable outside a
+//      development build (`import.meta.env.DEV`, a build-time constant --
+//      never a runtime toggle) so it can never influence a production
+//      resolution, deliberately, by construction, not by convention.
+//   4. If nothing resolves, return null -- the caller (see
 //      ApplicationContext) renders the Application Selector instead of
-//      guessing an application. This only happens when there is genuinely
-//      no domain match, which never occurs for a real, configured
-//      production domain -- Core stays invisible to end users.
+//      guessing an application. In production this only happens when
+//      there is genuinely no domain match and no `app` was given, which
+//      never occurs for a real, configured production domain -- Core
+//      stays invisible to end users.
 // See PROJECT_KNOWLEDGE.md -> Authentication (Application Resolver).
 import { createServerFn } from "@tanstack/react-start";
 import { getCookie, getRequest, setCookie } from "@tanstack/react-start/server";
@@ -75,29 +97,49 @@ async function findBySlug(slug: string): Promise<ApplicationRow | null> {
 }
 
 const resolveApplicationSchema = z.object({
-  overrideSlug: z.string().min(1).optional(),
+  app: z.string().min(1).optional(),
+  // Deprecated alias for `app` -- see the file-level comment above.
+  clientId: z.string().min(1).optional(),
 });
 
 export const resolveApplication = createServerFn({ method: "POST" })
   .inputValidator((raw: unknown) => resolveApplicationSchema.parse(raw ?? {}))
   .handler(async ({ data }): Promise<ApplicationBranding | null> => {
-    const request = getRequest();
-    const hostname = extractHostname(request?.headers.get("host") ?? null);
-
-    let row = hostname ? await findByDomain(hostname) : null;
-
-    if (!row && data.overrideSlug) {
-      row = await findBySlug(data.overrideSlug);
-      if (row) {
+    // 1. Explicit identification always wins, in every environment, and
+    // never falls through to hostname/cookie on a lookup miss -- a wrong
+    // or stale `app` must fail closed (resolve to null, the same "no
+    // application" state as any other unmatched case), never silently
+    // substitute a different application.
+    const explicitSlug = data.app ?? data.clientId;
+    if (explicitSlug) {
+      const row = await findBySlug(explicitSlug);
+      // Development convenience only: remember an explicitly-identified
+      // application so it keeps resolving across a whole session without
+      // repeating ?app= on every page (used by the dev-only Application
+      // Selector). Never happens in production -- same build-time gate as
+      // step 3 below.
+      if (row && import.meta.env.DEV) {
         setCookie(APP_OVERRIDE_COOKIE, row.slug, {
           path: "/",
           maxAge: 60 * 60 * 24 * 30,
           sameSite: "lax",
         });
       }
+      return row ? toBranding(row) : null;
     }
 
-    if (!row) {
+    // 2. Hostname match -- unchanged, authoritative for any application
+    // (including Core's own) still reached by visiting its own domain.
+    const request = getRequest();
+    const hostname = extractHostname(request?.headers.get("host") ?? null);
+    let row = hostname ? await findByDomain(hostname) : null;
+
+    // 3. Development-only convenience: fall back to a previously
+    // explicitly-picked application's cookie. `import.meta.env.DEV` is a
+    // build-time constant inlined by Vite -- a production build has this
+    // branch compiled out as dead code, not merely "usually false", so
+    // app_override can never influence a production resolution.
+    if (!row && import.meta.env.DEV) {
       const cookieSlug = getCookie(APP_OVERRIDE_COOKIE);
       if (cookieSlug) row = await findBySlug(cookieSlug);
     }

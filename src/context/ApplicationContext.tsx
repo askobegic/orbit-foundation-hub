@@ -23,18 +23,27 @@ function applyFavicon(url: string | null) {
   link.href = url;
 }
 
-function readInitialOverrideSlug(): string | undefined {
+// Explicit application identification (see
+// application-resolver.functions.ts) -- how an application redirecting a
+// user into the shared /login flow tells CORE which application it is,
+// independent of and with priority over whatever hostname CORE itself is
+// running on; also how the dev-only Application Selector's initial pick
+// can be linked to directly. Read once, from the very first request.
+// `client_id` is a deprecated fallback alias for `app` -- see the
+// resolver's file-level comment for why.
+function readInitialApp(): string | undefined {
   if (typeof window === "undefined") return undefined;
-  return new URLSearchParams(window.location.search).get("app") ?? undefined;
+  const params = new URLSearchParams(window.location.search);
+  return params.get("app") ?? params.get("client_id") ?? undefined;
 }
 
 export function ApplicationProvider({ children }: { children: ReactNode }) {
   const resolve = useServerFn(resolveApplication);
-  const [overrideSlug, setOverrideSlug] = useState<string | undefined>(readInitialOverrideSlug);
+  const [app, setApp] = useState<string | undefined>(readInitialApp);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["application-resolve", overrideSlug ?? null],
-    queryFn: () => resolve({ data: { overrideSlug } }),
+    queryKey: ["application-resolve", app ?? null],
+    queryFn: () => resolve({ data: { app } }),
     staleTime: Infinity,
   });
 
@@ -53,7 +62,7 @@ export function ApplicationProvider({ children }: { children: ReactNode }) {
 
   return (
     <ApplicationContext.Provider value={{ application, loading: isLoading }}>
-      {!isLoading && !application ? <ApplicationSelector onSelect={setOverrideSlug} /> : children}
+      {!isLoading && !application ? <ApplicationSelector onSelect={setApp} /> : children}
     </ApplicationContext.Provider>
   );
 }

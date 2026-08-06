@@ -30,7 +30,7 @@ A separate, non-severity tag, **Architecture Deviation**, marks findings where t
 | Area | Critical | High | Medium | Low |
 |---|---|---|---|---|
 | Architecture | 0 | 1 | 4 | 2 |
-| Authentication | 1 | 2 | 4 | 2 |
+| Authentication | 1 | 3 | 4 | 2 |
 | Dashboard | 0 | 1 | 6 | 4 |
 | Admin Panel | 1 | 0 | 8 | 5 |
 | Database | 2 | 0 | 1 | 5 |
@@ -210,6 +210,17 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 - **Resolution:** `loadOrCreateProfile`'s patch logic changed from "fill in only if empty" (`if (!existing.email && u.email)`) to "always resync when different" (`if (u.email && existing.email !== u.email)`) — deliberately the opposite rule from Identity Lock's name/photo fields (which fill once and then lock), since email needs to track the live auth identity, not freeze the first-seen value. `admin.users.tsx`'s edit modal no longer exposes an editable Email field (now read-only display); `admin.functions.ts`'s `userUpdateSchema` had the `email` field removed entirely, so no admin server call can write it anymore. No dashboard-facing form (`dashboard.profile.tsx`, `dashboard.settings.tsx`) ever exposed an editable `profiles.email` field either (confirmed via grep), so the admin modal was the only override path to close.
 - **Commit:** —
 - **Date:** Logged 2026-08-02, resolved 2026-08-03
+
+**AU-10 — Application resolution could silently fall back to a stale, unrelated application via the `app_override` cookie in production, causing a real Google Sign-In failure**
+- **Status:** ✅ Resolved (2026-08-06)
+- **Files:** `src/lib/application-resolver.functions.ts`; `src/context/ApplicationContext.tsx`; `src/routes/login.tsx`
+- **Description:** Discovered live in production, deploying Core to `logid.pro` ahead of the `core.logid.pro` domain split: `resolveApplication`'s hostname-match step could return nothing (no `applications` row for the domain being visited), at which point resolution silently fell through to whatever application slug happened to be stored in the `app_override` cookie from earlier dev/testing use — no error, no warning. On the live domain this resolved to BosniaFans' application row (the only other one with an active Google Client ID in the browser's cookie history), so the Google Sign-In button initialized with BosniaFans' Google Client ID while Supabase's Google provider was configured to accept only Core's own Client ID, producing `AuthApiError: Unacceptable audience in id_token` on every login attempt.
+- **Risk:** A cookie set for local/dev testing convenience could determine which application's branding and Google Client ID a real production visitor saw, with no way to detect this from the UI (the login button still rendered and appeared to work) — both a broken-login incident and, more generally, a non-deterministic production resolution path that violated "a correctly configured production domain must always resolve deterministically."
+- **Classification:** Architecture gap, surfaced while designing Core's move to a centralized-Identity-Provider domain model (`core.logid.pro`, separate from every application it authenticates for) — see `PROJECT_KNOWLEDGE.md` → Authentication → "Core as a centralized Identity Provider."
+- **Recommendation:** Give applications an explicit, stateless way to identify themselves to Core when initiating login, independent of Core's own hostname; make the cookie-based dev override structurally incapable of affecting a production build, not just unlikely to.
+- **Resolution:** Added `?app=<slug>` as an explicit application-identification parameter on `/login`, resolved via a single `applications` lookup by `slug` with absolute priority over hostname and no dependency on cookies or prior sessions for identification itself; an `app` that fails to resolve now fails closed (returns no application) rather than falling through to any fallback. (Named `app`, not the initially-implemented `client_id` — that's an established OAuth/OIDC term for something else, an OAuth client identifier, and reusing it here was confusing; `client_id` is still accepted as a deprecated fallback alias, but every call site and every doc now uses `app`.) The pre-existing `app_override` cookie mechanism is unchanged in shape but now gated behind `import.meta.env.DEV`, a Vite build-time constant — confirmed, by inspecting the compiled production server bundle directly, that the entire cookie mechanism (both the write, when an explicit `app` resolves, and the read, as a fallback) is dead-code-eliminated from a production build, not merely conditionally skipped at runtime. A login reached via explicit `app` now completes through the existing, unmodified `POST /v1/auth/session` and redirects the user back to that application's own registered `domain` with the resulting CORE token pair in the URL fragment (standard OAuth2 Implicit Grant shape) — the redirect target is always read from the resolved application's own database row, never from client-supplied input, so this introduces no open-redirect surface. A same-origin login (no explicit `app` — Core's own admin/dashboard access) is completely unchanged.
+- **Commit:** —
+- **Date:** Logged and resolved 2026-08-06
 
 ### Low
 

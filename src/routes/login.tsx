@@ -51,6 +51,49 @@ function LoginPage() {
     window.handleGoogleCredential = async (response: { credential: string }) => {
       setBusy(true);
       try {
+        // `client_id` is a deprecated fallback alias for `app` -- see
+        // application-resolver.functions.ts's file-level comment.
+        const params = new URLSearchParams(window.location.search);
+        const explicitApp = params.get("app") ?? params.get("client_id");
+
+        // Explicit cross-application login (?app=<slug> -- see
+        // ApplicationContext/application-resolver.functions.ts): mint a
+        // CORE-issued /v1 session for the originating application via the
+        // existing, unchanged POST /v1/auth/session (API_CONTRACT.md §5),
+        // and hand the tokens back via URL fragment -- the standard OAuth2
+        // Implicit Grant delivery shape -- rather than establishing a
+        // same-origin Supabase session here. The redirect target is always
+        // the resolved application's own registered domain, never
+        // client-supplied, so there is no open-redirect surface.
+        if (explicitApp && application?.id && application.domain) {
+          const res = await fetch("/v1/auth/session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ googleIdToken: response.credential, appId: application.id }),
+          });
+          const body = await res.json();
+          if (!res.ok) {
+            console.error("[login] /v1/auth/session failed:", body?.error);
+            toast.error(t("auth.loginError"));
+            setBusy(false);
+            return;
+          }
+          const { accessToken, refreshToken, expiresIn } = body.data as {
+            accessToken: string;
+            refreshToken: string;
+            expiresIn: number;
+          };
+          const fragment = new URLSearchParams({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+            expires_in: String(expiresIn),
+            token_type: "bearer",
+          });
+          window.location.href = `https://${application.domain}/#${fragment.toString()}`;
+          return;
+        }
+
+        // Same-origin login (Core's own dashboard/admin) -- unchanged.
         const { data, error } = await supabase.auth.signInWithIdToken({
           provider: "google",
           token: response.credential,
@@ -79,7 +122,7 @@ function LoginPage() {
     return () => {
       delete window.handleGoogleCredential;
     };
-  }, [t]);
+  }, [t, application]);
 
   // Load Google GSI and render button, once the Application Resolver has
   // supplied this application's own Google Client ID.
