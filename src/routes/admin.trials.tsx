@@ -104,13 +104,13 @@ function GrantSection() {
 
   return (
     <Card title={t("admin.trials.grantTitle")}>
-      <div className="flex flex-wrap items-end gap-2">
+      <div className="grid grid-cols-1 items-end gap-2 sm:flex sm:flex-wrap">
         <label className="text-sm">
           {t("admin.trials.username")}
           <input
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
           />
         </label>
         <div className="text-sm">
@@ -138,7 +138,7 @@ function GrantSection() {
             max={maxDays}
             value={days}
             onChange={(e) => setDays(Number(e.target.value))}
-            className="mt-1 block w-28 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-28"
           />
         </label>
         <label className="text-sm">
@@ -146,13 +146,13 @@ function GrantSection() {
           <input
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            className="mt-1 block w-56 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-56"
           />
         </label>
         <button
           onClick={() => grant.mutate()}
           disabled={!username.trim() || days < 1 || grant.isPending}
-          className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+          className="inline-flex items-center justify-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
         >
           <UserPlus className="h-4 w-4" /> {t("admin.trials.grant")}
         </button>
@@ -198,14 +198,14 @@ function PolicySection() {
 
   return (
     <Card title={t("admin.trials.policyTitle")}>
-      <div className="flex flex-wrap items-end gap-2">
+      <div className="grid grid-cols-1 items-end gap-2 sm:flex sm:flex-wrap">
         <label className="text-sm">
           {t("admin.trials.presetDurations")}
           <input
             value={presetDays}
             onChange={(e) => setPresetDays(e.target.value)}
             placeholder="1, 3, 7, 14"
-            className="mt-1 block w-64 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-64"
           />
         </label>
         <label className="text-sm">
@@ -215,13 +215,13 @@ function PolicySection() {
             min={1}
             value={maxDurationDays}
             onChange={(e) => setMaxDurationDays(Number(e.target.value))}
-            className="mt-1 block w-32 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-32"
           />
         </label>
         <button
           onClick={() => save.mutate()}
           disabled={save.isPending}
-          className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+          className="inline-flex items-center justify-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
         >
           <Save className="h-4 w-4" /> {t("common.save")}
         </button>
@@ -270,12 +270,12 @@ function HistorySection() {
             const grantedBy = row.granted_by_profile;
             const isActive = row.status === "active" && new Date(row.expires_at).getTime() > Date.now();
             return (
-              <li key={row.id} className="flex items-center justify-between py-3 text-sm">
-                <div>
-                  <p className="font-medium text-gray-800">
+              <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-gray-800">
                     {[user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.username}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="truncate text-xs text-gray-500">
                     {row.source} · {new Date(row.starts_at).toLocaleDateString()} –{" "}
                     {new Date(row.expires_at).toLocaleDateString()}
                     {grantedBy &&
@@ -283,7 +283,7 @@ function HistorySection() {
                     {row.reason && ` · "${row.reason}"`}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2">
                   <span
                     className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                       isActive

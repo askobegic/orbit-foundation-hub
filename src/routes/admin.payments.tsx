@@ -37,7 +37,7 @@ function PaymentsPage() {
         </Link>
         <h1 className="text-2xl font-semibold text-gray-900">{t("admin.payments.title")}</h1>
 
-        <div className="mt-6 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-100">
+        <div className="mt-6 overflow-x-auto rounded-2xl bg-white shadow-sm ring-1 ring-gray-100">
           <table className="min-w-full divide-y divide-gray-100 text-sm">
             <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
               <tr>

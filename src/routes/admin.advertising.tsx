@@ -8,6 +8,7 @@ import { ArrowLeft, Check, Gift, Plus, ShieldCheck, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { AdminTogglePill } from "@/components/admin/AdminTogglePill";
 import { supabase } from "@/integrations/supabase/client";
 import { getMyIsAdmin } from "@/lib/admin.functions";
 import {
@@ -127,14 +128,14 @@ function PlacementsSection() {
 
   return (
     <Card title={t("admin.advertising.placementsTitle")}>
-      <div className="flex flex-wrap items-end gap-2">
+      <div className="grid grid-cols-1 items-end gap-2 sm:flex sm:flex-wrap">
         <label className="text-sm">
           {t("admin.common.key")}
           <input
             value={key}
             onChange={(e) => setKey(e.target.value)}
             placeholder={t("admin.advertising.placementKeyPlaceholder")}
-            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
           />
         </label>
         <label className="text-sm">
@@ -142,32 +143,25 @@ function PlacementsSection() {
           <input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
           />
         </label>
         <button
           onClick={() => mut.mutate()}
           disabled={!key.trim() || !label.trim() || mut.isPending}
-          className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+          className="inline-flex items-center justify-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
         >
           <Plus className="h-4 w-4" /> {t("admin.common.add")}
         </button>
       </div>
       <ul className="mt-4 divide-y divide-gray-100">
         {(q.data ?? []).map((p) => (
-          <li key={p.id} className="flex items-center justify-between py-2 text-sm">
-            <span>
+          <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+            <span className="min-w-0 flex-1 truncate">
               <span className="font-medium">{p.label}</span>{" "}
               <span className="text-gray-400">({p.key})</span>
             </span>
-            <button
-              onClick={() => toggle.mutate(p)}
-              className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                p.enabled ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
-              }`}
-            >
-              {p.enabled ? t("admin.common.enabled") : t("admin.common.disabled")}
-            </button>
+            <AdminTogglePill enabled={p.enabled} onClick={() => toggle.mutate(p)} />
           </li>
         ))}
       </ul>
@@ -214,13 +208,13 @@ function PricesSection({ apps }: { apps: ApplicationRow[] }) {
 
   return (
     <Card title={t("admin.advertising.pricingTitle")}>
-      <div className="flex flex-wrap items-end gap-2">
+      <div className="grid grid-cols-1 items-end gap-2 sm:flex sm:flex-wrap">
         <label className="text-sm">
           {t("admin.advertising.placement")}
           <select
             value={placementKey}
             onChange={(e) => setPlacementKey(e.target.value)}
-            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
           >
             <option value="">{t("admin.common.select")}</option>
             {(placementsQ.data ?? []).map((p) => (
@@ -235,7 +229,7 @@ function PricesSection({ apps }: { apps: ApplicationRow[] }) {
           <select
             value={appId}
             onChange={(e) => setAppId(e.target.value)}
-            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
           >
             <option value="">{t("admin.advertising.global")}</option>
             {apps.map((a) => (
@@ -251,7 +245,7 @@ function PricesSection({ apps }: { apps: ApplicationRow[] }) {
             type="number"
             value={durationDays}
             onChange={(e) => setDurationDays(Number(e.target.value))}
-            className="mt-1 block w-24 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-24"
           />
         </label>
         <label className="text-sm">
@@ -260,7 +254,7 @@ function PricesSection({ apps }: { apps: ApplicationRow[] }) {
             type="number"
             value={price}
             onChange={(e) => setPrice(Number(e.target.value))}
-            className="mt-1 block w-24 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-24"
           />
         </label>
         <label className="text-sm">
@@ -268,13 +262,13 @@ function PricesSection({ apps }: { apps: ApplicationRow[] }) {
           <input
             value={currency}
             onChange={(e) => setCurrency(e.target.value.toUpperCase())}
-            className="mt-1 block w-20 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-20"
           />
         </label>
         <button
           onClick={() => mut.mutate()}
           disabled={!placementKey || mut.isPending}
-          className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+          className="inline-flex items-center justify-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
         >
           <Plus className="h-4 w-4" /> {t("admin.advertising.addPrice")}
         </button>
@@ -282,15 +276,15 @@ function PricesSection({ apps }: { apps: ApplicationRow[] }) {
       <p className="mt-3 text-xs text-gray-500">{t("admin.advertising.priceHint")}</p>
       <ul className="mt-4 divide-y divide-gray-100">
         {(pricesQ.data ?? []).map((p) => (
-          <li key={p.id} className="flex items-center justify-between py-2 text-sm">
-            <span>
+          <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+            <span className="min-w-0 flex-1 truncate">
               {p.placement_key} — {p.duration_days}d — {p.price} {p.currency}{" "}
               <span className="text-gray-400">
                 ({apps.find((a) => a.id === p.app_id)?.name ?? t("admin.advertising.globalShort")})
               </span>
             </span>
             {!p.stripe_payment_link && !p.paypal_payment_link && (
-              <span className="text-xs text-amber-600">{t("admin.advertising.noPaymentLink")}</span>
+              <span className="shrink-0 text-xs text-amber-600">{t("admin.advertising.noPaymentLink")}</span>
             )}
           </li>
         ))}
@@ -358,13 +352,13 @@ function ConfigSection({ apps }: { apps: ApplicationRow[] }) {
 
       <div className="mt-6 border-t border-gray-100 pt-4">
         <p className="text-sm font-medium text-gray-700">{t("admin.advertising.perAppOverride")}</p>
-        <div className="mt-2 flex flex-wrap items-end gap-2">
+        <div className="mt-2 grid grid-cols-1 items-end gap-2 sm:flex sm:flex-wrap">
           <label className="text-sm">
             {t("admin.common.application")}
             <select
               value={appId}
               onChange={(e) => setAppId(e.target.value)}
-              className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+              className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
             >
               <option value="">{t("admin.common.select")}</option>
               {apps.map((a) => (
@@ -379,7 +373,7 @@ function ConfigSection({ apps }: { apps: ApplicationRow[] }) {
             <select
               value={moderationMode}
               onChange={(e) => setModerationMode(e.target.value as typeof moderationMode)}
-              className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+              className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
             >
               <option value="manual">{t("admin.advertising.moderationMode.manual")}</option>
               <option value="auto">{t("admin.advertising.moderationMode.auto")}</option>
@@ -391,7 +385,7 @@ function ConfigSection({ apps }: { apps: ApplicationRow[] }) {
             <select
               value={eligibilityRule}
               onChange={(e) => setEligibilityRule(e.target.value as typeof eligibilityRule)}
-              className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+              className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
             >
               <option value="anyone">{t("admin.advertising.eligibilityRule.anyone")}</option>
               <option value="premium_only">{t("admin.advertising.eligibilityRule.premium_only")}</option>
@@ -426,7 +420,7 @@ function DraftExpirySection() {
   return (
     <Card title={t("admin.advertising.draftExpiryTitle")}>
       <p className="text-xs text-gray-500">{t("admin.advertising.draftExpiryHint")}</p>
-      <div className="mt-2 flex items-end gap-2">
+      <div className="mt-2 flex flex-wrap items-end gap-2">
         <label className="text-sm">
           {t("admin.advertising.hours")}
           <input
@@ -434,7 +428,7 @@ function DraftExpirySection() {
             min={1}
             value={hours}
             onChange={(e) => setHours(Number(e.target.value))}
-            className="mt-1 block w-24 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-24"
           />
         </label>
         <button
@@ -490,13 +484,13 @@ function TrustedAdvertisersSection({ apps }: { apps: ApplicationRow[] }) {
   return (
     <Card title={t("admin.advertising.trustedAdvertisersTitle")}>
       <p className="mb-3 text-xs text-gray-500">{t("admin.advertising.trustedAdvertisersHint")}</p>
-      <div className="flex items-end gap-2">
+      <div className="grid grid-cols-1 items-end gap-2 sm:flex">
         <label className="text-sm">
           {t("admin.common.application")}
           <select
             value={appId}
             onChange={(e) => setAppId(e.target.value)}
-            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
           >
             <option value="">{t("admin.common.select")}</option>
             {apps.map((a) => (
@@ -511,28 +505,28 @@ function TrustedAdvertisersSection({ apps }: { apps: ApplicationRow[] }) {
           <input
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
           />
         </label>
         <button
           onClick={() => grant.mutate()}
           disabled={!appId || !username.trim() || grant.isPending}
-          className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+          className="inline-flex items-center justify-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
         >
           <ShieldCheck className="h-4 w-4" /> {t("admin.common.grant")}
         </button>
       </div>
       <ul className="mt-4 divide-y divide-gray-100">
         {(q.data ?? []).map((row) => (
-          <li key={row.user_id} className="flex items-center justify-between py-2 text-sm">
-            <span>
+          <li key={row.user_id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+            <span className="min-w-0 flex-1 truncate">
               {[row.profiles?.first_name, row.profiles?.last_name].filter(Boolean).join(" ") ||
                 row.profiles?.username ||
                 row.user_id}
             </span>
             <button
               onClick={() => revoke.mutate(row.user_id)}
-              className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+              className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
             >
               <X className="h-3 w-3" /> {t("admin.common.revoke")}
             </button>
@@ -567,17 +561,17 @@ function ModerationQueueSection() {
       ) : (
         <ul className="divide-y divide-gray-100">
           {q.data!.map((c) => (
-            <li key={c.id} className="flex items-center justify-between py-3 text-sm">
-              <div>
-                <p className="font-medium text-gray-800">{c.title}</p>
-                <p className="text-xs text-gray-500">
+            <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium text-gray-800">{c.title}</p>
+                <p className="truncate text-xs text-gray-500">
                   {c.placement_key} ·{" "}
                   {[c.profiles?.first_name, c.profiles?.last_name].filter(Boolean).join(" ") ||
                     c.profiles?.username}{" "}
                   · {c.applications?.name}
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex shrink-0 gap-2">
                 <button
                   onClick={() => mut.mutate({ campaignId: c.id, approve: true })}
                   className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white"
@@ -622,14 +616,14 @@ function CreditFulfillmentSection() {
       ) : (
         <ul className="divide-y divide-gray-100">
           {q.data!.map((r) => (
-            <li key={r.id} className="flex items-center justify-between py-3 text-sm">
-              <span>
+            <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
+              <span className="min-w-0 flex-1 truncate">
                 <Gift className="mr-1 inline h-4 w-4 text-amber-500" />
                 {[r.profiles?.first_name, r.profiles?.last_name].filter(Boolean).join(" ") || r.profiles?.username}
               </span>
               <button
                 onClick={() => mut.mutate(r.id)}
-                className="rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white"
+                className="shrink-0 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white"
               >
                 {t("admin.advertising.fulfill")}
               </button>

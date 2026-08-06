@@ -246,7 +246,7 @@ function AdminUsers() {
   if (!adminQ.data?.isAdmin) return null;
 
   return (
-    <main className="min-h-screen bg-[#F7F8FA] px-4 py-8">
+    <main className="min-h-screen bg-[#F7F8FA] px-6 py-10">
       <div className="mx-auto max-w-5xl">
         <Link
           to="/admin"
@@ -267,6 +267,7 @@ function AdminUsers() {
                 setPage(1);
               }}
               placeholder={t("admin.users.searchPlaceholder")}
+              aria-label={t("admin.users.searchPlaceholder")}
               className="w-full bg-transparent text-sm focus:outline-none"
             />
           </div>
@@ -276,6 +277,7 @@ function AdminUsers() {
               setPremiumFilter(e.target.value as "" | "premium" | "standard");
               setPage(1);
             }}
+            aria-label={t("admin.users.colType")}
             className="rounded-xl bg-white px-3 py-2 text-sm shadow-sm ring-1 ring-gray-100"
           >
             <option value="">{t("admin.users.allTypes")}</option>
@@ -288,6 +290,7 @@ function AdminUsers() {
               setVerifiedFilter(e.target.value as typeof verifiedFilter);
               setPage(1);
             }}
+            aria-label={t("admin.users.colVerified")}
             className="rounded-xl bg-white px-3 py-2 text-sm shadow-sm ring-1 ring-gray-100"
           >
             <option value="">{t("admin.users.anyVerification")}</option>
@@ -300,6 +303,7 @@ function AdminUsers() {
               setActiveFilter(e.target.value as typeof activeFilter);
               setPage(1);
             }}
+            aria-label={t("admin.users.colStatus")}
             className="rounded-xl bg-white px-3 py-2 text-sm shadow-sm ring-1 ring-gray-100"
           >
             <option value="">{t("admin.users.activeAndSuspended")}</option>
@@ -308,7 +312,7 @@ function AdminUsers() {
           </select>
         </div>
 
-        <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-100">
+        <div className="overflow-x-auto rounded-2xl bg-white shadow-sm ring-1 ring-gray-100">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
               <tr>
@@ -375,7 +379,7 @@ function AdminUsers() {
                   <td className="px-4 py-2 text-right">
                     <button
                       onClick={() => openModal(r)}
-                      className="rounded-lg bg-[#1D6BF3] px-3 py-1 text-xs font-medium text-white hover:bg-[#1858cf]"
+                      className="rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#1858cf]"
                     >
                       {t("admin.users.manage")}
                     </button>
@@ -418,7 +422,7 @@ function AdminUsers() {
         </div>
 
         <h2 className="mb-3 mt-8 text-lg font-semibold">{t("admin.users.auditLogTitle")}</h2>
-        <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-100">
+        <div className="overflow-x-auto rounded-2xl bg-white shadow-sm ring-1 ring-gray-100">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
               <tr>
@@ -461,7 +465,11 @@ function AdminUsers() {
           <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-lg">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-semibold">{t("admin.users.manageModalTitle", { email: modal.email })}</h3>
-              <button onClick={() => setModal(null)} className="rounded-lg p-1 hover:bg-gray-100">
+              <button
+                onClick={() => setModal(null)}
+                aria-label={t("common.close")}
+                className="rounded-lg p-1 hover:bg-gray-100"
+              >
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -479,7 +487,7 @@ function AdminUsers() {
               </div>
 
               {!editing ? (
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                <div className="grid grid-cols-1 gap-x-4 gap-y-1 text-sm sm:grid-cols-2">
                   <Field
                     label={t("admin.users.fieldName")}
                     value={[modal.first_name, modal.last_name].filter(Boolean).join(" ") || "—"}
@@ -499,7 +507,7 @@ function AdminUsers() {
                   />
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Field label={t("admin.users.colEmail")} value={modal.email ?? "—"} />
                   <EditField label={t("admin.users.fieldUsername")} value={editUsername} onChange={setEditUsername} />
                   <EditField label={t("admin.users.colCity")} value={editCity} onChange={setEditCity} />
@@ -580,16 +588,16 @@ function AdminUsers() {
                     return (
                       <li
                         key={r.id}
-                        className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2 text-sm"
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-gray-100 px-3 py-2 text-sm"
                       >
-                        <span>
+                        <span className="min-w-0 flex-1 truncate">
                           {r.applications?.name ?? "?"} · {r.status} ·{" "}
                           {new Date(r.expires_at).toLocaleDateString()}
                         </span>
                         {r.status === "active" && (
                           <button
                             onClick={() => doRevoke.mutate(r.id)}
-                            className="rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-100"
+                            className="shrink-0 rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-100"
                           >
                             {t("admin.common.revoke")}
                           </button>

@@ -16,6 +16,7 @@ import { ArrowLeft, Archive, Plus, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { AdminTogglePill } from "@/components/admin/AdminTogglePill";
 import { supabase } from "@/integrations/supabase/client";
 import { getMyIsAdmin } from "@/lib/admin.functions";
 import {
@@ -140,14 +141,14 @@ function DefinitionsSection() {
 
   return (
     <Card title={t("admin.capabilities.definitionsTitle")}>
-      <div className="flex flex-wrap items-end gap-2">
+      <div className="grid grid-cols-1 items-end gap-2 sm:flex sm:flex-wrap">
         <label className="text-sm">
           {t("admin.common.key")}
           <input
             value={key}
             onChange={(e) => setKey(e.target.value)}
             placeholder={t("admin.capabilities.keyPlaceholder")}
-            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
           />
         </label>
         <label className="text-sm">
@@ -155,34 +156,26 @@ function DefinitionsSection() {
           <input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
           />
         </label>
         <button
           onClick={() => create.mutate()}
           disabled={!key.trim() || !label.trim() || create.isPending}
-          className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+          className="inline-flex items-center justify-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
         >
           <Plus className="h-4 w-4" /> {t("admin.common.add")}
         </button>
       </div>
       <ul className="mt-4 divide-y divide-gray-100">
         {(q.data ?? []).map((c) => (
-          <li key={c.id} className="flex items-center justify-between py-2 text-sm">
-            <span className={c.archived ? "text-gray-400 line-through" : ""}>
+          <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+            <span className={`min-w-0 flex-1 truncate ${c.archived ? "text-gray-400 line-through" : ""}`}>
               <span className="font-medium">{c.label}</span>{" "}
               <span className="text-gray-400">({c.key})</span>
             </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => toggleEnabled.mutate(c)}
-                disabled={c.archived}
-                className={`rounded-full px-2 py-0.5 text-xs font-semibold disabled:opacity-40 ${
-                  c.enabled ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
-                }`}
-              >
-                {c.enabled ? t("admin.common.enabled") : t("admin.common.disabled")}
-              </button>
+            <div className="flex shrink-0 items-center gap-2">
+              <AdminTogglePill enabled={c.enabled} disabled={c.archived} onClick={() => toggleEnabled.mutate(c)} />
               <button
                 onClick={() => toggleArchived.mutate(c)}
                 className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
@@ -238,19 +231,15 @@ function ApplicationCapabilitiesSection({ apps }: { apps: ApplicationRow[] }) {
       {appId && (
         <ul className="mt-4 divide-y divide-gray-100">
           {(q.data ?? []).map((c) => (
-            <li key={c.key} className="flex items-center justify-between py-2 text-sm">
-              <span>
+            <li key={c.key} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+              <span className="min-w-0 flex-1 truncate">
                 <span className="font-medium">{c.label}</span>{" "}
                 <span className="text-gray-400">({c.key})</span>
               </span>
-              <button
+              <AdminTogglePill
+                enabled={c.appEnabled}
                 onClick={() => toggle.mutate({ capabilityKey: c.key, enabled: !c.appEnabled })}
-                className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                  c.appEnabled ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
-                }`}
-              >
-                {c.appEnabled ? t("admin.common.enabled") : t("admin.common.disabled")}
-              </button>
+              />
             </li>
           ))}
           {(q.data ?? []).length === 0 && (

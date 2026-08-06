@@ -152,7 +152,13 @@ function AdminApps() {
   if (!adminQ.data?.isAdmin) return null;
 
   return (
-    <main className="min-h-screen bg-[#F7F8FA] px-4 py-8">
+    <main className="min-h-screen bg-[#F7F8FA] px-6 py-10">
+      {/* Single shared definition for the .input class used throughout this
+          page's forms (PlanForm, NewAppForm, AppSettings) -- hoisted here,
+          on the page's one always-mounted top-level component, instead of
+          being duplicated per-form, so no form depends on another having
+          rendered first. */}
+      <style>{`.input{width:100%;border:1px solid #e5e7eb;border-radius:8px;padding:6px 10px;font-size:14px;background:#fff}`}</style>
       <div className="mx-auto max-w-5xl">
         <Link
           to="/admin"
@@ -397,7 +403,6 @@ function PlanForm({
           {isNew ? t("admin.applications.create") : t("common.save")}
         </button>
       </div>
-      <style>{`.input{width:100%;border:1px solid #e5e7eb;border-radius:8px;padding:6px 10px;font-size:14px;background:#fff}`}</style>
     </div>
   );
 }
@@ -500,7 +505,6 @@ function NewAppForm({ onCreate, busy }: { onCreate: (v: NewAppPayload) => void; 
           {busy ? t("admin.applications.creating") : t("admin.applications.createApplication")}
         </button>
       </div>
-      <style>{`.input{width:100%;border:1px solid #e5e7eb;border-radius:8px;padding:6px 10px;font-size:14px;background:#fff}`}</style>
     </div>
   );
 }
@@ -1079,7 +1083,7 @@ function DescField({
         value={value}
         maxLength={max}
         onChange={(e) => onChange(e.target.value)}
-        className="min-h-[60px] w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#1D6BF3]"
+        className="min-h-[60px] w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#1D6BF3] focus-visible:ring-2 focus-visible:ring-[#1D6BF3]/40"
       />
     </label>
   );

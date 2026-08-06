@@ -56,24 +56,24 @@ function VerificationPage() {
             <p className="rounded-2xl bg-white p-6 text-sm text-gray-500 shadow-sm ring-1 ring-gray-100">{t("admin.verification.noCandidates")}</p>
           )}
           {rows.map((u) => (
-            <div key={u.id} className="flex items-center justify-between rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
-              <div className="flex items-center gap-3">
+            <div key={u.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
+              <div className="flex min-w-0 items-center gap-3">
                 {u.avatar_url ? (
-                  <img src={u.avatar_url} alt="" className="h-10 w-10 rounded-full object-cover" />
+                  <img src={u.avatar_url} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover" />
                 ) : (
-                  <div className="grid h-10 w-10 place-items-center rounded-full bg-gray-100 text-sm font-semibold text-gray-600">
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gray-100 text-sm font-semibold text-gray-600">
                     {(u.first_name ?? "?").slice(0, 1)}
                   </div>
                 )}
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-gray-900">
                     {[u.first_name, u.last_name].filter(Boolean).join(" ") || u.email}
                     {u.is_verified && <BadgeCheck className="ml-1 inline h-4 w-4 text-[#1D6BF3]" />}
                   </p>
-                  <p className="text-xs text-gray-500">{u.email} · {u.city ?? "—"}, {u.country ?? "—"}</p>
+                  <p className="truncate text-xs text-gray-500">{u.email} · {u.city ?? "—"}, {u.country ?? "—"}</p>
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex shrink-0 gap-2">
                 {u.is_verified ? (
                   <button
                     onClick={() => mut.mutate({ user_id: u.id, verified: false })}

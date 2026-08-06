@@ -16,6 +16,7 @@ import { ArrowLeft, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { AdminTogglePill } from "@/components/admin/AdminTogglePill";
 import { getMyIsAdmin } from "@/lib/admin.functions";
 import { adminListCapabilityDefinitions } from "@/lib/capabilities.functions";
 import {
@@ -134,14 +135,14 @@ function ActionRulesSection() {
   return (
     <Card title={t("admin.rewards.actionRulesTitle")}>
       <p className="mb-3 text-xs text-gray-500">{t("admin.rewards.actionRulesHint")}</p>
-      <div className="flex flex-wrap items-end gap-2">
+      <div className="grid grid-cols-1 items-end gap-2 sm:flex sm:flex-wrap">
         <label className="text-sm">
           {t("admin.rewards.action")}
           <input
             value={action}
             onChange={(e) => setAction(e.target.value)}
             placeholder={t("admin.rewards.actionPlaceholder")}
-            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
           />
         </label>
         <label className="text-sm">
@@ -149,7 +150,7 @@ function ActionRulesSection() {
           <input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
           />
         </label>
         <label className="text-sm">
@@ -158,7 +159,7 @@ function ActionRulesSection() {
             type="number"
             value={points}
             onChange={(e) => setPoints(Number(e.target.value))}
-            className="mt-1 block w-24 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-24"
           />
         </label>
         <label className="text-sm">
@@ -167,35 +168,28 @@ function ActionRulesSection() {
             type="number"
             value={cooldownSeconds}
             onChange={(e) => setCooldownSeconds(Number(e.target.value))}
-            className="mt-1 block w-24 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-24"
           />
         </label>
         <button
           onClick={() => create.mutate()}
           disabled={!action.trim() || !label.trim() || create.isPending}
-          className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+          className="inline-flex items-center justify-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
         >
           <Plus className="h-4 w-4" /> {t("admin.common.add")}
         </button>
       </div>
       <ul className="mt-4 divide-y divide-gray-100">
         {(q.data ?? []).map((r) => (
-          <li key={r.id} className="flex items-center justify-between py-2 text-sm">
-            <span>
+          <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+            <span className="min-w-0 flex-1 truncate">
               <span className="font-medium">{r.label}</span>{" "}
               <span className="text-gray-400">
                 ({r.action}) — {r.points} {t("admin.rewards.pts")}
                 {r.cooldown_seconds > 0 ? t("admin.rewards.cooldownPhrase", { seconds: r.cooldown_seconds }) : ""}
               </span>
             </span>
-            <button
-              onClick={() => toggle.mutate(r)}
-              className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                r.enabled ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
-              }`}
-            >
-              {r.enabled ? t("admin.common.enabled") : t("admin.common.disabled")}
-            </button>
+            <AdminTogglePill enabled={r.enabled} onClick={() => toggle.mutate(r)} />
           </li>
         ))}
       </ul>
@@ -246,14 +240,14 @@ function LevelsSection() {
   return (
     <Card title={t("admin.rewards.levelsTitle")}>
       <p className="mb-3 text-xs text-gray-500">{t("admin.rewards.levelsHint")}</p>
-      <div className="flex flex-wrap items-end gap-2">
+      <div className="grid grid-cols-1 items-end gap-2 sm:flex sm:flex-wrap">
         <label className="text-sm">
           {t("admin.common.key")}
           <input
             value={key}
             onChange={(e) => setKey(e.target.value)}
             placeholder={t("admin.rewards.keyPlaceholderLevel")}
-            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
           />
         </label>
         <label className="text-sm">
@@ -261,7 +255,7 @@ function LevelsSection() {
           <input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
           />
         </label>
         <label className="text-sm">
@@ -270,34 +264,27 @@ function LevelsSection() {
             type="number"
             value={minLifetimePoints}
             onChange={(e) => setMinLifetimePoints(Number(e.target.value))}
-            className="mt-1 block w-32 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-32"
           />
         </label>
         <button
           onClick={() => create.mutate()}
           disabled={!key.trim() || !label.trim() || create.isPending}
-          className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+          className="inline-flex items-center justify-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
         >
           <Plus className="h-4 w-4" /> {t("admin.common.add")}
         </button>
       </div>
       <ul className="mt-4 divide-y divide-gray-100">
         {(q.data ?? []).map((l) => (
-          <li key={l.id} className="flex items-center justify-between py-2 text-sm">
-            <span>
+          <li key={l.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+            <span className="min-w-0 flex-1 truncate">
               <span className="font-medium">{l.label}</span>{" "}
               <span className="text-gray-400">
                 ({l.key}) — {t("admin.rewards.fromPts", { points: l.min_lifetime_points })}
               </span>
             </span>
-            <button
-              onClick={() => toggle.mutate(l)}
-              className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                l.enabled ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
-              }`}
-            >
-              {l.enabled ? t("admin.common.enabled") : t("admin.common.disabled")}
-            </button>
+            <AdminTogglePill enabled={l.enabled} onClick={() => toggle.mutate(l)} />
           </li>
         ))}
       </ul>
@@ -363,14 +350,14 @@ function AchievementsSection() {
 
   return (
     <Card title={t("admin.rewards.achievementsTitle")}>
-      <div className="flex flex-wrap items-end gap-2">
+      <div className="grid grid-cols-1 items-end gap-2 sm:flex sm:flex-wrap">
         <label className="text-sm">
           {t("admin.common.key")}
           <input
             value={key}
             onChange={(e) => setKey(e.target.value)}
             placeholder={t("admin.rewards.keyPlaceholderAchievement")}
-            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
           />
         </label>
         <label className="text-sm">
@@ -378,7 +365,7 @@ function AchievementsSection() {
           <input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
           />
         </label>
         <label className="text-sm">
@@ -386,7 +373,7 @@ function AchievementsSection() {
           <select
             value={triggerAction}
             onChange={(e) => setTriggerAction(e.target.value)}
-            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
           >
             <option value="">{t("admin.rewards.noneManualOnly")}</option>
             {(actionsQ.data ?? []).map((a) => (
@@ -403,21 +390,21 @@ function AchievementsSection() {
             min={1}
             value={triggerCount}
             onChange={(e) => setTriggerCount(Number(e.target.value))}
-            className="mt-1 block w-24 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-24"
           />
         </label>
         <button
           onClick={() => create.mutate()}
           disabled={!key.trim() || !label.trim() || create.isPending}
-          className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+          className="inline-flex items-center justify-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
         >
           <Plus className="h-4 w-4" /> {t("admin.common.add")}
         </button>
       </div>
       <ul className="mt-4 divide-y divide-gray-100">
         {(q.data ?? []).map((a) => (
-          <li key={a.id} className="flex items-center justify-between py-2 text-sm">
-            <span>
+          <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+            <span className="min-w-0 flex-1 truncate">
               <span className="font-medium">{a.label}</span>{" "}
               <span className="text-gray-400">
                 ({a.key}){" "}
@@ -426,14 +413,7 @@ function AchievementsSection() {
                   : `— ${t("admin.rewards.manual")}`}
               </span>
             </span>
-            <button
-              onClick={() => toggle.mutate(a)}
-              className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                a.enabled ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
-              }`}
-            >
-              {a.enabled ? t("admin.common.enabled") : t("admin.common.disabled")}
-            </button>
+            <AdminTogglePill enabled={a.enabled} onClick={() => toggle.mutate(a)} />
           </li>
         ))}
       </ul>
@@ -518,14 +498,14 @@ function CatalogSection() {
   return (
     <Card title={t("admin.rewards.catalogTitle")}>
       <p className="mb-3 text-xs text-gray-500">{t("admin.rewards.catalogHint")}</p>
-      <div className="flex flex-wrap items-end gap-2">
+      <div className="grid grid-cols-1 items-end gap-2 sm:flex sm:flex-wrap">
         <label className="text-sm">
           {t("admin.common.key")}
           <input
             value={key}
             onChange={(e) => setKey(e.target.value)}
             placeholder={t("admin.rewards.keyPlaceholderCatalog")}
-            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
           />
         </label>
         <label className="text-sm">
@@ -533,7 +513,7 @@ function CatalogSection() {
           <input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
           />
         </label>
         <label className="text-sm">
@@ -542,7 +522,7 @@ function CatalogSection() {
             type="number"
             value={pointsCost}
             onChange={(e) => setPointsCost(Number(e.target.value))}
-            className="mt-1 block w-24 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-24"
           />
         </label>
         <label className="text-sm">
@@ -551,7 +531,7 @@ function CatalogSection() {
             type="number"
             value={verifiedReferralsRequired}
             onChange={(e) => setVerifiedReferralsRequired(Number(e.target.value))}
-            className="mt-1 block w-24 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-24"
           />
         </label>
         <label className="text-sm">
@@ -559,7 +539,7 @@ function CatalogSection() {
           <select
             value={grantType}
             onChange={(e) => setGrantType(e.target.value)}
-            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
           >
             <option value="">{t("admin.common.select")}</option>
             {(fulfillmentQ.data ?? []).map((f) => (
@@ -574,7 +554,7 @@ function CatalogSection() {
           <select
             value={requiresCapability}
             onChange={(e) => setRequiresCapability(e.target.value)}
-            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
           >
             <option value="">{t("admin.common.none")}</option>
             {(capabilitiesQ.data ?? []).map((c) => (
@@ -587,15 +567,15 @@ function CatalogSection() {
         <button
           onClick={() => create.mutate()}
           disabled={!key.trim() || !label.trim() || !grantType || create.isPending}
-          className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+          className="inline-flex items-center justify-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
         >
           <Plus className="h-4 w-4" /> {t("admin.common.add")}
         </button>
       </div>
       <ul className="mt-4 divide-y divide-gray-100">
         {(q.data ?? []).map((c) => (
-          <li key={c.id} className="flex items-center justify-between py-2 text-sm">
-            <span>
+          <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+            <span className="min-w-0 flex-1 truncate">
               <span className="font-medium">{c.label}</span>{" "}
               <span className="text-gray-400">
                 ({c.key}) — {c.points_cost} {t("admin.rewards.pts")}
@@ -606,14 +586,7 @@ function CatalogSection() {
                 {c.grant_type}
               </span>
             </span>
-            <button
-              onClick={() => toggle.mutate(c)}
-              className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                c.enabled ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
-              }`}
-            >
-              {c.enabled ? t("admin.common.enabled") : t("admin.common.disabled")}
-            </button>
+            <AdminTogglePill enabled={c.enabled} onClick={() => toggle.mutate(c)} />
           </li>
         ))}
       </ul>
@@ -661,14 +634,14 @@ function FulfillmentTypesSection() {
   return (
     <Card title={t("admin.rewards.fulfillmentTypesTitle")}>
       <p className="mb-3 text-xs text-gray-500">{t("admin.rewards.fulfillmentTypesHint")}</p>
-      <div className="flex flex-wrap items-end gap-2">
+      <div className="grid grid-cols-1 items-end gap-2 sm:flex sm:flex-wrap">
         <label className="text-sm">
           {t("admin.common.key")}
           <input
             value={key}
             onChange={(e) => setKey(e.target.value)}
             placeholder={t("admin.rewards.keyPlaceholderFulfillment")}
-            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
           />
         </label>
         <label className="text-sm">
@@ -676,32 +649,25 @@ function FulfillmentTypesSection() {
           <input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            className="mt-1 block rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
           />
         </label>
         <button
           onClick={() => create.mutate()}
           disabled={!key.trim() || !label.trim() || create.isPending}
-          className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+          className="inline-flex items-center justify-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
         >
           <Plus className="h-4 w-4" /> {t("admin.common.add")}
         </button>
       </div>
       <ul className="mt-4 divide-y divide-gray-100">
         {(q.data ?? []).map((f) => (
-          <li key={f.id} className="flex items-center justify-between py-2 text-sm">
-            <span>
+          <li key={f.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+            <span className="min-w-0 flex-1 truncate">
               <span className="font-medium">{f.label}</span>{" "}
               <span className="text-gray-400">({f.key})</span>
             </span>
-            <button
-              onClick={() => toggle.mutate(f)}
-              className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                f.enabled ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
-              }`}
-            >
-              {f.enabled ? t("admin.common.enabled") : t("admin.common.disabled")}
-            </button>
+            <AdminTogglePill enabled={f.enabled} onClick={() => toggle.mutate(f)} />
           </li>
         ))}
       </ul>
@@ -743,7 +709,7 @@ function ConfigSection() {
           min={1}
           value={verificationDays}
           onChange={(e) => setVerificationDays(Number(e.target.value))}
-          className="mt-1 block w-32 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-32"
         />
       </label>
       <p className="mt-1 text-xs text-gray-500">{t("admin.rewards.referralVerificationHint")}</p>
