@@ -42,7 +42,11 @@
     "photoImportedGoogle": "Imported from Google",
     "photoImportedApple": "Imported from Apple",
     "photoImported": "Photo imported from your account",
-    "backToDashboard": "Back to Dashboard"
+    "backToDashboard": "Back to Dashboard",
+    "signingIn": "Signing in...",
+    "notAvailable": "Login is currently not available for this application.",
+    "identityNoticeLabel": "Notice:",
+    "identityNoticeBody": "Only profiles with the person's real first and last name and a profile photo are allowed on this platform. Profiles with false information or inappropriate images may be removed after a review."
   },
   "share": {
     "shareApp": "Share",

@@ -208,21 +208,18 @@ function LoginPage() {
           ) : busy ? (
             <div className="flex items-center gap-3 py-3">
               <span className="h-5 w-5 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
-              <span className="text-sm text-gray-500">Prijava u toku...</span>
+              <span className="text-sm text-gray-500">{t("auth.signingIn")}</span>
             </div>
           ) : googleClientId ? (
             <div ref={googleButtonRef} />
           ) : (
-            <p className="text-center text-sm text-gray-500">
-              Prijava trenutno nije dostupna za ovu aplikaciju.
-            </p>
+            <p className="text-center text-sm text-gray-500">{t("auth.notAvailable")}</p>
           )}
         </div>
 
         <p className="mt-6 text-center text-xs leading-relaxed text-gray-500">
-          <strong className="font-semibold">Hinweis:</strong> Auf dieser Plattform sind nur Profile
-          mit echtem Vor- und Nachnamen sowie einem Profilfoto der Person erlaubt. Profile mit
-          falschen Angaben oder ungeeigneten Bildern können nach einer Überprüfung entfernt werden.
+          <strong className="font-semibold">{t("auth.identityNoticeLabel")}</strong>{" "}
+          {t("auth.identityNoticeBody")}
         </p>
 
         <LanguageSwitcher className="mt-6" />

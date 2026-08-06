@@ -60,7 +60,11 @@
     "photoImportedGoogle": "Preuzeto sa Google naloga",
     "photoImportedApple": "Preuzeto sa Apple naloga",
     "photoImported": "Fotografija preuzeta iz vašeg naloga",
-    "backToDashboard": "Nazad na Dashboard"
+    "backToDashboard": "Nazad na Dashboard",
+    "signingIn": "Prijava u toku...",
+    "notAvailable": "Prijava trenutno nije dostupna za ovu aplikaciju.",
+    "identityNoticeLabel": "Napomena:",
+    "identityNoticeBody": "Na ovoj platformi dozvoljeni su samo profili sa stvarnim imenom i prezimenom osobe te profilnom fotografijom. Profili sa netačnim podacima ili neprikladnim slikama mogu biti uklonjeni nakon provjere."
   },
   "profile": {
     "title": "Moj profil",

@@ -42,7 +42,11 @@
     "photoImportedGoogle": "Von Google importiert",
     "photoImportedApple": "Von Apple importiert",
     "photoImported": "Foto aus deinem Konto importiert",
-    "backToDashboard": "Zurück zum Dashboard"
+    "backToDashboard": "Zurück zum Dashboard",
+    "signingIn": "Anmeldung läuft...",
+    "notAvailable": "Die Anmeldung ist für diese Anwendung derzeit nicht verfügbar.",
+    "identityNoticeLabel": "Hinweis:",
+    "identityNoticeBody": "Auf dieser Plattform sind nur Profile mit echtem Vor- und Nachnamen sowie einem Profilfoto der Person erlaubt. Profile mit falschen Angaben oder ungeeigneten Bildern können nach einer Überprüfung entfernt werden."
   },
   "share": {
     "shareApp": "Teilen",
