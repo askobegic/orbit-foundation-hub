@@ -116,12 +116,16 @@ function ChatThread() {
   const displayName = fullName || (otherUser?.username ? `@${otherUser.username}` : "");
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#F7F8FA]">
+    <div className="mx-auto flex h-dvh w-full max-w-2xl flex-col bg-[#F7F8FA]">
       <header className="flex items-center gap-3 border-b border-gray-100 bg-white px-4 py-3">
-        <Link to="/dashboard/messages" className="rounded-lg p-2 text-gray-500 hover:bg-gray-100">
+        <Link
+          to="/dashboard/messages"
+          aria-label={t("messages.backToInbox")}
+          className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
+        >
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <div className="h-9 w-9 overflow-hidden rounded-full bg-gray-100">
+        <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full bg-gray-100">
           {otherUser?.avatarUrl ? (
             <img src={otherUser.avatarUrl} alt={displayName} className="h-full w-full object-cover" />
           ) : (
@@ -134,7 +138,7 @@ function ChatThread() {
         <DashboardMobileNav />
       </header>
 
-      <div className="flex-1 space-y-3 overflow-y-auto p-4">
+      <div className="flex-1 space-y-3 overflow-y-auto p-4" aria-live="polite" role="log">
         {messagesQuery.isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 4 }).map((_, i) => (

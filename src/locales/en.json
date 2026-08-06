@@ -20,7 +20,8 @@
   "messages": {
     "title": "Messages",
     "empty": "No conversations yet",
-    "unavailable": "Messaging is not available for this application"
+    "unavailable": "Messaging is not available for this application",
+    "backToInbox": "Back to messages"
   },
   "auth": {
     "login": "Sign In",

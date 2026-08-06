@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Send } from "lucide-react";
 
 const MAX_LENGTH = 2000;
@@ -13,6 +13,17 @@ export interface ChatComposerProps {
 export function ChatComposer({ onSend, disabled }: ChatComposerProps) {
   const [value, setValue] = useState("");
   const [sending, setSending] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // rows={1} only sets the initial height -- without this, a multi-line
+  // draft scrolls invisibly inside a fixed one-row box instead of growing
+  // (capped by the max-h-32 below, matching the previous fixed cap).
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [value]);
 
   async function handleSend() {
     const trimmed = value.trim();
@@ -27,8 +38,9 @@ export function ChatComposer({ onSend, disabled }: ChatComposerProps) {
   }
 
   return (
-    <div className="flex items-end gap-2 border-t border-gray-100 bg-white p-3">
+    <div className="flex items-end gap-2 border-t border-gray-100 bg-white p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
       <textarea
+        ref={textareaRef}
         value={value}
         onChange={(e) => setValue(e.target.value.slice(0, MAX_LENGTH))}
         onKeyDown={(e) => {
@@ -39,6 +51,7 @@ export function ChatComposer({ onSend, disabled }: ChatComposerProps) {
         }}
         rows={1}
         placeholder="Type a message…"
+        aria-label="Type a message"
         disabled={disabled || sending}
         className="max-h-32 flex-1 resize-none rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#1D6BF3] disabled:bg-gray-50"
       />

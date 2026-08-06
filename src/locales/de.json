@@ -20,7 +20,8 @@
   "messages": {
     "title": "Nachrichten",
     "empty": "Noch keine Unterhaltungen",
-    "unavailable": "Nachrichten sind für diese Anwendung nicht verfügbar"
+    "unavailable": "Nachrichten sind für diese Anwendung nicht verfügbar",
+    "backToInbox": "Zurück zu den Nachrichten"
   },
   "auth": {
     "login": "Anmelden",

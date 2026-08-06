@@ -20,7 +20,8 @@
   "messages": {
     "title": "Poruke",
     "empty": "Još nema razgovora",
-    "unavailable": "Poruke nisu dostupne za ovu aplikaciju"
+    "unavailable": "Poruke nisu dostupne za ovu aplikaciju",
+    "backToInbox": "Nazad na poruke"
   },
   "share": {
     "shareApp": "Podijeli",

@@ -61,7 +61,7 @@ export function ConversationListItem({
         type="button"
         onClick={onHide}
         aria-label="Hide conversation"
-        className="shrink-0 rounded-lg p-2 text-gray-300 opacity-0 hover:bg-gray-100 hover:text-gray-600 group-hover:opacity-100"
+        className="shrink-0 rounded-lg p-2 text-gray-300 opacity-100 hover:bg-gray-100 hover:text-gray-600 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100"
       >
         <EyeOff className="h-4 w-4" />
       </button>
