@@ -50,10 +50,7 @@ export const getRewardsMe = createServerFn({ method: "POST" })
     // a scheduled job.
     await promotePendingReferralVerifications(context.userId);
 
-    const { lifetimePoints, rewardPoints } = await computeBalance(
-      context.userId,
-      context.supabase,
-    );
+    const { lifetimePoints, rewardPoints } = await computeBalance(context.userId, context.supabase);
 
     const [
       { data: levels },
@@ -127,7 +124,8 @@ export const getRewardsMe = createServerFn({ method: "POST" })
         pointsCost: c.points_cost,
         verifiedReferralsRequired: c.verified_referrals_required,
         grantType: c.grant_type,
-        canRedeem: rewardPoints >= c.points_cost && verifiedReferralsCount >= c.verified_referrals_required,
+        canRedeem:
+          rewardPoints >= c.points_cost && verifiedReferralsCount >= c.verified_referrals_required,
       })),
       redeemHistory: (redemptions ?? []).map((r) => ({
         catalogKey: r.catalog_key,
@@ -199,7 +197,11 @@ export const redeemReward = createServerFn({ method: "POST" })
         catalog_key: item.key,
         points_spent: item.points_cost,
         verified_referrals_at_redemption: verifiedReferrals ?? 0,
-        grant_result: { status: "pending_fulfillment", grantType: item.grant_type, grantValue: item.grant_value },
+        grant_result: {
+          status: "pending_fulfillment",
+          grantType: item.grant_type,
+          grantValue: item.grant_value,
+        },
       })
       .select("*")
       .single();
@@ -268,7 +270,12 @@ export const linkReferral = createServerFn({ method: "POST" })
 
 const actionRuleSchema = z.object({
   id: z.string().uuid().optional(),
-  action: z.string().trim().min(1).max(60).regex(/^[a-z][a-z0-9_]*$/),
+  action: z
+    .string()
+    .trim()
+    .min(1)
+    .max(60)
+    .regex(/^[a-z][a-z0-9_]*$/),
   label: z.string().trim().min(1).max(120),
   points: z.number().int().min(0),
   cooldownSeconds: z.number().int().min(0).default(0),
@@ -307,7 +314,12 @@ export const adminUpsertRewardActionRule = createServerFn({ method: "POST" })
       archived: data.archived,
     };
     const { data: row, error } = data.id
-      ? await supabaseAdmin.from("reward_action_rules").update(payload).eq("id", data.id).select("*").single()
+      ? await supabaseAdmin
+          .from("reward_action_rules")
+          .update(payload)
+          .eq("id", data.id)
+          .select("*")
+          .single()
       : await supabaseAdmin.from("reward_action_rules").insert(payload).select("*").single();
     if (error) throw new Error(error.message);
 
@@ -337,7 +349,12 @@ export const adminListRewardActionRules = createServerFn({ method: "POST" })
 
 const levelSchema = z.object({
   id: z.string().uuid().optional(),
-  key: z.string().trim().min(1).max(60).regex(/^[a-z][a-z0-9_]*$/),
+  key: z
+    .string()
+    .trim()
+    .min(1)
+    .max(60)
+    .regex(/^[a-z][a-z0-9_]*$/),
   label: z.string().trim().min(1).max(120),
   minLifetimePoints: z.number().int().min(0).default(0),
   displayOrder: z.number().int().default(0),
@@ -372,7 +389,12 @@ export const adminUpsertRewardLevel = createServerFn({ method: "POST" })
       archived: data.archived,
     };
     const { data: row, error } = data.id
-      ? await supabaseAdmin.from("reward_levels").update(payload).eq("id", data.id).select("*").single()
+      ? await supabaseAdmin
+          .from("reward_levels")
+          .update(payload)
+          .eq("id", data.id)
+          .select("*")
+          .single()
       : await supabaseAdmin.from("reward_levels").insert(payload).select("*").single();
     if (error) throw new Error(error.message);
 
@@ -402,7 +424,12 @@ export const adminListRewardLevels = createServerFn({ method: "POST" })
 
 const achievementSchema = z.object({
   id: z.string().uuid().optional(),
-  key: z.string().trim().min(1).max(60).regex(/^[a-z][a-z0-9_]*$/),
+  key: z
+    .string()
+    .trim()
+    .min(1)
+    .max(60)
+    .regex(/^[a-z][a-z0-9_]*$/),
   label: z.string().trim().min(1).max(120),
   description: z.string().trim().max(500).nullable().optional(),
   // References reward_action_rules.action -- an achievement is earned by
@@ -445,7 +472,12 @@ export const adminUpsertRewardAchievement = createServerFn({ method: "POST" })
       archived: data.archived,
     };
     const { data: row, error } = data.id
-      ? await supabaseAdmin.from("reward_achievements").update(payload).eq("id", data.id).select("*").single()
+      ? await supabaseAdmin
+          .from("reward_achievements")
+          .update(payload)
+          .eq("id", data.id)
+          .select("*")
+          .single()
       : await supabaseAdmin.from("reward_achievements").insert(payload).select("*").single();
     if (error) throw new Error(error.message);
 
@@ -481,7 +513,12 @@ export const adminListRewardAchievements = createServerFn({ method: "POST" })
 // it -- that stays with whichever module owns that type.
 const fulfillmentTypeSchema = z.object({
   id: z.string().uuid().optional(),
-  key: z.string().trim().min(1).max(60).regex(/^[a-z][a-z0-9_]*$/, "lowercase snake_case only"),
+  key: z
+    .string()
+    .trim()
+    .min(1)
+    .max(60)
+    .regex(/^[a-z][a-z0-9_]*$/, "lowercase snake_case only"),
   label: z.string().trim().min(1).max(120),
   description: z.string().trim().max(500).nullable().optional(),
   displayOrder: z.number().int().default(0),
@@ -551,14 +588,24 @@ export const adminListRewardFulfillmentTypes = createServerFn({ method: "POST" }
 
 const catalogSchema = z.object({
   id: z.string().uuid().optional(),
-  key: z.string().trim().min(1).max(60).regex(/^[a-z][a-z0-9_]*$/),
+  key: z
+    .string()
+    .trim()
+    .min(1)
+    .max(60)
+    .regex(/^[a-z][a-z0-9_]*$/),
   label: z.string().trim().min(1).max(120),
   description: z.string().trim().max(500).nullable().optional(),
   pointsCost: z.number().int().min(0),
   verifiedReferralsRequired: z.number().int().min(0).default(0),
   // Validated against reward_fulfillment_types by DB foreign key, not a
   // hardcoded enum here -- see the comment above fulfillmentTypeSchema.
-  grantType: z.string().trim().min(1).max(60).regex(/^[a-z][a-z0-9_]*$/),
+  grantType: z
+    .string()
+    .trim()
+    .min(1)
+    .max(60)
+    .regex(/^[a-z][a-z0-9_]*$/),
   grantValue: z.record(z.string(), z.unknown()).default({}),
   // Dependency validation (adjustment): hides this reward from
   // getRewardsMe's catalog automatically when the named capability is
@@ -602,7 +649,12 @@ export const adminUpsertRewardCatalogItem = createServerFn({ method: "POST" })
       archived: data.archived,
     };
     const { data: row, error } = data.id
-      ? await supabaseAdmin.from("reward_catalog").update(payload).eq("id", data.id).select("*").single()
+      ? await supabaseAdmin
+          .from("reward_catalog")
+          .update(payload)
+          .eq("id", data.id)
+          .select("*")
+          .single()
       : await supabaseAdmin.from("reward_catalog").insert(payload).select("*").single();
     if (error) throw new Error(error.message);
 
@@ -676,4 +728,62 @@ export const adminSetRewardConfig = createServerFn({ method: "POST" })
       reason: data.reason ?? null,
     });
     return { ok: true };
+  });
+
+// ---------- Admin: manual reward adjustments (Priority 12 Phase 4) ----------
+
+const adjustRewardPointsSchema = z.object({
+  userId: z.string().uuid(),
+  points: z
+    .number()
+    .int()
+    .refine((v) => v !== 0, "points must be nonzero"),
+  // Independent from `points` (Priority 12 decision 1), same as every
+  // other ledger-writing path -- defaults to equal `points` unless an
+  // admin deliberately diverges them.
+  lifetimePoints: z.number().int().optional(),
+  // Mandatory, unlike every other admin mutation's optional `reason` --
+  // an explicit user requirement for this specific action, since it's the
+  // one path that can move a user's balance without any underlying
+  // action having actually happened.
+  reason: z.string().trim().min(1).max(500),
+});
+
+// The one path that can write a negative points/lifetime_points row --
+// enforced at the database level by reward_ledger_points_nonneg_check,
+// which only permits negative values when origin = 'manual_admin' (see
+// the Phase 1 migration). Every other origin keeps the non-negative
+// guarantee untouched.
+export const adminAdjustRewardPoints = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => adjustRewardPointsSchema.parse(raw))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const supabaseAdmin = await adminClient();
+    const lifetimePoints = data.lifetimePoints ?? data.points;
+
+    const { data: row, error } = await supabaseAdmin
+      .from("reward_ledger")
+      .insert({
+        user_id: data.userId,
+        action: "manual_adjustment",
+        points: data.points,
+        lifetime_points: lifetimePoints,
+        actor_user_id: context.userId,
+        origin: "manual_admin",
+        metadata: {},
+      })
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+
+    await writeAuditLog({
+      userId: context.userId,
+      action: "reward_ledger.manual_adjustment",
+      entityType: "reward_ledger",
+      entityId: row.id,
+      newData: { targetUserId: data.userId, points: data.points, lifetimePoints },
+      reason: data.reason,
+    });
+    return { ok: true, points: data.points, lifetimePoints };
   });

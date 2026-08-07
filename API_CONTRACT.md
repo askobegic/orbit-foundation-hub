@@ -679,6 +679,7 @@ All under `/v1/admin/rewards/...`, all standard soft-lifecycle registry CRUD (li
 - `GET /v1/admin/rewards/catalog` / `POST .../catalog` / `PATCH .../catalog/{key}` — `{ key, label, description, pointsCost, verifiedReferralsRequired, grantType, grantValue, requiresCapability, displayOrder, enabled, archived }`.
 - `GET /v1/admin/rewards/fulfillment-types` / `POST .../fulfillment-types` / `PATCH .../fulfillment-types/{key}` — `{ key, label, description, displayOrder, enabled, archived }`.
 - `GET /v1/admin/rewards/config` / `PUT /v1/admin/rewards/config/{key}` — `{ key, value }` (e.g. `key: "referral_verification_days"`).
+- `POST /v1/admin/rewards/adjust` (Priority 12 Phase 4) — `{ userId, points, lifetimePoints, reason }`. Writes a `reward_ledger` row directly (`origin: "manual_admin"`, the one origin permitted to carry negative `points`/`lifetimePoints`). Unlike every other endpoint in this contract, `reason` is **required**, not optional — this is the one action that can move a user's balance with no underlying event having actually happened.
 
 Every mutating endpoint above accepts an optional `reason` field, audited via the same shared audit mechanism as every other admin action (`PROJECT_KNOWLEDGE.md` → Audit Strategy).
 

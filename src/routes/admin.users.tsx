@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
   BadgeCheck,
+  Coins,
   Crown,
   Pencil,
   Search,
@@ -29,6 +30,7 @@ import {
   adminUpdateUser,
   getMyIsAdmin,
 } from "@/lib/admin.functions";
+import { adminAdjustRewardPoints } from "@/lib/rewards.functions";
 import type { ApplicationRow } from "@/types/database";
 
 export const Route = createFileRoute("/admin/users")({
@@ -84,6 +86,7 @@ function AdminUsers() {
   const auditFn = useServerFn(adminListAuditLogs);
   const grant = useServerFn(adminGrantPremium);
   const revoke = useServerFn(adminRevokePremium);
+  const adjustPoints = useServerFn(adminAdjustRewardPoints);
   const updateUser = useServerFn(adminUpdateUser);
   const setActive = useServerFn(adminSetUserActive);
   const deleteUser = useServerFn(adminDeleteUser);
@@ -125,6 +128,8 @@ function AdminUsers() {
   const [selApp, setSelApp] = useState<string>("");
   const [months, setMonths] = useState<number>(12);
   const [reason, setReason] = useState("");
+  const [adjPoints, setAdjPoints] = useState<number>(0);
+  const [adjReason, setAdjReason] = useState("");
 
   function openModal(row: UserRow) {
     setModal(row);
@@ -133,6 +138,8 @@ function AdminUsers() {
     setEditCountry(row.country ?? "");
     setEditUsername(row.username ?? "");
     setSelApp("");
+    setAdjPoints(0);
+    setAdjReason("");
   }
 
   const invalidateUsers = () => qc.invalidateQueries({ queryKey: ["admin-users"] });
@@ -178,6 +185,18 @@ function AdminUsers() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const doAdjustPoints = useMutation({
+    mutationFn: () =>
+      adjustPoints({ data: { userId: modal!.id, points: adjPoints, reason: adjReason.trim() } }),
+    onSuccess: () => {
+      toast.success(t("admin.users.rewardAdjustmentApplied"));
+      setAdjPoints(0);
+      setAdjReason("");
+      qc.invalidateQueries({ queryKey: ["admin-audit"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const doUpdate = useMutation({
     mutationFn: () =>
       updateUser({
@@ -217,7 +236,9 @@ function AdminUsers() {
   const doVerify = useMutation({
     mutationFn: (verified: boolean) => setVerified({ data: { user_id: modal!.id, verified } }),
     onSuccess: (_r, verified) => {
-      toast.success(verified ? t("admin.users.userVerified") : t("admin.users.verificationRevoked"));
+      toast.success(
+        verified ? t("admin.users.userVerified") : t("admin.users.verificationRevoked"),
+      );
       setModal((m) => (m ? { ...m, is_verified: verified } : m));
       invalidateUsers();
     },
@@ -408,9 +429,7 @@ function AdminUsers() {
             >
               {t("admin.users.prev")}
             </button>
-            <span className="text-xs">
-              {t("admin.users.pageOf", { page, totalPages })}
-            </span>
+            <span className="text-xs">{t("admin.users.pageOf", { page, totalPages })}</span>
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages}
@@ -464,7 +483,9 @@ function AdminUsers() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-lg">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold">{t("admin.users.manageModalTitle", { email: modal.email })}</h3>
+              <h3 className="text-lg font-semibold">
+                {t("admin.users.manageModalTitle", { email: modal.email })}
+              </h3>
               <button
                 onClick={() => setModal(null)}
                 aria-label={t("common.close")}
@@ -477,7 +498,9 @@ function AdminUsers() {
             {/* User details */}
             <div className="mb-4 rounded-xl border border-gray-100 p-3">
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase text-gray-500">{t("admin.users.userDetailsTitle")}</p>
+                <p className="text-xs font-semibold uppercase text-gray-500">
+                  {t("admin.users.userDetailsTitle")}
+                </p>
                 <button
                   onClick={() => setEditing((v) => !v)}
                   className="inline-flex items-center gap-1 text-xs font-medium text-[#1D6BF3] hover:underline"
@@ -493,8 +516,18 @@ function AdminUsers() {
                     value={[modal.first_name, modal.last_name].filter(Boolean).join(" ") || "—"}
                   />
                   <Field label={t("admin.users.colEmail")} value={modal.email ?? "—"} />
-                  <Field label={t("admin.users.fieldUserType")} value={modal.is_premium ? t("admin.users.typePremium") : t("admin.users.typeStandard")} />
-                  <Field label={t("admin.users.fieldVerified")} value={modal.is_verified ? t("admin.users.yes") : t("admin.users.no")} />
+                  <Field
+                    label={t("admin.users.fieldUserType")}
+                    value={
+                      modal.is_premium
+                        ? t("admin.users.typePremium")
+                        : t("admin.users.typeStandard")
+                    }
+                  />
+                  <Field
+                    label={t("admin.users.fieldVerified")}
+                    value={modal.is_verified ? t("admin.users.yes") : t("admin.users.no")}
+                  />
                   <Field label={t("admin.users.fieldCountry")} value={modal.country ?? "—"} />
                   <Field label={t("admin.users.colCity")} value={modal.city ?? "—"} />
                   <Field
@@ -509,9 +542,21 @@ function AdminUsers() {
               ) : (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Field label={t("admin.users.colEmail")} value={modal.email ?? "—"} />
-                  <EditField label={t("admin.users.fieldUsername")} value={editUsername} onChange={setEditUsername} />
-                  <EditField label={t("admin.users.colCity")} value={editCity} onChange={setEditCity} />
-                  <EditField label={t("admin.users.fieldCountry")} value={editCountry} onChange={setEditCountry} />
+                  <EditField
+                    label={t("admin.users.fieldUsername")}
+                    value={editUsername}
+                    onChange={setEditUsername}
+                  />
+                  <EditField
+                    label={t("admin.users.colCity")}
+                    value={editCity}
+                    onChange={setEditCity}
+                  />
+                  <EditField
+                    label={t("admin.users.fieldCountry")}
+                    value={editCountry}
+                    onChange={setEditCountry}
+                  />
                   <p className="col-span-2 text-[11px] text-gray-400">
                     {t("admin.users.identityLockedNote")}
                   </p>
@@ -573,7 +618,9 @@ function AdminUsers() {
 
             {/* Premium */}
             <div className="mb-4 space-y-2">
-              <p className="text-xs font-semibold uppercase text-gray-500">{t("admin.users.activeSubscriptionsTitle")}</p>
+              <p className="text-xs font-semibold uppercase text-gray-500">
+                {t("admin.users.activeSubscriptionsTitle")}
+              </p>
               {(userSubsQ.data ?? []).length === 0 ? (
                 <p className="text-sm text-gray-500">{t("admin.common.none")}</p>
               ) : (
@@ -609,8 +656,45 @@ function AdminUsers() {
               )}
             </div>
 
+            {/* Reward points adjustment (Priority 12 Phase 4) */}
+            <div className="mb-4 border-t border-gray-100 pt-4">
+              <p className="mb-2 text-xs font-semibold uppercase text-gray-500">
+                {t("admin.users.rewardAdjustmentTitle")}
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="flex flex-col gap-1 text-xs">
+                  {t("admin.users.rewardAdjustmentPoints")}
+                  <input
+                    type="number"
+                    value={adjPoints}
+                    onChange={(e) => setAdjPoints(Number(e.target.value))}
+                    className="rounded-lg border border-gray-200 px-2 py-1 text-sm"
+                  />
+                </label>
+                <label className="col-span-2 flex flex-col gap-1 text-xs">
+                  {t("admin.users.rewardAdjustmentReason")}
+                  <input
+                    value={adjReason}
+                    onChange={(e) => setAdjReason(e.target.value)}
+                    className="rounded-lg border border-gray-200 px-2 py-1 text-sm"
+                    placeholder={t("admin.users.rewardAdjustmentReasonPlaceholder")}
+                  />
+                </label>
+              </div>
+              <button
+                onClick={() => doAdjustPoints.mutate()}
+                disabled={adjPoints === 0 || !adjReason.trim() || doAdjustPoints.isPending}
+                className="mt-3 inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              >
+                <Coins className="h-4 w-4" />
+                {t("admin.users.rewardAdjustmentApply")}
+              </button>
+            </div>
+
             <div className="mb-3 border-t border-gray-100 pt-4">
-              <p className="mb-2 text-xs font-semibold uppercase text-gray-500">{t("admin.users.grantPremiumTitle")}</p>
+              <p className="mb-2 text-xs font-semibold uppercase text-gray-500">
+                {t("admin.users.grantPremiumTitle")}
+              </p>
               <div className="grid grid-cols-2 gap-3">
                 <label className="flex flex-col gap-1 text-xs">
                   {t("admin.users.app")}
