@@ -16,6 +16,7 @@ import {
   UserPlus,
   Users,
   Wallet,
+  Zap,
 } from "lucide-react";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
@@ -166,6 +167,12 @@ function AdminGate() {
       icon: Gift,
       title: t("admin.hub.cards.rewards.title"),
       desc: t("admin.hub.cards.rewards.desc"),
+    },
+    {
+      to: "/admin/events",
+      icon: Zap,
+      title: t("admin.hub.cards.events.title"),
+      desc: t("admin.hub.cards.events.desc"),
     },
   ];
   return (

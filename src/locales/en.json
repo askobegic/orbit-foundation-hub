@@ -469,6 +469,36 @@
       "overridesTitle": "Per-application overrides",
       "noWidgets": "No widget definitions yet."
     },
+    "events": {
+      "title": "Universal Events",
+      "subtitle": "Event registry, per-application mapping, and reward rules for application-reported events. Extends Rewards & Loyalty without replacing it.",
+      "definitionsTitle": "Event registry",
+      "keyPlaceholder": "e.g. photo_uploaded",
+      "categoryPlaceholder": "Category (optional)",
+      "created": "Event created",
+      "noDefinitions": "No event definitions yet.",
+      "mappingTitle": "Application mapping",
+      "rulesTitle": "Reward rules",
+      "noEnabledEvents": "Enable at least one event above for this application to configure reward rules.",
+      "points": "Points",
+      "lifetimePoints": "Lifetime points",
+      "cooldownSeconds": "Cooldown (seconds)",
+      "maxExecutions": "Max executions",
+      "dailyLimit": "Daily limit",
+      "weeklyLimit": "Weekly limit",
+      "monthlyLimit": "Monthly limit",
+      "priority": "Priority",
+      "repeatable": "Repeatable",
+      "save": "Save",
+      "saved": "Rule saved",
+      "conditions": "Conditions",
+      "conditionTypePlaceholder": "e.g. not_self",
+      "paramsPlaceholder": "Params (JSON)",
+      "addCondition": "Add condition",
+      "invalidParams": "Params must be valid JSON",
+      "noConditions": "No conditions — the rule always applies.",
+      "versionLabel": "v{{version}}"
+    },
     "trials": {
       "title": "Promotional Trials",
       "subtitle": "There is no automatic Trial. Registration always creates a Standard account; a Trial only ever exists because it was explicitly granted below.",
@@ -769,7 +799,8 @@
         "trials": { "title": "Promotional Trials", "desc": "Grant, end, revoke, and review Promotional Trial history." },
         "capabilities": { "title": "Capabilities", "desc": "Register capabilities and enable them per application." },
         "dashboardWidgets": { "title": "Dashboard Widgets", "desc": "Enable or disable dashboard sections, globally or per application." },
-        "rewards": { "title": "Rewards & Loyalty", "desc": "Action rules, levels, achievements, catalog, fulfillment types, config." }
+        "rewards": { "title": "Rewards & Loyalty", "desc": "Action rules, levels, achievements, catalog, fulfillment types, config." },
+        "events": { "title": "Universal Events", "desc": "Event registry, per-application mapping, and reward rules for application-reported events." }
       }
     },
     "verification": {

@@ -469,6 +469,36 @@
       "overridesTitle": "Anwendungsspezifische Ausnahmen",
       "noWidgets": "Noch keine Widget-Definitionen."
     },
+    "events": {
+      "title": "Universelle Ereignisse",
+      "subtitle": "Ereignisregister, Anwendungszuordnung und Prämienregeln für von Anwendungen gemeldete Ereignisse. Erweitert Prämien & Treue, ohne es zu ersetzen.",
+      "definitionsTitle": "Ereignisregister",
+      "keyPlaceholder": "z. B. photo_uploaded",
+      "categoryPlaceholder": "Kategorie (optional)",
+      "created": "Ereignis erstellt",
+      "noDefinitions": "Noch keine Ereignisdefinitionen.",
+      "mappingTitle": "Anwendungszuordnung",
+      "rulesTitle": "Prämienregeln",
+      "noEnabledEvents": "Aktivieren Sie oben mindestens ein Ereignis für diese Anwendung, um Prämienregeln zu konfigurieren.",
+      "points": "Punkte",
+      "lifetimePoints": "Lebenszeitpunkte",
+      "cooldownSeconds": "Abklingzeit (Sekunden)",
+      "maxExecutions": "Maximale Ausführungen",
+      "dailyLimit": "Tageslimit",
+      "weeklyLimit": "Wochenlimit",
+      "monthlyLimit": "Monatslimit",
+      "priority": "Priorität",
+      "repeatable": "Wiederholbar",
+      "save": "Speichern",
+      "saved": "Regel gespeichert",
+      "conditions": "Bedingungen",
+      "conditionTypePlaceholder": "z. B. not_self",
+      "paramsPlaceholder": "Parameter (JSON)",
+      "addCondition": "Bedingung hinzufügen",
+      "invalidParams": "Parameter müssen gültiges JSON sein",
+      "noConditions": "Keine Bedingungen — die Regel gilt immer.",
+      "versionLabel": "v{{version}}"
+    },
     "trials": {
       "title": "Werbe-Testzeiträume",
       "subtitle": "Es gibt keinen automatischen Testzeitraum. Die Registrierung erstellt immer ein Standardkonto; ein Testzeitraum existiert nur, wenn er unten ausdrücklich gewährt wurde.",
@@ -769,7 +799,8 @@
         "trials": { "title": "Werbe-Testzeiträume", "desc": "Werbe-Testzeiträume gewähren, beenden, widerrufen und deren Verlauf einsehen." },
         "capabilities": { "title": "Funktionen", "desc": "Funktionen registrieren und pro Anwendung aktivieren." },
         "dashboardWidgets": { "title": "Dashboard-Widgets", "desc": "Dashboard-Bereiche global oder pro Anwendung aktivieren oder deaktivieren." },
-        "rewards": { "title": "Prämien & Treue", "desc": "Aktionsregeln, Stufen, Erfolge, Katalog, Erfüllungstypen, Konfiguration." }
+        "rewards": { "title": "Prämien & Treue", "desc": "Aktionsregeln, Stufen, Erfolge, Katalog, Erfüllungstypen, Konfiguration." },
+        "events": { "title": "Universelle Ereignisse", "desc": "Ereignisregister, Anwendungszuordnung und Prämienregeln für von Anwendungen gemeldete Ereignisse." }
       }
     },
     "verification": {

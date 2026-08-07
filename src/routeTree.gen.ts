@@ -19,6 +19,7 @@ import { Route as AdminApplicationsRouteImport } from './routes/admin.applicatio
 import { Route as AdminCapabilitiesRouteImport } from './routes/admin.capabilities'
 import { Route as AdminCommunicationRouteImport } from './routes/admin.communication'
 import { Route as AdminDashboardWidgetsRouteImport } from './routes/admin.dashboard-widgets'
+import { Route as AdminEventsRouteImport } from './routes/admin.events'
 import { Route as AdminPaymentsRouteImport } from './routes/admin.payments'
 import { Route as AdminRewardsRouteImport } from './routes/admin.rewards'
 import { Route as AdminTrialsRouteImport } from './routes/admin.trials'
@@ -188,6 +189,11 @@ const AdminCommunicationRoute = AdminCommunicationRouteImport.update({
 const AdminDashboardWidgetsRoute = AdminDashboardWidgetsRouteImport.update({
   id: '/dashboard-widgets',
   path: '/dashboard-widgets',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminEventsRoute = AdminEventsRouteImport.update({
+  id: '/events',
+  path: '/events',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminPaymentsRoute = AdminPaymentsRouteImport.update({
@@ -857,6 +863,7 @@ export interface FileRoutesByFullPath {
   '/admin/capabilities': typeof AdminCapabilitiesRoute
   '/admin/communication': typeof AdminCommunicationRoute
   '/admin/dashboard-widgets': typeof AdminDashboardWidgetsRoute
+  '/admin/events': typeof AdminEventsRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/rewards': typeof AdminRewardsRoute
   '/admin/trials': typeof AdminTrialsRoute
@@ -989,6 +996,7 @@ export interface FileRoutesByTo {
   '/admin/capabilities': typeof AdminCapabilitiesRoute
   '/admin/communication': typeof AdminCommunicationRoute
   '/admin/dashboard-widgets': typeof AdminDashboardWidgetsRoute
+  '/admin/events': typeof AdminEventsRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/rewards': typeof AdminRewardsRoute
   '/admin/trials': typeof AdminTrialsRoute
@@ -1122,6 +1130,7 @@ export interface FileRoutesById {
   '/admin/capabilities': typeof AdminCapabilitiesRoute
   '/admin/communication': typeof AdminCommunicationRoute
   '/admin/dashboard-widgets': typeof AdminDashboardWidgetsRoute
+  '/admin/events': typeof AdminEventsRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/rewards': typeof AdminRewardsRoute
   '/admin/trials': typeof AdminTrialsRoute
@@ -1256,6 +1265,7 @@ export interface FileRouteTypes {
     | '/admin/capabilities'
     | '/admin/communication'
     | '/admin/dashboard-widgets'
+    | '/admin/events'
     | '/admin/payments'
     | '/admin/rewards'
     | '/admin/trials'
@@ -1388,6 +1398,7 @@ export interface FileRouteTypes {
     | '/admin/capabilities'
     | '/admin/communication'
     | '/admin/dashboard-widgets'
+    | '/admin/events'
     | '/admin/payments'
     | '/admin/rewards'
     | '/admin/trials'
@@ -1520,6 +1531,7 @@ export interface FileRouteTypes {
     | '/admin/capabilities'
     | '/admin/communication'
     | '/admin/dashboard-widgets'
+    | '/admin/events'
     | '/admin/payments'
     | '/admin/rewards'
     | '/admin/trials'
@@ -1833,6 +1845,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard-widgets'
       fullPath: '/admin/dashboard-widgets'
       preLoaderRoute: typeof AdminDashboardWidgetsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/events': {
+      id: '/admin/events'
+      path: '/events'
+      fullPath: '/admin/events'
+      preLoaderRoute: typeof AdminEventsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/payments': {
@@ -2684,6 +2703,7 @@ interface AdminRouteChildren {
   AdminCapabilitiesRoute: typeof AdminCapabilitiesRoute
   AdminCommunicationRoute: typeof AdminCommunicationRoute
   AdminDashboardWidgetsRoute: typeof AdminDashboardWidgetsRoute
+  AdminEventsRoute: typeof AdminEventsRoute
   AdminPaymentsRoute: typeof AdminPaymentsRoute
   AdminRewardsRoute: typeof AdminRewardsRoute
   AdminTrialsRoute: typeof AdminTrialsRoute
@@ -2697,6 +2717,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCapabilitiesRoute: AdminCapabilitiesRoute,
   AdminCommunicationRoute: AdminCommunicationRoute,
   AdminDashboardWidgetsRoute: AdminDashboardWidgetsRoute,
+  AdminEventsRoute: AdminEventsRoute,
   AdminPaymentsRoute: AdminPaymentsRoute,
   AdminRewardsRoute: AdminRewardsRoute,
   AdminTrialsRoute: AdminTrialsRoute,

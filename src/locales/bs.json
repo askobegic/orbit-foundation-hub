@@ -469,6 +469,36 @@
       "overridesTitle": "Izuzeci po aplikaciji",
       "noWidgets": "Još nema definicija widgeta."
     },
+    "events": {
+      "title": "Univerzalni događaji",
+      "subtitle": "Registar događaja, mapiranje po aplikaciji i pravila nagrađivanja za događaje koje prijavljuju aplikacije. Proširuje Nagrade i lojalnost bez zamjene.",
+      "definitionsTitle": "Registar događaja",
+      "keyPlaceholder": "npr. photo_uploaded",
+      "categoryPlaceholder": "Kategorija (opcionalno)",
+      "created": "Događaj je kreiran",
+      "noDefinitions": "Još nema definicija događaja.",
+      "mappingTitle": "Mapiranje po aplikaciji",
+      "rulesTitle": "Pravila nagrađivanja",
+      "noEnabledEvents": "Omogućite bar jedan događaj iznad za ovu aplikaciju da biste konfigurisali pravila nagrađivanja.",
+      "points": "Bodovi",
+      "lifetimePoints": "Bodovi za cijeli vijek",
+      "cooldownSeconds": "Period čekanja (sekunde)",
+      "maxExecutions": "Maksimalno izvršenja",
+      "dailyLimit": "Dnevni limit",
+      "weeklyLimit": "Sedmični limit",
+      "monthlyLimit": "Mjesečni limit",
+      "priority": "Prioritet",
+      "repeatable": "Ponovljivo",
+      "save": "Sačuvaj",
+      "saved": "Pravilo je sačuvano",
+      "conditions": "Uslovi",
+      "conditionTypePlaceholder": "npr. not_self",
+      "paramsPlaceholder": "Parametri (JSON)",
+      "addCondition": "Dodaj uslov",
+      "invalidParams": "Parametri moraju biti validan JSON",
+      "noConditions": "Nema uslova — pravilo se uvijek primjenjuje.",
+      "versionLabel": "v{{version}}"
+    },
     "trials": {
       "title": "Promotivni probni periodi",
       "subtitle": "Ne postoji automatski probni period. Registracija uvijek kreira standardni nalog; probni period postoji samo ako je izričito dodijeljen ispod.",
@@ -769,7 +799,8 @@
         "trials": { "title": "Promotivni probni periodi", "desc": "Dodijelite, okončajte, poništite i pregledajte historiju promotivnih probnih perioda." },
         "capabilities": { "title": "Mogućnosti", "desc": "Registrujte mogućnosti i omogućite ih po aplikaciji." },
         "dashboardWidgets": { "title": "Dashboard widgeti", "desc": "Omogućite ili onemogućite sekcije dashboarda, globalno ili po aplikaciji." },
-        "rewards": { "title": "Nagrade i lojalnost", "desc": "Pravila akcija, nivoi, dostignuća, katalog, tipovi ispunjenja, konfiguracija." }
+        "rewards": { "title": "Nagrade i lojalnost", "desc": "Pravila akcija, nivoi, dostignuća, katalog, tipovi ispunjenja, konfiguracija." },
+        "events": { "title": "Univerzalni događaji", "desc": "Registar događaja, mapiranje po aplikaciji i pravila nagrađivanja za događaje koje prijavljuju aplikacije." }
       }
     },
     "verification": {
