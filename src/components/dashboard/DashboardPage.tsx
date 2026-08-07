@@ -58,7 +58,8 @@ export function DashboardPage() {
     enabled: !!application?.id,
     queryFn: () => getDashboardWidgetsFn({ data: { appId: application!.id } }),
   });
-  const isWidgetEnabled = (key: string) => !application || (widgetsQuery.data?.includes(key) ?? true);
+  const isWidgetEnabled = (key: string) =>
+    !application || (widgetsQuery.data?.includes(key) ?? true);
   const rewardsEnabled = isWidgetEnabled("rewards");
   const advertisingEnabled = isWidgetEnabled("advertising");
   const messagingEnabled = isWidgetEnabled("messaging");
@@ -175,7 +176,9 @@ export function DashboardPage() {
                 {t("dashboard.welcome")}
                 {profile?.first_name ? `, ${profile.first_name}` : ""} 👋
               </h1>
-              <p className="hidden truncate text-xs text-gray-500 sm:block">{t("dashboard.subtitle")}</p>
+              <p className="hidden truncate text-xs text-gray-500 sm:block">
+                {t("dashboard.subtitle")}
+              </p>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-3">
@@ -196,16 +199,16 @@ export function DashboardPage() {
           </div>
         </header>
 
-        <main className="grid gap-6 p-4 lg:grid-cols-3 lg:p-8">
+        <main className="grid grid-cols-1 gap-6 overflow-x-hidden p-4 lg:grid-cols-3 lg:p-8">
           {/* LEFT (2 cols) */}
-          <div className="flex flex-col gap-6 lg:col-span-2">
+          <div className="flex min-w-0 flex-col gap-6 lg:col-span-2">
             {isWidgetEnabled("trial_banner") && <TrialBanner />}
             {/* Profile card */}
             <section className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-100">
               <div className="h-24 bg-gradient-to-r from-[#1D6BF3] via-[#6366F1] to-[#8B5CF6]" />
               <div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-end sm:justify-between">
-                <div className="flex items-end gap-4">
-                  <div className="-mt-14 h-20 w-20 overflow-hidden rounded-2xl border-4 border-white bg-gray-100 shadow-sm">
+                <div className="flex min-w-0 items-end gap-4">
+                  <div className="-mt-14 h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-4 border-white bg-gray-100 shadow-sm">
                     {profile?.avatar_url ? (
                       <img
                         src={profile.avatar_url}
@@ -218,13 +221,16 @@ export function DashboardPage() {
                       </div>
                     )}
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <h2 className="text-lg font-semibold">
+                      <h2 className="min-w-0 truncate text-lg font-semibold">
                         {fullName || user?.email || t("profile.notEntered")}
                       </h2>
                       {profile?.is_verified && (
-                        <BadgeCheck className="h-4 w-4 text-[#1D6BF3]" aria-label={t("profile.verified")} />
+                        <BadgeCheck
+                          className="h-4 w-4 text-[#1D6BF3]"
+                          aria-label={t("profile.verified")}
+                        />
                       )}
                     </div>
                     <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-gray-500">
@@ -274,37 +280,76 @@ export function DashboardPage() {
 
             {/* Applications */}
             {isWidgetEnabled("my_applications") && (
-            <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-base font-semibold">{t("dashboard.myApps")}</h3>
-                <span className="text-xs text-gray-400">
-                  {appsQuery.data?.length ?? 0}
-                </span>
-              </div>
-              {appsQuery.isLoading ? (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <Skeleton key={i} className="h-20 w-full rounded-xl" />
-                  ))}
+              <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="text-base font-semibold">{t("dashboard.myApps")}</h3>
+                  <span className="text-xs text-gray-400">{appsQuery.data?.length ?? 0}</span>
                 </div>
-              ) : (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {(appsQuery.data ?? []).map((app) => {
-                    // Premium is global (see hasPremium above) -- every
-                    // tile reflects the same platform-wide status, not a
-                    // per-application one.
-                    const isPremium = hasPremium;
-                    const isActive = app.visibility === "active";
-                    const desc =
-                      app[`short_description_${lang}` as const] ??
-                      app.short_description_en ??
-                      "";
-                    const expiry = premiumExpiryByApp.get(app.id);
-                    if (!isActive) {
+                {appsQuery.isLoading ? (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <Skeleton key={i} className="h-20 w-full rounded-xl" />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {(appsQuery.data ?? []).map((app) => {
+                      // Premium is global (see hasPremium above) -- every
+                      // tile reflects the same platform-wide status, not a
+                      // per-application one.
+                      const isPremium = hasPremium;
+                      const isActive = app.visibility === "active";
+                      const desc =
+                        app[`short_description_${lang}` as const] ?? app.short_description_en ?? "";
+                      const expiry = premiumExpiryByApp.get(app.id);
+                      if (!isActive) {
+                        return (
+                          <div
+                            key={app.id}
+                            className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50/40 p-3 opacity-60"
+                          >
+                            {app.logo_url ? (
+                              <img
+                                src={app.logo_url}
+                                alt={app.name}
+                                width={44}
+                                height={44}
+                                className="h-11 w-11 shrink-0 rounded-xl object-cover grayscale"
+                              />
+                            ) : (
+                              <div
+                                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-white grayscale"
+                                style={{ backgroundColor: app.primary_color }}
+                              >
+                                {app.name.slice(0, 1)}
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="truncate text-sm font-medium text-gray-500">
+                                  {app.name}
+                                </span>
+                                <span className="shrink-0 rounded-full bg-gray-200 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500">
+                                  {t("dashboard.comingSoon")}
+                                </span>
+                              </div>
+                              <p className="truncate text-xs text-gray-400">
+                                {app.launch_date
+                                  ? `${t("dashboard.launchDate")}: ${new Date(app.launch_date).toLocaleDateString(i18n.language)}`
+                                  : desc}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      }
                       return (
                         <div
                           key={app.id}
-                          className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50/40 p-3 opacity-60"
+                          className={`flex items-center gap-3 rounded-xl border p-3 transition hover:shadow-sm ${
+                            isPremium
+                              ? "border-purple-200 bg-gradient-to-br from-purple-50/60 to-white hover:border-purple-300"
+                              : "border-gray-100 bg-gray-50/40 hover:border-gray-200"
+                          }`}
                         >
                           {app.logo_url ? (
                             <img
@@ -312,11 +357,15 @@ export function DashboardPage() {
                               alt={app.name}
                               width={44}
                               height={44}
-                              className="h-11 w-11 shrink-0 rounded-xl object-cover grayscale"
+                              className={`h-11 w-11 shrink-0 rounded-xl object-cover ${
+                                isPremium ? "" : "grayscale opacity-70"
+                              }`}
                             />
                           ) : (
                             <div
-                              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-white grayscale"
+                              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-white ${
+                                isPremium ? "" : "grayscale opacity-70"
+                              }`}
                               style={{ backgroundColor: app.primary_color }}
                             >
                               {app.name.slice(0, 1)}
@@ -324,252 +373,218 @@ export function DashboardPage() {
                           )}
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
-                              <span className="truncate text-sm font-medium text-gray-500">
+                              <span
+                                className={`truncate text-sm ${
+                                  isPremium
+                                    ? "font-semibold text-gray-900"
+                                    : "font-medium text-gray-500"
+                                }`}
+                              >
                                 {app.name}
                               </span>
-                              <span className="shrink-0 rounded-full bg-gray-200 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500">
-                                {t("dashboard.comingSoon")}
+                              <span
+                                className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                                  isPremium
+                                    ? "bg-gradient-to-r from-[#8B5CF6] to-[#6366F1] text-white"
+                                    : "bg-gray-200 text-gray-500"
+                                }`}
+                              >
+                                {isPremium ? t("dashboard.premium") : t("dashboard.standard")}
                               </span>
                             </div>
-                            <p className="truncate text-xs text-gray-400">
-                              {app.launch_date
-                                ? `${t("dashboard.launchDate")}: ${new Date(app.launch_date).toLocaleDateString(i18n.language)}`
+                            <p
+                              className={`truncate text-xs ${
+                                isPremium ? "text-gray-600" : "text-gray-400"
+                              }`}
+                            >
+                              {isPremium && expiry
+                                ? `${t("dashboard.validUntil")}: ${new Date(expiry).toLocaleDateString(i18n.language)}`
                                 : desc}
                             </p>
                           </div>
+                          <div className="flex shrink-0 items-center gap-1">
+                            {!isPremium && (
+                              <Link
+                                to="/pricing"
+                                search={{ app: app.slug }}
+                                className="rounded-lg bg-gradient-to-r from-[#8B5CF6] to-[#6366F1] px-2.5 py-1 text-[11px] font-semibold text-white hover:opacity-90"
+                              >
+                                {t("dashboard.upgrade")}
+                              </Link>
+                            )}
+                            {app.domain && (
+                              <a
+                                href={`https://${app.domain}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                aria-label={t("dashboard.openApp")}
+                                className={`rounded-lg p-2 hover:bg-gray-50 ${
+                                  isPremium
+                                    ? "text-[#1D6BF3] hover:text-[#1858cf]"
+                                    : "text-gray-300 hover:text-gray-500"
+                                }`}
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </a>
+                            )}
+                          </div>
                         </div>
                       );
-                    }
-                    return (
-                      <div
-                        key={app.id}
-                        className={`flex items-center gap-3 rounded-xl border p-3 transition hover:shadow-sm ${
-                          isPremium
-                            ? "border-purple-200 bg-gradient-to-br from-purple-50/60 to-white hover:border-purple-300"
-                            : "border-gray-100 bg-gray-50/40 hover:border-gray-200"
-                        }`}
-                      >
-                        {app.logo_url ? (
-                          <img
-                            src={app.logo_url}
-                            alt={app.name}
-                            width={44}
-                            height={44}
-                            className={`h-11 w-11 shrink-0 rounded-xl object-cover ${
-                              isPremium ? "" : "grayscale opacity-70"
-                            }`}
-                          />
-                        ) : (
-                          <div
-                            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-white ${
-                              isPremium ? "" : "grayscale opacity-70"
-                            }`}
-                            style={{ backgroundColor: app.primary_color }}
-                          >
-                            {app.name.slice(0, 1)}
-                          </div>
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`truncate text-sm ${
-                                isPremium
-                                  ? "font-semibold text-gray-900"
-                                  : "font-medium text-gray-500"
-                              }`}
-                            >
-                              {app.name}
-                            </span>
-                            <span
-                              className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
-                                isPremium
-                                  ? "bg-gradient-to-r from-[#8B5CF6] to-[#6366F1] text-white"
-                                  : "bg-gray-200 text-gray-500"
-                              }`}
-                            >
-                              {isPremium ? t("dashboard.premium") : t("dashboard.standard")}
-                            </span>
-                          </div>
-                          <p
-                            className={`truncate text-xs ${
-                              isPremium ? "text-gray-600" : "text-gray-400"
-                            }`}
-                          >
-                            {isPremium && expiry
-                              ? `${t("dashboard.validUntil")}: ${new Date(expiry).toLocaleDateString(i18n.language)}`
-                              : desc}
-                          </p>
-                        </div>
-                        <div className="flex shrink-0 items-center gap-1">
-                          {!isPremium && (
-                            <Link
-                              to="/pricing"
-                              search={{ app: app.slug }}
-                              className="rounded-lg bg-gradient-to-r from-[#8B5CF6] to-[#6366F1] px-2.5 py-1 text-[11px] font-semibold text-white hover:opacity-90"
-                            >
-                              {t("dashboard.upgrade")}
-                            </Link>
-                          )}
-                          {app.domain && (
-                            <a
-                              href={`https://${app.domain}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              aria-label={t("dashboard.openApp")}
-                              className={`rounded-lg p-2 hover:bg-gray-50 ${
-                                isPremium
-                                  ? "text-[#1D6BF3] hover:text-[#1858cf]"
-                                  : "text-gray-300 hover:text-gray-500"
-                              }`}
-                            >
-                              <ExternalLink className="h-4 w-4" />
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </section>
+                    })}
+                  </div>
+                )}
+              </section>
             )}
           </div>
 
           {/* RIGHT column */}
-          <div className="flex flex-col gap-6">
+          <div className="flex min-w-0 flex-col gap-6">
             {/* Active subscription */}
             {isWidgetEnabled("active_subscription") && (
-            <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-[#1D6BF3] to-[#6366F1] p-6 text-white shadow-sm">
-              <div className="mb-2 flex items-center justify-between">
-                <h3 className="text-sm font-semibold uppercase tracking-wide opacity-80">
-                  {t("dashboard.activeSubscription")}
-                </h3>
-                <Crown className="h-4 w-4 opacity-80" />
-              </div>
-              {subsQuery.isLoading ? (
-                <Skeleton className="h-16 w-full bg-white/20" />
-              ) : activeSub ? (
-                <div>
-                  <p className="text-xl font-semibold">
-                    {activeSub.plan?.name ?? t("dashboard.premium")}
-                  </p>
-                  <p className="mt-1 text-xs opacity-80">
-                    {t("dashboard.validUntil")}:{" "}
-                    {new Date(activeSub.expires_at).toLocaleDateString(i18n.language)}
-                  </p>
-                  <Link
-                    to="/dashboard/purchases"
-                    className="mt-4 inline-flex items-center justify-center rounded-lg bg-white/15 px-3 py-1.5 text-xs font-medium backdrop-blur hover:bg-white/25"
-                  >
-                    {t("subscription.managePlan")}
-                  </Link>
+              <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-[#1D6BF3] to-[#6366F1] p-6 text-white shadow-sm">
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide opacity-80">
+                    {t("dashboard.activeSubscription")}
+                  </h3>
+                  <Crown className="h-4 w-4 opacity-80" />
                 </div>
-              ) : (
-                <div>
-                  <p className="text-sm opacity-90">{t("dashboard.noSubscription")}</p>
-                  <Link
-                    to="/pricing"
-                    className="mt-3 inline-flex items-center justify-center rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-[#1D6BF3] hover:bg-white/90"
-                  >
-                    {t("dashboard.upgrade")}
-                  </Link>
-                </div>
-              )}
-            </section>
+                {subsQuery.isLoading ? (
+                  <Skeleton className="h-16 w-full bg-white/20" />
+                ) : activeSub ? (
+                  <div>
+                    <p className="text-xl font-semibold">
+                      {activeSub.plan?.name ?? t("dashboard.premium")}
+                    </p>
+                    <p className="mt-1 text-xs opacity-80">
+                      {t("dashboard.validUntil")}:{" "}
+                      {new Date(activeSub.expires_at).toLocaleDateString(i18n.language)}
+                    </p>
+                    <Link
+                      to="/dashboard/purchases"
+                      className="mt-4 inline-flex items-center justify-center rounded-lg bg-white/15 px-3 py-1.5 text-xs font-medium backdrop-blur hover:bg-white/25"
+                    >
+                      {t("subscription.managePlan")}
+                    </Link>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-sm opacity-90">{t("dashboard.noSubscription")}</p>
+                    <Link
+                      to="/pricing"
+                      className="mt-3 inline-flex items-center justify-center rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-[#1D6BF3] hover:bg-white/90"
+                    >
+                      {t("dashboard.upgrade")}
+                    </Link>
+                  </div>
+                )}
+              </section>
             )}
 
             {/* Payment history */}
             {isWidgetEnabled("payment_history") && (
-            <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-sm font-semibold">{t("dashboard.paymentHistory")}</h3>
-                <Link to="/dashboard/purchases" className="text-xs font-medium text-[#1D6BF3] hover:underline">
-                  {t("dashboard.viewAll")}
-                </Link>
-              </div>
-              {paymentsQuery.isLoading ? (
-                <div className="space-y-2">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <Skeleton key={i} className="h-10 w-full rounded-lg" />
-                  ))}
+              <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold">{t("dashboard.paymentHistory")}</h3>
+                  <Link
+                    to="/dashboard/purchases"
+                    className="text-xs font-medium text-[#1D6BF3] hover:underline"
+                  >
+                    {t("dashboard.viewAll")}
+                  </Link>
                 </div>
-              ) : (paymentsQuery.data?.length ?? 0) === 0 ? (
-                <p className="py-4 text-center text-sm text-gray-500">
-                  {t("dashboard.noPayments")}
-                </p>
-              ) : (
-                <ul className="divide-y divide-gray-100">
-                  {paymentsQuery.data!.map((p) => (
-                    <li key={p.id} className="flex items-center justify-between py-2 text-sm">
-                      <div>
-                        <p className="font-medium">
-                          {p.amount.toFixed(2)} {p.currency}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {new Date(p.created_at).toLocaleDateString(i18n.language)}
-                        </p>
-                      </div>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                          p.status === "success"
-                            ? "bg-emerald-100 text-emerald-700"
-                            : p.status === "pending"
-                              ? "bg-amber-100 text-amber-700"
-                              : "bg-gray-100 text-gray-600"
-                        }`}
-                      >
-                        {p.status}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
+                {paymentsQuery.isLoading ? (
+                  <div className="space-y-2">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <Skeleton key={i} className="h-10 w-full rounded-lg" />
+                    ))}
+                  </div>
+                ) : (paymentsQuery.data?.length ?? 0) === 0 ? (
+                  <p className="py-4 text-center text-sm text-gray-500">
+                    {t("dashboard.noPayments")}
+                  </p>
+                ) : (
+                  <ul className="divide-y divide-gray-100">
+                    {paymentsQuery.data!.map((p) => (
+                      <li key={p.id} className="flex items-center justify-between py-2 text-sm">
+                        <div>
+                          <p className="font-medium">
+                            {p.amount.toFixed(2)} {p.currency}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(p.created_at).toLocaleDateString(i18n.language)}
+                          </p>
+                        </div>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                            p.status === "success"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : p.status === "pending"
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {p.status}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
             )}
 
-          {/* Quick links */}
-          {isWidgetEnabled("quick_links") && (
-<section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
-  <h3 className="mb-3 text-sm font-semibold">{t("dashboard.quickLinks")}</h3>
-  <div className="grid grid-cols-2 gap-2">
-    {[
-      { to: "/dashboard/profile", icon: User, label: t("nav.profile") },
-      { to: "/dashboard/settings", icon: Settings, label: t("nav.settings") },
-      { to: "/dashboard/security", icon: Shield, label: t("nav.security") },
-      ...(rewardsEnabled ? [{ to: "/dashboard/rewards" as const, icon: Gift, label: t("nav.rewards") }] : []),
-      ...(advertisingEnabled
-        ? [{ to: "/dashboard/advertising" as const, icon: Megaphone, label: t("nav.advertising") }]
-        : []),
-      { to: "/dashboard/help", icon: HelpCircle, label: t("nav.help") },
-    ].map((q) => (
-      <Link
-        key={q.label}
-        to={q.to}
-        className="flex items-center gap-2 rounded-xl border border-gray-100 p-3 text-xs font-medium text-gray-700 transition hover:border-gray-200 hover:bg-gray-50"
-      >
-        <q.icon className="h-4 w-4 text-[#1D6BF3]" />
-        {q.label}
-        <ChevronRight className="ml-auto h-3 w-3 text-gray-400" />
-      </Link>
-    ))}
-  </div>
-</section>
-          )}
+            {/* Quick links */}
+            {isWidgetEnabled("quick_links") && (
+              <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
+                <h3 className="mb-3 text-sm font-semibold">{t("dashboard.quickLinks")}</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { to: "/dashboard/profile", icon: User, label: t("nav.profile") },
+                    { to: "/dashboard/settings", icon: Settings, label: t("nav.settings") },
+                    { to: "/dashboard/security", icon: Shield, label: t("nav.security") },
+                    ...(rewardsEnabled
+                      ? [{ to: "/dashboard/rewards" as const, icon: Gift, label: t("nav.rewards") }]
+                      : []),
+                    ...(advertisingEnabled
+                      ? [
+                          {
+                            to: "/dashboard/advertising" as const,
+                            icon: Megaphone,
+                            label: t("nav.advertising"),
+                          },
+                        ]
+                      : []),
+                    { to: "/dashboard/help", icon: HelpCircle, label: t("nav.help") },
+                  ].map((q) => (
+                    <Link
+                      key={q.label}
+                      to={q.to}
+                      className="flex min-w-0 items-center gap-2 rounded-xl border border-gray-100 p-3 text-xs font-medium text-gray-700 transition hover:border-gray-200 hover:bg-gray-50"
+                    >
+                      <q.icon className="h-4 w-4 shrink-0 text-[#1D6BF3]" />
+                      <span className="truncate">{q.label}</span>
+                      <ChevronRight className="ml-auto h-3 w-3 shrink-0 text-gray-400" />
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
 
-{isWidgetEnabled("share_and_invite") && (
-<ShareAndInvite
-  username={profile?.username ?? null}
-  firstName={profile?.first_name ?? null}
-  lastName={profile?.last_name ?? null}
-/>
-)}
+            {isWidgetEnabled("share_and_invite") && (
+              <ShareAndInvite
+                username={profile?.username ?? null}
+                firstName={profile?.first_name ?? null}
+                lastName={profile?.last_name ?? null}
+              />
+            )}
           </div>
 
           {/* Footer */}
           <footer className="lg:col-span-3">
             <div className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-gray-100 bg-white px-6 py-4 text-xs text-gray-500 sm:flex-row">
-              <p>© {new Date().getFullYear()} Core Platform · {t("dashboard.footerRights")}</p>
-              <div className="flex items-center gap-4">
+              <p className="text-center">
+                © {new Date().getFullYear()} Core Platform · {t("dashboard.footerRights")}
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-4">
                 <span className="flex items-center gap-1">
                   <Lock className="h-3 w-3 text-emerald-500" />
                   {t("dashboard.trustSecure")}
