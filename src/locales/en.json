@@ -283,6 +283,8 @@
     "lifetimePoints": "Lifetime Points",
     "level": "Level",
     "verifiedReferrals": "Verified Premium Referrals",
+    "pointsByApp": "Points by application",
+    "pointsByAppCore": "Core Platform",
     "achievements": "Achievements",
     "noAchievements": "No achievements yet.",
     "availableRewards": "Available Rewards",
@@ -497,7 +499,12 @@
       "addCondition": "Add condition",
       "invalidParams": "Params must be valid JSON",
       "noConditions": "No conditions — the rule always applies.",
-      "versionLabel": "v{{version}}"
+      "versionLabel": "v{{version}}",
+      "analyticsTitle": "Analytics",
+      "analyticsSinceDays": "Since (days)",
+      "analyticsByEvent": "Most-rewarded events",
+      "analyticsTopEarners": "Top earners",
+      "analyticsEmpty": "No data for this period."
     },
     "trials": {
       "title": "Promotional Trials",

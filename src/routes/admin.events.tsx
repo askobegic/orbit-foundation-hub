@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getMyIsAdmin } from "@/lib/admin.functions";
 import {
   adminDeleteEventRuleCondition,
+  adminGetEventAnalytics,
   adminListApplicationEvents,
   adminListEventDefinitions,
   adminListEventRuleConditions,
@@ -102,6 +103,8 @@ function AdminEvents() {
             <RewardRulesSection appId={appId} />
           </>
         )}
+
+        <AnalyticsSection appId={appId || null} />
       </div>
     </main>
   );
@@ -553,5 +556,68 @@ function ConditionsEditor({ ruleId }: { ruleId: string }) {
         </button>
       </div>
     </div>
+  );
+}
+
+function AnalyticsSection({ appId }: { appId: string | null }) {
+  const { t } = useTranslation();
+  const analyticsFn = useServerFn(adminGetEventAnalytics);
+  const [sinceDays, setSinceDays] = useState(30);
+  const q = useQuery({
+    queryKey: ["admin-event-analytics", appId, sinceDays],
+    queryFn: () => analyticsFn({ data: { appId, sinceDays } }),
+  });
+
+  return (
+    <Card title={t("admin.events.analyticsTitle")}>
+      <label className="text-xs">
+        {t("admin.events.analyticsSinceDays")}
+        <input
+          type="number"
+          min={1}
+          max={365}
+          value={sinceDays}
+          onChange={(e) => setSinceDays(Number(e.target.value) || 30)}
+          className="mt-1 block w-24 rounded-lg border border-gray-200 px-2 py-1 text-sm"
+        />
+      </label>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase text-gray-500">
+            {t("admin.events.analyticsByEvent")}
+          </p>
+          <ul className="divide-y divide-gray-100 text-sm">
+            {(q.data?.byEvent ?? []).map((r) => (
+              <li key={r.eventKey} className="flex items-center justify-between gap-2 py-1.5">
+                <span className="min-w-0 flex-1 truncate">{r.eventKey}</span>
+                <span className="shrink-0 text-gray-500">
+                  {r.executionCount}× · {r.totalPoints} pts
+                </span>
+              </li>
+            ))}
+            {(q.data?.byEvent ?? []).length === 0 && (
+              <p className="py-1.5 text-sm text-gray-500">{t("admin.events.analyticsEmpty")}</p>
+            )}
+          </ul>
+        </div>
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase text-gray-500">
+            {t("admin.events.analyticsTopEarners")}
+          </p>
+          <ul className="divide-y divide-gray-100 text-sm">
+            {(q.data?.topEarners ?? []).map((r) => (
+              <li key={r.userId} className="flex items-center justify-between gap-2 py-1.5">
+                <span className="min-w-0 flex-1 truncate">{r.name ?? r.username ?? r.userId}</span>
+                <span className="shrink-0 text-gray-500">{r.totalPoints} pts</span>
+              </li>
+            ))}
+            {(q.data?.topEarners ?? []).length === 0 && (
+              <p className="py-1.5 text-sm text-gray-500">{t("admin.events.analyticsEmpty")}</p>
+            )}
+          </ul>
+        </div>
+      </div>
+    </Card>
   );
 }

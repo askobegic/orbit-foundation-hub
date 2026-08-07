@@ -2518,6 +2518,21 @@ export type Database = {
       }
     }
     Functions: {
+      event_analytics_by_event: {
+        Args: { _app_id: string; _since: string }
+        Returns: {
+          event_key: string
+          execution_count: number
+          total_points: number
+        }[]
+      }
+      event_analytics_top_earners: {
+        Args: { _app_id: string; _limit?: number; _since: string }
+        Returns: {
+          total_points: number
+          user_id: string
+        }[]
+      }
       get_premium_application_ids: {
         Args: { _user_id: string }
         Returns: string[]

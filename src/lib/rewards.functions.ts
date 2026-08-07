@@ -93,6 +93,33 @@ export const getRewardsMe = createServerFn({ method: "POST" })
 
     const verifiedReferralsCount = verifiedReferrals ?? 0;
 
+    // Global Points, broken down per application (Priority 12 Phase 5) --
+    // a read-only aggregation over the same source_app_id column every
+    // grant has always recorded, not a new balance concept: rewardPoints
+    // above remains the one global, spendable total. Bounded to this
+    // caller's own ledger, so grouping in JS (rather than a DB-side
+    // aggregate function, which the cross-user admin analytics below
+    // need instead) is safe and avoids a second RPC round-trip.
+    const { data: ledgerByApp } = await context.supabase
+      .from("reward_ledger")
+      .select("source_app_id, points")
+      .eq("user_id", context.userId);
+    const pointsByAppId = new Map<string | null, number>();
+    for (const row of ledgerByApp ?? []) {
+      const key = row.source_app_id;
+      pointsByAppId.set(key, (pointsByAppId.get(key) ?? 0) + row.points);
+    }
+    const appIds = [...pointsByAppId.keys()].filter((id): id is string => id !== null);
+    const { data: appRows } = appIds.length
+      ? await context.supabase.from("applications").select("id, name").in("id", appIds)
+      : { data: [] };
+    const appNameById = new Map((appRows ?? []).map((a) => [a.id, a.name]));
+    const pointsByApp = [...pointsByAppId.entries()].map(([appId, points]) => ({
+      appId,
+      appName: appId ? (appNameById.get(appId) ?? null) : "core",
+      points,
+    }));
+
     // Dependency validation (adjustment, Priority 8.3 follow-up): a
     // catalog item with requires_capability set is only shown when that
     // capability is enabled for the caller's current application. With no
@@ -107,6 +134,7 @@ export const getRewardsMe = createServerFn({ method: "POST" })
     return {
       rewardPoints,
       lifetimePoints,
+      pointsByApp,
       level: levels?.[0]
         ? { key: levels[0].key, label: levels[0].label }
         : { key: "member", label: "Member" },

@@ -391,3 +391,68 @@ export const adminDeleteEventRuleCondition = createServerFn({ method: "POST" })
     });
     return { ok: true };
   });
+
+// ---------- Analytics (Priority 12 Phase 5) ----------
+
+const analyticsSchema = z.object({
+  // null/omitted -- global, across every application.
+  appId: z.string().uuid().nullable().optional(),
+  sinceDays: z.number().int().min(1).max(365).default(30),
+});
+
+// Cross-user aggregation (most-rewarded events, top earners) can't be
+// expressed through PostgREST's query builder -- see the Phase 5
+// migration's event_analytics_by_event/event_analytics_top_earners, which
+// are service_role-only and only ever called from here, after assertAdmin.
+export const adminGetEventAnalytics = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => analyticsSchema.parse(raw))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const supabaseAdmin = await adminClient();
+    const since = new Date(Date.now() - data.sinceDays * 24 * 60 * 60 * 1000).toISOString();
+    // The generated RPC arg types don't reflect that the SQL parameter
+    // accepts NULL (uuid columns are always nullable in Postgres; the type
+    // generator just mirrors the declared type) -- cast, don't coerce to
+    // "" or a sentinel value.
+    const appId = (data.appId ?? null) as string;
+
+    const [{ data: byEvent, error: byEventError }, { data: topEarners, error: topEarnersError }] =
+      await Promise.all([
+        supabaseAdmin.rpc("event_analytics_by_event", { _app_id: appId, _since: since }),
+        supabaseAdmin.rpc("event_analytics_top_earners", {
+          _app_id: appId,
+          _since: since,
+          _limit: 10,
+        }),
+      ]);
+    if (byEventError) throw new Error(byEventError.message);
+    if (topEarnersError) throw new Error(topEarnersError.message);
+
+    const userIds = (topEarners ?? []).map((r) => r.user_id);
+    const { data: profiles } = userIds.length
+      ? await supabaseAdmin
+          .from("profiles")
+          .select("id, username, first_name, last_name")
+          .in("id", userIds)
+      : { data: [] };
+    const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
+
+    return {
+      byEvent: (byEvent ?? []).map((r) => ({
+        eventKey: r.event_key,
+        executionCount: r.execution_count,
+        totalPoints: r.total_points,
+      })),
+      topEarners: (topEarners ?? []).map((r) => {
+        const profile = profileById.get(r.user_id);
+        const name = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ");
+        return {
+          userId: r.user_id,
+          totalPoints: r.total_points,
+          username: profile?.username ?? null,
+          name: name || null,
+        };
+      }),
+    };
+  });

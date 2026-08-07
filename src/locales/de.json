@@ -283,6 +283,8 @@
     "lifetimePoints": "Punkte insgesamt",
     "level": "Stufe",
     "verifiedReferrals": "Bestätigte Premium-Empfehlungen",
+    "pointsByApp": "Punkte nach Anwendung",
+    "pointsByAppCore": "Core Platform",
     "achievements": "Erfolge",
     "noAchievements": "Noch keine Erfolge.",
     "availableRewards": "Verfügbare Prämien",
@@ -497,7 +499,12 @@
       "addCondition": "Bedingung hinzufügen",
       "invalidParams": "Parameter müssen gültiges JSON sein",
       "noConditions": "Keine Bedingungen — die Regel gilt immer.",
-      "versionLabel": "v{{version}}"
+      "versionLabel": "v{{version}}",
+      "analyticsTitle": "Analysen",
+      "analyticsSinceDays": "Seit (Tage)",
+      "analyticsByEvent": "Meistbelohnte Ereignisse",
+      "analyticsTopEarners": "Top-Verdiener",
+      "analyticsEmpty": "Keine Daten für diesen Zeitraum."
     },
     "trials": {
       "title": "Werbe-Testzeiträume",

@@ -117,6 +117,25 @@ function RewardsPage() {
               </div>
             </section>
 
+            {data.pointsByApp.length > 1 && (
+              <section className="mt-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
+                <p className="mb-2 text-xs font-semibold uppercase text-gray-500">
+                  {t("rewards.pointsByApp")}
+                </p>
+                <ul className="divide-y divide-gray-100">
+                  {data.pointsByApp.map((a) => (
+                    <li
+                      key={a.appId ?? "core"}
+                      className="flex items-center justify-between py-1.5 text-sm"
+                    >
+                      <span>{a.appName === "core" ? t("rewards.pointsByAppCore") : a.appName}</span>
+                      <span className="font-medium">{a.points}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
             <section className="mt-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
               <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
                 <Star className="h-4 w-4 text-amber-500" />
@@ -132,7 +151,9 @@ function RewardsPage() {
                       className="rounded-xl border border-gray-100 bg-gray-50/60 p-3 text-sm"
                     >
                       <p className="font-medium text-gray-800">{a.label}</p>
-                      {a.description && <p className="mt-0.5 text-xs text-gray-500">{a.description}</p>}
+                      {a.description && (
+                        <p className="mt-0.5 text-xs text-gray-500">{a.description}</p>
+                      )}
                       <p className="mt-1 text-[11px] text-gray-400">
                         {new Date(a.earnedAt).toLocaleDateString(i18n.language)}
                       </p>
@@ -143,7 +164,9 @@ function RewardsPage() {
             </section>
 
             <section className="mt-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
-              <h2 className="text-sm font-semibold text-gray-900">{t("rewards.availableRewards")}</h2>
+              <h2 className="text-sm font-semibold text-gray-900">
+                {t("rewards.availableRewards")}
+              </h2>
               {data.catalog.length === 0 ? (
                 <p className="mt-2 text-sm text-gray-500">{t("rewards.noRewards")}</p>
               ) : (
@@ -152,9 +175,7 @@ function RewardsPage() {
                     <li key={c.key} className="flex items-center justify-between gap-3 py-3">
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-gray-800">{c.label}</p>
-                        {c.description && (
-                          <p className="text-xs text-gray-500">{c.description}</p>
-                        )}
+                        {c.description && <p className="text-xs text-gray-500">{c.description}</p>}
                         <p className="mt-0.5 text-xs text-gray-400">
                           {t("rewards.pointsCost", { points: c.pointsCost })}
                           {c.verifiedReferralsRequired > 0 &&

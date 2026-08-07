@@ -283,6 +283,8 @@
     "lifetimePoints": "Ukupni bodovi",
     "level": "Nivo",
     "verifiedReferrals": "Potvrđene premium preporuke",
+    "pointsByApp": "Bodovi po aplikaciji",
+    "pointsByAppCore": "Core Platform",
     "achievements": "Postignuća",
     "noAchievements": "Još nemate postignuća.",
     "availableRewards": "Dostupne nagrade",
@@ -497,7 +499,12 @@
       "addCondition": "Dodaj uslov",
       "invalidParams": "Parametri moraju biti validan JSON",
       "noConditions": "Nema uslova — pravilo se uvijek primjenjuje.",
-      "versionLabel": "v{{version}}"
+      "versionLabel": "v{{version}}",
+      "analyticsTitle": "Analitika",
+      "analyticsSinceDays": "Od (dana)",
+      "analyticsByEvent": "Najnagrađivaniji događaji",
+      "analyticsTopEarners": "Najbolji korisnici",
+      "analyticsEmpty": "Nema podataka za ovaj period."
     },
     "trials": {
       "title": "Promotivni probni periodi",
