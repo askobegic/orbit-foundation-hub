@@ -471,6 +471,48 @@ export type Database = {
           },
         ]
       }
+      application_events: {
+        Row: {
+          app_id: string
+          created_at: string
+          enabled: boolean
+          event_key: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          app_id: string
+          created_at?: string
+          enabled?: boolean
+          event_key: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          app_id?: string
+          created_at?: string
+          enabled?: boolean
+          event_key?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_events_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_events_event_key_fkey"
+            columns: ["event_key"]
+            isOneToOne: false
+            referencedRelation: "event_definitions"
+            referencedColumns: ["event_key"]
+          },
+        ]
+      }
       applications: {
         Row: {
           cover_image_url: string | null
@@ -772,6 +814,239 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "capability_definitions"
             referencedColumns: ["key"]
+          },
+        ]
+      }
+      event_abuse_flags: {
+        Row: {
+          app_id: string | null
+          created_at: string
+          event_key: string | null
+          id: string
+          metadata: Json
+          reason: string
+          reviewed: boolean
+          reviewed_at: string | null
+          reviewed_by: string | null
+          user_id: string
+        }
+        Insert: {
+          app_id?: string | null
+          created_at?: string
+          event_key?: string | null
+          id?: string
+          metadata?: Json
+          reason: string
+          reviewed?: boolean
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          user_id: string
+        }
+        Update: {
+          app_id?: string | null
+          created_at?: string
+          event_key?: string | null
+          id?: string
+          metadata?: Json
+          reason?: string
+          reviewed?: boolean
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_abuse_flags_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_abuse_flags_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_abuse_flags_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_abuse_flags_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_abuse_flags_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_definitions: {
+        Row: {
+          archived: boolean
+          category: string | null
+          created_at: string
+          description: string | null
+          display_name: string
+          display_order: number
+          enabled: boolean
+          event_key: string
+          icon: string | null
+          id: string
+          is_system: boolean
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          archived?: boolean
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          display_name: string
+          display_order?: number
+          enabled?: boolean
+          event_key: string
+          icon?: string | null
+          id?: string
+          is_system?: boolean
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          archived?: boolean
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          display_name?: string
+          display_order?: number
+          enabled?: boolean
+          event_key?: string
+          icon?: string | null
+          id?: string
+          is_system?: boolean
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
+      event_rule_conditions: {
+        Row: {
+          condition_type: string
+          created_at: string
+          display_order: number
+          id: string
+          params: Json
+          rule_id: string
+        }
+        Insert: {
+          condition_type: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          params?: Json
+          rule_id: string
+        }
+        Update: {
+          condition_type?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          params?: Json
+          rule_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_rule_conditions_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "event_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_rules: {
+        Row: {
+          app_id: string
+          archived: boolean
+          cooldown_seconds: number
+          created_at: string
+          daily_limit: number | null
+          display_order: number
+          enabled: boolean
+          event_key: string
+          id: string
+          lifetime_points: number
+          max_executions: number | null
+          monthly_limit: number | null
+          points: number
+          priority: number
+          repeatable: boolean
+          updated_at: string
+          weekly_limit: number | null
+        }
+        Insert: {
+          app_id: string
+          archived?: boolean
+          cooldown_seconds?: number
+          created_at?: string
+          daily_limit?: number | null
+          display_order?: number
+          enabled?: boolean
+          event_key: string
+          id?: string
+          lifetime_points?: number
+          max_executions?: number | null
+          monthly_limit?: number | null
+          points?: number
+          priority?: number
+          repeatable?: boolean
+          updated_at?: string
+          weekly_limit?: number | null
+        }
+        Update: {
+          app_id?: string
+          archived?: boolean
+          cooldown_seconds?: number
+          created_at?: string
+          daily_limit?: number | null
+          display_order?: number
+          enabled?: boolean
+          event_key?: string
+          id?: string
+          lifetime_points?: number
+          max_executions?: number | null
+          monthly_limit?: number | null
+          points?: number
+          priority?: number
+          repeatable?: boolean
+          updated_at?: string
+          weekly_limit?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_rules_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_rules_event_key_fkey"
+            columns: ["event_key"]
+            isOneToOne: false
+            referencedRelation: "event_definitions"
+            referencedColumns: ["event_key"]
           },
         ]
       }
@@ -1514,8 +1789,13 @@ export type Database = {
       reward_ledger: {
         Row: {
           action: string
+          actor_user_id: string | null
           created_at: string
+          dedupe_key: string | null
           id: string
+          lifetime_points: number
+          metadata: Json
+          origin: string
           points: number
           resource_id: string | null
           resource_type: string | null
@@ -1524,8 +1804,13 @@ export type Database = {
         }
         Insert: {
           action: string
+          actor_user_id?: string | null
           created_at?: string
+          dedupe_key?: string | null
           id?: string
+          lifetime_points?: number
+          metadata?: Json
+          origin?: string
           points: number
           resource_id?: string | null
           resource_type?: string | null
@@ -1534,8 +1819,13 @@ export type Database = {
         }
         Update: {
           action?: string
+          actor_user_id?: string | null
           created_at?: string
+          dedupe_key?: string | null
           id?: string
+          lifetime_points?: number
+          metadata?: Json
+          origin?: string
           points?: number
           resource_id?: string | null
           resource_type?: string | null
@@ -1543,6 +1833,20 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "reward_ledger_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reward_ledger_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "reward_ledger_source_app_id_fkey"
             columns: ["source_app_id"]

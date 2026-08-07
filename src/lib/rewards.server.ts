@@ -14,6 +14,7 @@
 // configured application action) still gets a reward_ledger row for full
 // auditability, it just carries 0 points.
 import { hasAnyActivePremium } from "@/lib/premium";
+import type { Json } from "@/integrations/supabase/types";
 
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -26,6 +27,16 @@ export async function grantRewardAction(params: {
   resourceType?: string | null;
   resourceId?: string | null;
   sourceAppId?: string | null;
+  // Priority 12 (Universal Event & Rewards Engine) additions -- all
+  // optional, all defaulting to the exact behavior every existing call
+  // site (webhooks, onboarding, promotePendingReferralVerifications)
+  // already gets today. Only the new recordEvent() pipeline (Phase 3)
+  // passes these explicitly.
+  actorUserId?: string | null; // defaults to userId (actor === recipient, today's implicit behavior)
+  lifetimePoints?: number; // defaults to the resolved `points` value
+  origin?: "core" | "application" | "api" | "n8n" | "manual_admin" | "system"; // defaults to "core"
+  metadata?: Record<string, unknown>; // defaults to {}
+  dedupeKey?: string | null;
 }): Promise<{ granted: boolean; points: number; reason?: string }> {
   const supabaseAdmin = await admin();
 
@@ -80,6 +91,11 @@ export async function grantRewardAction(params: {
     resource_type: params.resourceType ?? null,
     resource_id: params.resourceId ?? null,
     source_app_id: params.sourceAppId ?? null,
+    actor_user_id: params.actorUserId ?? params.userId,
+    lifetime_points: params.lifetimePoints ?? points,
+    origin: params.origin ?? "core",
+    metadata: (params.metadata ?? {}) as Json,
+    dedupe_key: params.dedupeKey ?? null,
   });
   if (insertError) {
     console.error("grantRewardAction: ledger insert failed", insertError);

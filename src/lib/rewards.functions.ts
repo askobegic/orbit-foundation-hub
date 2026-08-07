@@ -14,12 +14,19 @@ import { grantRewardAction, promotePendingReferralVerifications } from "@/lib/re
 
 async function computeBalance(userId: string, supabase: Awaited<ReturnType<typeof adminClient>>) {
   const [{ data: ledgerRows }, { data: redemptionRows }] = await Promise.all([
-    supabase.from("reward_ledger").select("points").eq("user_id", userId),
+    supabase.from("reward_ledger").select("points, lifetime_points").eq("user_id", userId),
     supabase.from("reward_redemptions").select("points_spent").eq("user_id", userId),
   ]);
-  const lifetimePoints = (ledgerRows ?? []).reduce((sum, r) => sum + r.points, 0);
+  // Priority 12: Lifetime Points and Reward Points are independent
+  // columns as of the Phase 1 migration (lifetime_points defaults equal
+  // to points for every row, so this is unchanged for any user not
+  // touched by a rule/adjustment that deliberately diverges them).
+  // Reward (spendable) Points still derive from `points`, exactly as
+  // before -- only the Lifetime figure's source column changed.
+  const spendablePoints = (ledgerRows ?? []).reduce((sum, r) => sum + r.points, 0);
+  const lifetimePoints = (ledgerRows ?? []).reduce((sum, r) => sum + r.lifetime_points, 0);
   const redeemedPoints = (redemptionRows ?? []).reduce((sum, r) => sum + r.points_spent, 0);
-  return { lifetimePoints, rewardPoints: lifetimePoints - redeemedPoints };
+  return { lifetimePoints, rewardPoints: spendablePoints - redeemedPoints };
 }
 
 async function adminClient() {
