@@ -1,0 +1,52 @@
+// API_CONTRACT.md §13 -- POST /v1/events (Priority 12 Phase 3). The one
+// endpoint every application calls to report an event; recordEvent()
+// (events.server.ts) resolves the reward, if any -- the calling application
+// never calculates points itself.
+import { createFileRoute } from "@tanstack/react-router";
+import { z } from "zod";
+
+import { recordEvent } from "@/lib/events.server";
+import { apiData, parseBody, readJsonBody, withRoute } from "@/lib/v1/http.server";
+import { requireUserContext } from "@/lib/v1/context.server";
+
+const bodySchema = z.object({
+  eventKey: z.string().trim().min(1).max(60),
+  // Who the event is about, if different from the authenticated caller
+  // (e.g. comment_received rewards the content owner, not the commenter).
+  // Defaults to the caller.
+  recipientUserId: z.string().uuid().optional(),
+  resourceType: z.string().trim().max(60).nullable().optional(),
+  resourceId: z.string().trim().max(200).nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).default({}),
+  // Application-supplied idempotency key -- see idx_reward_ledger_dedupe.
+  // A retried submission with the same key never grants points twice.
+  dedupeKey: z.string().trim().max(200).nullable().optional(),
+});
+
+export const Route = createFileRoute("/v1/events/")({
+  server: {
+    handlers: {
+      POST: withRoute(async ({ request }) => {
+        // The caller's own JWT is the only source of both "who is acting"
+        // (sub) and "which application" (azp) -- API_CONTRACT.md §3.3.
+        // Neither is ever accepted from the request body.
+        const ctx = await requireUserContext(request);
+        const data = parseBody(bodySchema, await readJsonBody(request));
+
+        const result = await recordEvent({
+          appId: ctx.appId,
+          eventKey: data.eventKey,
+          actorUserId: ctx.userId,
+          recipientUserId: data.recipientUserId ?? ctx.userId,
+          resourceType: data.resourceType ?? null,
+          resourceId: data.resourceId ?? null,
+          metadata: data.metadata,
+          dedupeKey: data.dedupeKey ?? null,
+          origin: "api",
+        });
+
+        return apiData(result);
+      }),
+    },
+  },
+});

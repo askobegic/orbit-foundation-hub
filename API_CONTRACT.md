@@ -682,6 +682,27 @@ All under `/v1/admin/rewards/...`, all standard soft-lifecycle registry CRUD (li
 
 Every mutating endpoint above accepts an optional `reason` field, audited via the same shared audit mechanism as every other admin action (`PROJECT_KNOWLEDGE.md` → Audit Strategy).
 
+### Universal Event Engine (Priority 12)
+
+Extends Rewards & Loyalty rather than replacing it — `reward_action_rules`/`reward_ledger` remain the sole path for CORE-internal actions (webhooks, onboarding, admin grants). Schema reference: `event_definitions`/`application_events`/`event_rules`/`event_rule_conditions`/`event_abuse_flags`. Business rules and the full condition-type list: `PROJECT_KNOWLEDGE.md` → Rewards & Loyalty / Universal Event Engine.
+
+### `POST /v1/events`
+The one endpoint every application calls to report an event — the calling application never calculates points itself; CORE resolves the reward (if any) from the admin-configured Event Registry, Application Mapping, and Reward Rule Engine.
+- **Auth:** user. `azp` (the calling application) and `sub` (the acting user) are taken from the caller's own JWT only, never from the request body.
+- **Request body:** `{ "eventKey": "photo_liked", "recipientUserId": "...", "resourceType": "photo", "resourceId": "...", "metadata": {}, "dedupeKey": "..." }` — `recipientUserId` defaults to the caller (the common case where actor and recipient are the same person); set it explicitly for events like `comment_received` where the reward belongs to the content owner, not the caller. `dedupeKey` makes a retried submission idempotent (unique per app + event).
+- **Response 200:** `{ "data": { "granted": true, "points": 5, "lifetimePoints": 5, "reason": null } }` — `granted: false` is not an error; it's the expected outcome when the event isn't configured for this application, a cooldown/limit is active, or a rule condition didn't pass (`reason` explains which).
+- **Errors:** `UNAUTHORIZED`, `VALIDATION_ERROR`.
+- Every submission is recorded in `reward_ledger` regardless of outcome (0 points when unconfigured/rejected), for full auditability — the same precedent as an unrecognized CORE-internal action.
+
+### Admin registry endpoints (Universal Event Engine)
+
+Same soft-lifecycle registry CRUD shape as the Admin registry endpoints above:
+
+- `GET /v1/admin/events/definitions` / `POST .../definitions` / `PATCH .../definitions/{eventKey}` — `{ eventKey, displayName, description, category, icon, displayOrder, enabled, archived }`. `version` auto-increments on every update (observability only).
+- `GET /v1/admin/events/application-mapping?appId=...` / `PUT .../application-mapping` — `{ appId, eventKey, enabled }`. Fails closed: no row means the event is not live for that application.
+- `GET /v1/admin/events/rules?appId=...` / `POST .../rules` / `PATCH .../rules/{id}` — `{ appId, eventKey, points, lifetimePoints, cooldownSeconds, maxExecutions, dailyLimit, weeklyLimit, monthlyLimit, priority, repeatable, displayOrder, enabled, archived }`.
+- `GET /v1/admin/events/rules/{ruleId}/conditions` / `POST .../conditions` / `DELETE .../conditions/{id}` — `{ conditionType, params, displayOrder }`.
+
 ---
 
 ## 14. Advertising

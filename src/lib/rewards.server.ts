@@ -109,7 +109,10 @@ export async function grantRewardAction(params: {
   return { granted: points > 0, points, reason };
 }
 
-async function checkAchievements(userId: string, action: string): Promise<void> {
+// Exported for events.server.ts's recordEvent() pipeline (Priority 12
+// Phase 3) -- an event-driven grant completes the same achievements a
+// CORE-internal action can, since both write the same reward_ledger.
+export async function checkAchievements(userId: string, action: string): Promise<void> {
   const supabaseAdmin = await admin();
   const { data: achievements } = await supabaseAdmin
     .from("reward_achievements")

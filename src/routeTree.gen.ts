@@ -48,6 +48,7 @@ import { Route as V1AuthRefreshRouteImport } from './routes/v1/auth/refresh'
 import { Route as V1AuthSessionRouteImport } from './routes/v1/auth/session'
 import { Route as V1CapabilitiesIndexRouteImport } from './routes/v1/capabilities/index'
 import { Route as V1ConversationsIndexRouteImport } from './routes/v1/conversations/index'
+import { Route as V1EventsIndexRouteImport } from './routes/v1/events/index'
 import { Route as V1MeIndexRouteImport } from './routes/v1/me/index'
 import { Route as V1MeExportRouteImport } from './routes/v1/me/export'
 import { Route as V1MePremiumRouteImport } from './routes/v1/me/premium'
@@ -335,6 +336,11 @@ const V1CapabilitiesIndexRoute = V1CapabilitiesIndexRouteImport.update({
 const V1ConversationsIndexRoute = V1ConversationsIndexRouteImport.update({
   id: '/v1/conversations/',
   path: '/v1/conversations/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1EventsIndexRoute = V1EventsIndexRouteImport.update({
+  id: '/v1/events/',
+  path: '/v1/events/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const V1MeIndexRoute = V1MeIndexRouteImport.update({
@@ -903,6 +909,7 @@ export interface FileRoutesByFullPath {
   '/v1/applications/': typeof V1ApplicationsIndexRoute
   '/v1/capabilities/': typeof V1CapabilitiesIndexRoute
   '/v1/conversations/': typeof V1ConversationsIndexRoute
+  '/v1/events/': typeof V1EventsIndexRoute
   '/v1/me/': typeof V1MeIndexRoute
   '/v1/products/': typeof V1ProductsIndexRoute
   '/v1/share-invite/': typeof V1ShareInviteIndexRoute
@@ -1036,6 +1043,7 @@ export interface FileRoutesByTo {
   '/v1/applications': typeof V1ApplicationsIndexRoute
   '/v1/capabilities': typeof V1CapabilitiesIndexRoute
   '/v1/conversations': typeof V1ConversationsIndexRoute
+  '/v1/events': typeof V1EventsIndexRoute
   '/v1/me': typeof V1MeIndexRoute
   '/v1/products': typeof V1ProductsIndexRoute
   '/v1/share-invite': typeof V1ShareInviteIndexRoute
@@ -1170,6 +1178,7 @@ export interface FileRoutesById {
   '/v1/applications/': typeof V1ApplicationsIndexRoute
   '/v1/capabilities/': typeof V1CapabilitiesIndexRoute
   '/v1/conversations/': typeof V1ConversationsIndexRoute
+  '/v1/events/': typeof V1EventsIndexRoute
   '/v1/me/': typeof V1MeIndexRoute
   '/v1/products/': typeof V1ProductsIndexRoute
   '/v1/share-invite/': typeof V1ShareInviteIndexRoute
@@ -1305,6 +1314,7 @@ export interface FileRouteTypes {
     | '/v1/applications/'
     | '/v1/capabilities/'
     | '/v1/conversations/'
+    | '/v1/events/'
     | '/v1/me/'
     | '/v1/products/'
     | '/v1/share-invite/'
@@ -1438,6 +1448,7 @@ export interface FileRouteTypes {
     | '/v1/applications'
     | '/v1/capabilities'
     | '/v1/conversations'
+    | '/v1/events'
     | '/v1/me'
     | '/v1/products'
     | '/v1/share-invite'
@@ -1571,6 +1582,7 @@ export interface FileRouteTypes {
     | '/v1/applications/'
     | '/v1/capabilities/'
     | '/v1/conversations/'
+    | '/v1/events/'
     | '/v1/me/'
     | '/v1/products/'
     | '/v1/share-invite/'
@@ -1692,6 +1704,7 @@ export interface RootRouteChildren {
   V1ApplicationsIndexRoute: typeof V1ApplicationsIndexRoute
   V1CapabilitiesIndexRoute: typeof V1CapabilitiesIndexRoute
   V1ConversationsIndexRoute: typeof V1ConversationsIndexRoute
+  V1EventsIndexRoute: typeof V1EventsIndexRoute
   V1MeIndexRoute: typeof V1MeIndexRoute
   V1ProductsIndexRoute: typeof V1ProductsIndexRoute
   V1ShareInviteIndexRoute: typeof V1ShareInviteIndexRoute
@@ -2048,6 +2061,13 @@ declare module '@tanstack/react-router' {
       path: '/v1/conversations'
       fullPath: '/v1/conversations/'
       preLoaderRoute: typeof V1ConversationsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/events/': {
+      id: '/v1/events/'
+      path: '/v1/events'
+      fullPath: '/v1/events/'
+      preLoaderRoute: typeof V1EventsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/v1/me/': {
@@ -2788,6 +2808,7 @@ const rootRouteChildren: RootRouteChildren = {
   V1ApplicationsIndexRoute: V1ApplicationsIndexRoute,
   V1CapabilitiesIndexRoute: V1CapabilitiesIndexRoute,
   V1ConversationsIndexRoute: V1ConversationsIndexRoute,
+  V1EventsIndexRoute: V1EventsIndexRoute,
   V1MeIndexRoute: V1MeIndexRoute,
   V1ProductsIndexRoute: V1ProductsIndexRoute,
   V1ShareInviteIndexRoute: V1ShareInviteIndexRoute,
