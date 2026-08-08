@@ -184,15 +184,15 @@ export function DashboardPage() {
           <div className="flex shrink-0 items-center gap-3">
             <LanguageSwitcher />
             <NotificationBell />
-            <div className="flex items-center gap-2 rounded-full border border-gray-200 bg-white py-1 pl-1 pr-3">
-              <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#1D6BF3] to-[#6366F1] text-xs font-semibold text-white">
+            <div className="flex min-w-0 items-center gap-2 rounded-full border border-gray-200 bg-white py-1 pl-1 pr-3">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#1D6BF3] to-[#6366F1] text-xs font-semibold text-white">
                 {profile?.avatar_url ? (
                   <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
                 ) : (
                   initials.toUpperCase()
                 )}
               </span>
-              <span className="hidden text-sm font-medium sm:inline">
+              <span className="hidden min-w-0 max-w-[160px] truncate text-sm font-medium sm:inline">
                 {fullName || user?.email}
               </span>
             </div>
@@ -228,7 +228,7 @@ export function DashboardPage() {
                       </h2>
                       {profile?.is_verified && (
                         <BadgeCheck
-                          className="h-4 w-4 text-[#1D6BF3]"
+                          className="h-4 w-4 shrink-0 text-[#1D6BF3]"
                           aria-label={t("profile.verified")}
                         />
                       )}
@@ -286,13 +286,13 @@ export function DashboardPage() {
                   <span className="text-xs text-gray-400">{appsQuery.data?.length ?? 0}</span>
                 </div>
                 {appsQuery.isLoading ? (
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {Array.from({ length: 6 }).map((_, i) => (
                       <Skeleton key={i} className="h-20 w-full rounded-xl" />
                     ))}
                   </div>
                 ) : (
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {(appsQuery.data ?? []).map((app) => {
                       // Premium is global (see hasPremium above) -- every
                       // tile reflects the same platform-wide status, not a
@@ -326,7 +326,7 @@ export function DashboardPage() {
                             )}
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2">
-                                <span className="truncate text-sm font-medium text-gray-500">
+                                <span className="min-w-0 truncate text-sm font-medium text-gray-500">
                                   {app.name}
                                 </span>
                                 <span className="shrink-0 rounded-full bg-gray-200 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500">
@@ -342,39 +342,92 @@ export function DashboardPage() {
                           </div>
                         );
                       }
+                      // Shared between both layouts below -- identical markup,
+                      // computed once so the two layouts can never drift apart
+                      // on how the avatar itself renders.
+                      const avatar = app.logo_url ? (
+                        <img
+                          src={app.logo_url}
+                          alt={app.name}
+                          width={44}
+                          height={44}
+                          className={`h-11 w-11 shrink-0 rounded-xl object-cover ${
+                            isPremium ? "" : "grayscale opacity-70"
+                          }`}
+                        />
+                      ) : (
+                        <div
+                          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-white ${
+                            isPremium ? "" : "grayscale opacity-70"
+                          }`}
+                          style={{ backgroundColor: app.primary_color }}
+                        >
+                          {app.name.slice(0, 1)}
+                        </div>
+                      );
+                      const badge = (
+                        <span
+                          className={`w-fit shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                            isPremium
+                              ? "bg-gradient-to-r from-[#8B5CF6] to-[#6366F1] text-white"
+                              : "bg-gray-200 text-gray-500"
+                          }`}
+                        >
+                          {isPremium ? t("dashboard.premium") : t("dashboard.standard")}
+                        </span>
+                      );
+                      const descriptionText =
+                        isPremium && expiry
+                          ? `${t("dashboard.validUntil")}: ${new Date(expiry).toLocaleDateString(i18n.language)}`
+                          : desc;
+                      const upgradeLink = !isPremium && (
+                        <Link
+                          to="/pricing"
+                          search={{ app: app.slug }}
+                          className="rounded-lg bg-gradient-to-r from-[#8B5CF6] to-[#6366F1] px-2.5 py-1 text-[11px] font-semibold text-white hover:opacity-90"
+                        >
+                          {t("dashboard.upgrade")}
+                        </Link>
+                      );
+                      const externalLink = app.domain && (
+                        <a
+                          href={`https://${app.domain}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          aria-label={t("dashboard.openApp")}
+                          className={`rounded-lg p-2 hover:bg-gray-50 ${
+                            isPremium
+                              ? "text-[#1D6BF3] hover:text-[#1858cf]"
+                              : "text-gray-300 hover:text-gray-500"
+                          }`}
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      );
+
                       return (
                         <div
                           key={app.id}
-                          className={`flex items-center gap-3 rounded-xl border p-3 transition hover:shadow-sm ${
+                          className={`rounded-xl border p-3 transition hover:shadow-sm ${
                             isPremium
                               ? "border-purple-200 bg-gradient-to-br from-purple-50/60 to-white hover:border-purple-300"
                               : "border-gray-100 bg-gray-50/40 hover:border-gray-200"
                           }`}
                         >
-                          {app.logo_url ? (
-                            <img
-                              src={app.logo_url}
-                              alt={app.name}
-                              width={44}
-                              height={44}
-                              className={`h-11 w-11 shrink-0 rounded-xl object-cover ${
-                                isPremium ? "" : "grayscale opacity-70"
-                              }`}
-                            />
-                          ) : (
-                            <div
-                              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-white ${
-                                isPremium ? "" : "grayscale opacity-70"
-                              }`}
-                              style={{ backgroundColor: app.primary_color }}
-                            >
-                              {app.name.slice(0, 1)}
-                            </div>
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
+                          {/* Mobile (<640px): a dedicated stacked layout. The
+                              single-row desktop layout has no horizontal room
+                              left for the action buttons once a real app name,
+                              badge, and description all share it -- rather
+                              than fight that with min-width tricks, mobile
+                              gets its own structure: logo, name, badge, and
+                              the full (non-truncated) description each on
+                              their own line, then the actions full-width
+                              below a divider. */}
+                          <div className="flex flex-col gap-2 sm:hidden">
+                            <div className="flex items-center gap-3">
+                              {avatar}
                               <span
-                                className={`truncate text-sm ${
+                                className={`min-w-0 flex-1 truncate text-sm ${
                                   isPremium
                                     ? "font-semibold text-gray-900"
                                     : "font-medium text-gray-500"
@@ -382,51 +435,64 @@ export function DashboardPage() {
                               >
                                 {app.name}
                               </span>
-                              <span
-                                className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
-                                  isPremium
-                                    ? "bg-gradient-to-r from-[#8B5CF6] to-[#6366F1] text-white"
-                                    : "bg-gray-200 text-gray-500"
-                                }`}
-                              >
-                                {isPremium ? t("dashboard.premium") : t("dashboard.standard")}
-                              </span>
                             </div>
+                            {badge}
                             <p
-                              className={`truncate text-xs ${
-                                isPremium ? "text-gray-600" : "text-gray-400"
-                              }`}
+                              className={`text-xs ${isPremium ? "text-gray-600" : "text-gray-400"}`}
                             >
-                              {isPremium && expiry
-                                ? `${t("dashboard.validUntil")}: ${new Date(expiry).toLocaleDateString(i18n.language)}`
-                                : desc}
+                              {descriptionText}
                             </p>
-                          </div>
-                          <div className="flex shrink-0 items-center gap-1">
-                            {!isPremium && (
-                              <Link
-                                to="/pricing"
-                                search={{ app: app.slug }}
-                                className="rounded-lg bg-gradient-to-r from-[#8B5CF6] to-[#6366F1] px-2.5 py-1 text-[11px] font-semibold text-white hover:opacity-90"
-                              >
-                                {t("dashboard.upgrade")}
-                              </Link>
+                            {(upgradeLink || externalLink) && (
+                              <div className="flex flex-col gap-2 border-t border-gray-100 pt-3">
+                                {/* Full-width mobile CTA -- a separate node
+                                    from the shared `upgradeLink` (used
+                                    as-is in the desktop layout below),
+                                    since only this layout needs it full-width. */}
+                                {upgradeLink && (
+                                  <Link
+                                    to="/pricing"
+                                    search={{ app: app.slug }}
+                                    className="w-full rounded-lg bg-gradient-to-r from-[#8B5CF6] to-[#6366F1] px-2.5 py-2 text-center text-xs font-semibold text-white hover:opacity-90"
+                                  >
+                                    {t("dashboard.upgrade")}
+                                  </Link>
+                                )}
+                                {externalLink && (
+                                  <div className="flex justify-center">{externalLink}</div>
+                                )}
+                              </div>
                             )}
-                            {app.domain && (
-                              <a
-                                href={`https://${app.domain}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                aria-label={t("dashboard.openApp")}
-                                className={`rounded-lg p-2 hover:bg-gray-50 ${
-                                  isPremium
-                                    ? "text-[#1D6BF3] hover:text-[#1858cf]"
-                                    : "text-gray-300 hover:text-gray-500"
+                          </div>
+
+                          {/* Desktop (>=640px): original single-row layout,
+                              unchanged. */}
+                          <div className="hidden items-center gap-3 sm:flex">
+                            {avatar}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`min-w-0 truncate text-sm ${
+                                    isPremium
+                                      ? "font-semibold text-gray-900"
+                                      : "font-medium text-gray-500"
+                                  }`}
+                                >
+                                  {app.name}
+                                </span>
+                                {badge}
+                              </div>
+                              <p
+                                className={`truncate text-xs ${
+                                  isPremium ? "text-gray-600" : "text-gray-400"
                                 }`}
                               >
-                                <ExternalLink className="h-4 w-4" />
-                              </a>
-                            )}
+                                {descriptionText}
+                              </p>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-1">
+                              {upgradeLink}
+                              {externalLink}
+                            </div>
                           </div>
                         </div>
                       );
@@ -561,7 +627,7 @@ export function DashboardPage() {
                       className="flex min-w-0 items-center gap-2 rounded-xl border border-gray-100 p-3 text-xs font-medium text-gray-700 transition hover:border-gray-200 hover:bg-gray-50"
                     >
                       <q.icon className="h-4 w-4 shrink-0 text-[#1D6BF3]" />
-                      <span className="truncate">{q.label}</span>
+                      <span className="min-w-0 truncate">{q.label}</span>
                       <ChevronRight className="ml-auto h-3 w-3 shrink-0 text-gray-400" />
                     </Link>
                   ))}
@@ -640,8 +706,8 @@ function Sidebar({
                 "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium bg-[#1D6BF3]/10 text-[#1D6BF3]",
             }}
           >
-            <item.icon className="h-4 w-4" />
-            {item.label}
+            <item.icon className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 truncate">{item.label}</span>
           </Link>
         ))}
       </nav>
@@ -651,8 +717,8 @@ function Sidebar({
           onClick={onSignOut}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-600 transition hover:bg-gray-50 hover:text-gray-900"
         >
-          <LogOut className="h-4 w-4" />
-          {t("nav.logout")}
+          <LogOut className="h-4 w-4 shrink-0" />
+          <span className="min-w-0 truncate">{t("nav.logout")}</span>
         </button>
       </div>
     </aside>

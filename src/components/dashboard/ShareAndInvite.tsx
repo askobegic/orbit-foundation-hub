@@ -160,7 +160,7 @@ export function ShareAndInvite({ username, firstName, lastName }: ShareAndInvite
         <p className="mb-3 text-xs text-gray-500">{shareDescription}</p>
 
         <div className="mb-4 flex items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
-          <span className="flex-1 truncate text-xs text-gray-500">{shareUrl}</span>
+          <span className="min-w-0 flex-1 truncate text-xs text-gray-500">{shareUrl}</span>
           <button
             onClick={copyShareUrl}
             aria-label={t("share.copyLink")}
@@ -177,7 +177,14 @@ export function ShareAndInvite({ username, firstName, lastName }: ShareAndInvite
               href={s.onClick ? undefined : s.href}
               target={s.onClick ? undefined : "_blank"}
               rel="noopener noreferrer"
-              onClick={s.onClick ? (e) => { e.preventDefault(); s.onClick?.(); } : undefined}
+              onClick={
+                s.onClick
+                  ? (e) => {
+                      e.preventDefault();
+                      s.onClick?.();
+                    }
+                  : undefined
+              }
               className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-all duration-200 hover:border-transparent hover:text-white"
               onMouseEnter={(e) => {
                 const el = e.currentTarget as HTMLElement;
@@ -217,7 +224,7 @@ export function ShareAndInvite({ username, firstName, lastName }: ShareAndInvite
         </div>
 
         <div className="flex items-center gap-2 rounded-lg border border-dashed border-gray-200 px-3 py-2">
-          <span className="flex-1 truncate text-xs text-gray-400">{inviteLink}</span>
+          <span className="min-w-0 flex-1 truncate text-xs text-gray-400">{inviteLink}</span>
           <button
             onClick={copyInvite}
             aria-label={t("share.copyLink")}
@@ -232,7 +239,9 @@ export function ShareAndInvite({ username, firstName, lastName }: ShareAndInvite
       {inviteOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-          onClick={(e) => { if (e.target === e.currentTarget) setInviteOpen(false); }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setInviteOpen(false);
+          }}
         >
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
             <div className="mb-4 flex items-center justify-between">

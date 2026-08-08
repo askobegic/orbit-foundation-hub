@@ -21,7 +21,8 @@ function useDashboardWidgetFlags(): DashboardWidgetFlags {
     enabled: !!application?.id,
     queryFn: () => getDashboardWidgetsFn({ data: { appId: application!.id } }),
   });
-  const isWidgetEnabled = (key: string) => !application || (widgetsQuery.data?.includes(key) ?? true);
+  const isWidgetEnabled = (key: string) =>
+    !application || (widgetsQuery.data?.includes(key) ?? true);
   return {
     rewardsEnabled: isWidgetEnabled("rewards"),
     advertisingEnabled: isWidgetEnabled("advertising"),
@@ -109,8 +110,8 @@ export function DashboardMobileNav() {
                       "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium bg-[#1D6BF3]/10 text-[#1D6BF3]",
                   }}
                 >
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  <span className="min-w-0 truncate">{item.label}</span>
                 </Link>
               ))}
             </nav>
@@ -123,8 +124,8 @@ export function DashboardMobileNav() {
                 }}
                 className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-gray-600 transition hover:bg-gray-50 hover:text-gray-900"
               >
-                <LogOut className="h-4 w-4" />
-                {t("nav.logout")}
+                <LogOut className="h-4 w-4 shrink-0" />
+                <span className="min-w-0 truncate">{t("nav.logout")}</span>
               </button>
             </div>
           </div>
