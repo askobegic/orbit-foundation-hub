@@ -414,29 +414,30 @@ export function DashboardPage() {
                               : "border-gray-100 bg-gray-50/40 hover:border-gray-200"
                           }`}
                         >
-                          {/* Mobile (<640px): a dedicated stacked layout. The
-                              single-row desktop layout has no horizontal room
-                              left for the action buttons once a real app name,
-                              badge, and description all share it -- rather
-                              than fight that with min-width tricks, mobile
-                              gets its own structure: logo, name, badge, and
-                              the full (non-truncated) description each on
-                              their own line, then the actions full-width
-                              below a divider. */}
-                          <div className="flex flex-col gap-2 sm:hidden">
-                            <div className="flex items-center gap-3">
+                          {/* Mobile (<640px): a genuinely separate layout,
+                              not a reflow of the desktop row -- there is no
+                              combination of name/badge/button widths that
+                              fits on one line below 640px, so nothing here
+                              truncates or relies on min-width tricks to
+                              force itself into that row. Name wraps, the
+                              full description wraps, and the actions get
+                              their own full-width block below a divider. */}
+                          <div className="flex flex-col gap-3 sm:hidden">
+                            <div className="flex items-start gap-3">
                               {avatar}
-                              <span
-                                className={`min-w-0 flex-1 truncate text-sm ${
-                                  isPremium
-                                    ? "font-semibold text-gray-900"
-                                    : "font-medium text-gray-500"
-                                }`}
-                              >
-                                {app.name}
-                              </span>
+                              <div className="flex flex-1 flex-col gap-1">
+                                <span
+                                  className={`text-sm ${
+                                    isPremium
+                                      ? "font-semibold text-gray-900"
+                                      : "font-medium text-gray-500"
+                                  }`}
+                                >
+                                  {app.name}
+                                </span>
+                                {badge}
+                              </div>
                             </div>
-                            {badge}
                             <p
                               className={`text-xs ${isPremium ? "text-gray-600" : "text-gray-400"}`}
                             >
@@ -458,7 +459,7 @@ export function DashboardPage() {
                                   </Link>
                                 )}
                                 {externalLink && (
-                                  <div className="flex justify-center">{externalLink}</div>
+                                  <div className="flex justify-end">{externalLink}</div>
                                 )}
                               </div>
                             )}
