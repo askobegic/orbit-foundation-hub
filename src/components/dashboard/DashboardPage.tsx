@@ -395,7 +395,7 @@ export function DashboardPage() {
                           target="_blank"
                           rel="noreferrer"
                           aria-label={t("dashboard.openApp")}
-                          className={`rounded-lg p-2 hover:bg-gray-50 ${
+                          className={`shrink-0 rounded-lg p-2 hover:bg-gray-50 ${
                             isPremium
                               ? "text-[#1D6BF3] hover:text-[#1858cf]"
                               : "text-gray-300 hover:text-gray-500"
@@ -406,93 +406,114 @@ export function DashboardPage() {
                       );
 
                       return (
-                        <div
-                          key={app.id}
-                          className={`rounded-xl border p-3 transition hover:shadow-sm ${
-                            isPremium
-                              ? "border-purple-200 bg-gradient-to-br from-purple-50/60 to-white hover:border-purple-300"
-                              : "border-gray-100 bg-gray-50/40 hover:border-gray-200"
-                          }`}
-                        >
-                          {/* Mobile (<640px): a genuinely separate layout,
-                              not a reflow of the desktop row -- there is no
-                              combination of name/badge/button widths that
-                              fits on one line below 640px, so nothing here
-                              truncates or relies on min-width tricks to
-                              force itself into that row. Name wraps, the
-                              full description wraps, and the actions get
-                              their own full-width block below a divider. */}
-                          <div className="flex flex-col gap-3 sm:hidden">
-                            <div className="flex items-start gap-3">
+                        // Unstyled wrapper carrying only the list key and
+                        // the grid-item min-width override (this grid uses
+                        // Tailwind's grid-cols-N, i.e. minmax(0,1fr) tracks
+                        // -- min-w-0 here is what lets this item actually
+                        // shrink to that track width instead of asserting
+                        // its own min-content). No visual styling of its
+                        // own -- each layout below owns its full card
+                        // (border, background, padding) independently.
+                        <div key={app.id} className="min-w-0">
+                          {/* Desktop (>=640px) -- untouched: the exact
+                              original single-row card. */}
+                          <div className="hidden sm:block">
+                            <div
+                              className={`flex items-center gap-3 rounded-xl border p-3 transition hover:shadow-sm ${
+                                isPremium
+                                  ? "border-purple-200 bg-gradient-to-br from-purple-50/60 to-white hover:border-purple-300"
+                                  : "border-gray-100 bg-gray-50/40 hover:border-gray-200"
+                              }`}
+                            >
                               {avatar}
-                              <div className="flex flex-1 flex-col gap-1">
-                                <span
-                                  className={`text-sm ${
-                                    isPremium
-                                      ? "font-semibold text-gray-900"
-                                      : "font-medium text-gray-500"
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className={`min-w-0 truncate text-sm ${
+                                      isPremium
+                                        ? "font-semibold text-gray-900"
+                                        : "font-medium text-gray-500"
+                                    }`}
+                                  >
+                                    {app.name}
+                                  </span>
+                                  {badge}
+                                </div>
+                                <p
+                                  className={`truncate text-xs ${
+                                    isPremium ? "text-gray-600" : "text-gray-400"
                                   }`}
                                 >
-                                  {app.name}
-                                </span>
-                                {badge}
+                                  {descriptionText}
+                                </p>
+                              </div>
+                              <div className="flex shrink-0 items-center gap-1">
+                                {upgradeLink}
+                                {externalLink}
                               </div>
                             </div>
-                            <p
-                              className={`text-xs ${isPremium ? "text-gray-600" : "text-gray-400"}`}
-                            >
-                              {descriptionText}
-                            </p>
-                            {(upgradeLink || externalLink) && (
-                              <div className="flex flex-col gap-2 border-t border-gray-100 pt-3">
-                                {/* Full-width mobile CTA -- a separate node
-                                    from the shared `upgradeLink` (used
-                                    as-is in the desktop layout below),
-                                    since only this layout needs it full-width. */}
-                                {upgradeLink && (
-                                  <Link
-                                    to="/pricing"
-                                    search={{ app: app.slug }}
-                                    className="w-full rounded-lg bg-gradient-to-r from-[#8B5CF6] to-[#6366F1] px-2.5 py-2 text-center text-xs font-semibold text-white hover:opacity-90"
-                                  >
-                                    {t("dashboard.upgrade")}
-                                  </Link>
-                                )}
-                                {externalLink && (
-                                  <div className="flex justify-end">{externalLink}</div>
-                                )}
-                              </div>
-                            )}
                           </div>
 
-                          {/* Desktop (>=640px): original single-row layout,
-                              unchanged. */}
-                          <div className="hidden items-center gap-3 sm:flex">
-                            {avatar}
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2">
-                                <span
-                                  className={`min-w-0 truncate text-sm ${
-                                    isPremium
-                                      ? "font-semibold text-gray-900"
-                                      : "font-medium text-gray-500"
-                                  }`}
-                                >
-                                  {app.name}
-                                </span>
-                                {badge}
-                              </div>
+                          {/* Mobile (<640px) -- rebuilt from zero as a
+                              plain vertical block card, not a horizontal
+                              row of any kind. Every element here is a
+                              normal block box (logo, then name, then
+                              badge, then description, then a divider,
+                              then the button, each simply stacked) --
+                              normal block children always take exactly
+                              their parent's width and can never force it
+                              wider, which is what makes this structurally
+                              immune to the overflow this card kept
+                              hitting as a flex row. The only flex used
+                              anywhere below is inside the button itself,
+                              to center its label and icon. */}
+                          <div className="block sm:hidden">
+                            <div
+                              className={`w-full max-w-full box-border rounded-xl border p-3 ${
+                                isPremium
+                                  ? "border-purple-200 bg-gradient-to-br from-purple-50/60 to-white"
+                                  : "border-gray-100 bg-gray-50/40"
+                              }`}
+                            >
+                              <div>{avatar}</div>
                               <p
-                                className={`truncate text-xs ${
+                                className={`mt-3 break-words text-sm ${
+                                  isPremium
+                                    ? "font-semibold text-gray-900"
+                                    : "font-medium text-gray-500"
+                                }`}
+                              >
+                                {app.name}
+                              </p>
+                              <span
+                                className={`mt-1 inline-block w-fit rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                                  isPremium
+                                    ? "bg-gradient-to-r from-[#8B5CF6] to-[#6366F1] text-white"
+                                    : "bg-gray-200 text-gray-500"
+                                }`}
+                              >
+                                {isPremium ? t("dashboard.premium") : t("dashboard.standard")}
+                              </span>
+                              <p
+                                className={`mt-3 break-words text-xs ${
                                   isPremium ? "text-gray-600" : "text-gray-400"
                                 }`}
                               >
                                 {descriptionText}
                               </p>
-                            </div>
-                            <div className="flex shrink-0 items-center gap-1">
-                              {upgradeLink}
-                              {externalLink}
+                              {!isPremium && (
+                                <>
+                                  <div className="my-3 border-t border-gray-100" />
+                                  <Link
+                                    to="/pricing"
+                                    search={{ app: app.slug }}
+                                    className="flex w-full max-w-full box-border items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#8B5CF6] to-[#6366F1] px-3 py-2.5 text-sm font-semibold text-white hover:opacity-90"
+                                  >
+                                    <span>{t("dashboard.upgrade")}</span>
+                                    <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                                  </Link>
+                                </>
+                              )}
                             </div>
                           </div>
                         </div>
