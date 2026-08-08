@@ -119,6 +119,42 @@ export type Database = {
           },
         ]
       }
+      ad_campaign_formats: {
+        Row: {
+          archived: boolean
+          created_at: string
+          description: string | null
+          display_order: number
+          enabled: boolean
+          id: string
+          key: string
+          label: string
+          updated_at: string
+        }
+        Insert: {
+          archived?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          enabled?: boolean
+          id?: string
+          key: string
+          label: string
+          updated_at?: string
+        }
+        Update: {
+          archived?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          enabled?: boolean
+          id?: string
+          key?: string
+          label?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ad_campaigns: {
         Row: {
           app_id: string
@@ -203,6 +239,155 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles_public"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_channel_apps: {
+        Row: {
+          app_id: string
+          channel_id: string
+          created_at: string
+        }
+        Insert: {
+          app_id: string
+          channel_id: string
+          created_at?: string
+        }
+        Update: {
+          app_id?: string
+          channel_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_channel_apps_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_channel_apps_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "ad_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_channel_types: {
+        Row: {
+          archived: boolean
+          created_at: string
+          description: string | null
+          display_order: number
+          enabled: boolean
+          id: string
+          key: string
+          label: string
+          updated_at: string
+        }
+        Insert: {
+          archived?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          enabled?: boolean
+          id?: string
+          key: string
+          label: string
+          updated_at?: string
+        }
+        Update: {
+          archived?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          enabled?: boolean
+          id?: string
+          key?: string
+          label?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ad_channels: {
+        Row: {
+          allowed_format_keys: string[]
+          allowed_media_types: string[]
+          archived: boolean
+          channel_type_key: string
+          created_at: string
+          description: string | null
+          display_order: number
+          enabled: boolean
+          external_partner: string | null
+          external_url: string | null
+          id: string
+          integration_id: string | null
+          key: string
+          logo_url: string | null
+          max_duration_days: number | null
+          max_file_size_bytes: number | null
+          min_duration_days: number | null
+          name: string
+          notes: string | null
+          purchasable: boolean
+          updated_at: string
+        }
+        Insert: {
+          allowed_format_keys?: string[]
+          allowed_media_types?: string[]
+          archived?: boolean
+          channel_type_key: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          enabled?: boolean
+          external_partner?: string | null
+          external_url?: string | null
+          id?: string
+          integration_id?: string | null
+          key: string
+          logo_url?: string | null
+          max_duration_days?: number | null
+          max_file_size_bytes?: number | null
+          min_duration_days?: number | null
+          name: string
+          notes?: string | null
+          purchasable?: boolean
+          updated_at?: string
+        }
+        Update: {
+          allowed_format_keys?: string[]
+          allowed_media_types?: string[]
+          archived?: boolean
+          channel_type_key?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          enabled?: boolean
+          external_partner?: string | null
+          external_url?: string | null
+          id?: string
+          integration_id?: string | null
+          key?: string
+          logo_url?: string | null
+          max_duration_days?: number | null
+          max_file_size_bytes?: number | null
+          min_duration_days?: number | null
+          name?: string
+          notes?: string | null
+          purchasable?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_channels_channel_type_key_fkey"
+            columns: ["channel_type_key"]
+            isOneToOne: false
+            referencedRelation: "ad_channel_types"
+            referencedColumns: ["key"]
           },
         ]
       }

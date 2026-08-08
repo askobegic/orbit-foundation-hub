@@ -106,13 +106,18 @@ export const createDraftCampaign = createServerFn({ method: "POST" })
   .inputValidator((raw: unknown) => createDraftSchema.parse(raw))
   .handler(async ({ data, context }) => {
     const capabilities = await getApplicationCapabilities({ data: { appId: data.appId } });
-    if (!capabilities.includes("advertising")) throw new Error("Advertising is not available for this application");
+    if (!capabilities.includes("advertising"))
+      throw new Error("Advertising is not available for this application");
 
     const { eligible } = await checkAdvertiserEligibility(context.userId, data.appId);
-    if (!eligible) throw new Error("You are not eligible to create a campaign for this application");
+    if (!eligible)
+      throw new Error("You are not eligible to create a campaign for this application");
 
     const price = await resolvePlacementPriceById(data.placementPriceId);
-    if (!price || (await resolvePlacementPrices(data.appId, price.placementKey)).every((p) => p.id !== price.id)) {
+    if (
+      !price ||
+      (await resolvePlacementPrices(data.appId, price.placementKey)).every((p) => p.id !== price.id)
+    ) {
       throw new Error("Invalid placement price for this application");
     }
 
@@ -273,7 +278,12 @@ export const getMyCampaigns = createServerFn({ method: "POST" })
 
 const placementSchema = z.object({
   id: z.string().uuid().optional(),
-  key: z.string().trim().min(1).max(60).regex(/^[a-z][a-z0-9_]*$/),
+  key: z
+    .string()
+    .trim()
+    .min(1)
+    .max(60)
+    .regex(/^[a-z][a-z0-9_]*$/),
   label: z.string().trim().min(1).max(120),
   description: z.string().trim().max(500).nullable().optional(),
   displayOrder: z.number().int().default(0),
@@ -308,7 +318,12 @@ export const adminUpsertAdPlacement = createServerFn({ method: "POST" })
       archived: data.archived,
     };
     const { data: row, error } = data.id
-      ? await supabaseAdmin.from("ad_placements").update(payload).eq("id", data.id).select("*").single()
+      ? await supabaseAdmin
+          .from("ad_placements")
+          .update(payload)
+          .eq("id", data.id)
+          .select("*")
+          .single()
       : await supabaseAdmin.from("ad_placements").insert(payload).select("*").single();
     if (error) throw new Error(error.message);
 
@@ -379,7 +394,12 @@ export const adminUpsertAdPlacementPrice = createServerFn({ method: "POST" })
       archived: data.archived,
     };
     const { data: row, error } = data.id
-      ? await supabaseAdmin.from("ad_placement_prices").update(payload).eq("id", data.id).select("*").single()
+      ? await supabaseAdmin
+          .from("ad_placement_prices")
+          .update(payload)
+          .eq("id", data.id)
+          .select("*")
+          .single()
       : await supabaseAdmin.from("ad_placement_prices").insert(payload).select("*").single();
     if (error) throw new Error(error.message);
 
@@ -468,9 +488,11 @@ export const adminSetAdDraftExpiryHours = createServerFn({ method: "POST" })
       .eq("key", "draft_expiry_hours")
       .maybeSingle();
 
-    const { error } = await supabaseAdmin
-      .from("ad_config")
-      .upsert({ key: "draft_expiry_hours", value: data.hours as Json, updated_at: new Date().toISOString() });
+    const { error } = await supabaseAdmin.from("ad_config").upsert({
+      key: "draft_expiry_hours",
+      value: data.hours as Json,
+      updated_at: new Date().toISOString(),
+    });
     if (error) throw new Error(error.message);
 
     await writeAuditLog({
@@ -730,7 +752,11 @@ export const adminFulfillAdvertisingCreditRedemption = createServerFn({ method: 
     const { data: row, error } = await supabaseAdmin
       .from("reward_redemptions")
       .update({
-        grant_result: { ...grantResult, status: "fulfilled", fulfilledAt: new Date().toISOString() } as Json,
+        grant_result: {
+          ...grantResult,
+          status: "fulfilled",
+          fulfilledAt: new Date().toISOString(),
+        } as Json,
       })
       .eq("id", data.redemptionId)
       .select("*")
@@ -746,4 +772,348 @@ export const adminFulfillAdvertisingCreditRedemption = createServerFn({ method: 
       newData: row,
     });
     return { ok: true, amount, currency };
+  });
+
+// ---------- Admin: Universal Advertising Distribution Network (Priority 13, Phase C) ----------
+//
+// Channel *registry* only this phase (type/identity/format-and-media rules/
+// duration bounds/notes/app association) -- no pricing (ad_channel_prices)
+// and no campaign-target selection/checkout, both deliberately deferred to
+// later phases. Same soft-lifecycle registry shape and admin-CRUD pattern as
+// ad_placements/adminUpsertAdPlacement above -- no new pattern introduced.
+
+const channelTypeSchema = z.object({
+  id: z.string().uuid().optional(),
+  key: z
+    .string()
+    .trim()
+    .min(1)
+    .max(60)
+    .regex(/^[a-z][a-z0-9_]*$/),
+  label: z.string().trim().min(1).max(120),
+  description: z.string().trim().max(500).nullable().optional(),
+  displayOrder: z.number().int().default(0),
+  enabled: z.boolean().default(true),
+  archived: z.boolean().default(false),
+  reason: z.string().trim().max(500).optional(),
+});
+
+export const adminUpsertAdChannelType = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => channelTypeSchema.parse(raw))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const supabaseAdmin = await adminClient();
+
+    let previous: unknown = null;
+    if (data.id) {
+      const { data: existing } = await supabaseAdmin
+        .from("ad_channel_types")
+        .select("*")
+        .eq("id", data.id)
+        .maybeSingle();
+      previous = existing;
+    }
+
+    const payload = {
+      key: data.key,
+      label: data.label,
+      description: data.description ?? null,
+      display_order: data.displayOrder,
+      enabled: data.enabled,
+      archived: data.archived,
+    };
+    const { data: row, error } = data.id
+      ? await supabaseAdmin
+          .from("ad_channel_types")
+          .update(payload)
+          .eq("id", data.id)
+          .select("*")
+          .single()
+      : await supabaseAdmin.from("ad_channel_types").insert(payload).select("*").single();
+    if (error) throw new Error(error.message);
+
+    await writeAuditLog({
+      userId: context.userId,
+      action: data.id ? "ad_channel_type.update" : "ad_channel_type.create",
+      entityType: "ad_channel_type",
+      entityId: row.id,
+      oldData: previous,
+      newData: row,
+      reason: data.reason ?? null,
+    });
+    return row;
+  });
+
+export const adminListAdChannelTypes = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { data, error } = await context.supabase
+      .from("ad_channel_types")
+      .select("*")
+      .order("display_order", { ascending: true });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+const campaignFormatSchema = z.object({
+  id: z.string().uuid().optional(),
+  key: z
+    .string()
+    .trim()
+    .min(1)
+    .max(60)
+    .regex(/^[a-z][a-z0-9_]*$/),
+  label: z.string().trim().min(1).max(120),
+  description: z.string().trim().max(500).nullable().optional(),
+  displayOrder: z.number().int().default(0),
+  enabled: z.boolean().default(true),
+  archived: z.boolean().default(false),
+  reason: z.string().trim().max(500).optional(),
+});
+
+export const adminUpsertAdCampaignFormat = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => campaignFormatSchema.parse(raw))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const supabaseAdmin = await adminClient();
+
+    let previous: unknown = null;
+    if (data.id) {
+      const { data: existing } = await supabaseAdmin
+        .from("ad_campaign_formats")
+        .select("*")
+        .eq("id", data.id)
+        .maybeSingle();
+      previous = existing;
+    }
+
+    const payload = {
+      key: data.key,
+      label: data.label,
+      description: data.description ?? null,
+      display_order: data.displayOrder,
+      enabled: data.enabled,
+      archived: data.archived,
+    };
+    const { data: row, error } = data.id
+      ? await supabaseAdmin
+          .from("ad_campaign_formats")
+          .update(payload)
+          .eq("id", data.id)
+          .select("*")
+          .single()
+      : await supabaseAdmin.from("ad_campaign_formats").insert(payload).select("*").single();
+    if (error) throw new Error(error.message);
+
+    await writeAuditLog({
+      userId: context.userId,
+      action: data.id ? "ad_campaign_format.update" : "ad_campaign_format.create",
+      entityType: "ad_campaign_format",
+      entityId: row.id,
+      oldData: previous,
+      newData: row,
+      reason: data.reason ?? null,
+    });
+    return row;
+  });
+
+export const adminListAdCampaignFormats = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { data, error } = await context.supabase
+      .from("ad_campaign_formats")
+      .select("*")
+      .order("display_order", { ascending: true });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+const channelSchema = z.object({
+  id: z.string().uuid().optional(),
+  key: z
+    .string()
+    .trim()
+    .min(1)
+    .max(60)
+    .regex(/^[a-z][a-z0-9_]*$/),
+  name: z.string().trim().min(1).max(160),
+  channelTypeKey: z.string().trim().min(1),
+  description: z.string().trim().max(1000).nullable().optional(),
+  logoUrl: z.string().trim().nullable().optional(),
+  enabled: z.boolean().default(true),
+  purchasable: z.boolean().default(true),
+  allowedFormatKeys: z.array(z.string().trim().min(1)).max(20).default([]),
+  allowedMediaTypes: z.array(z.string().trim().min(1).max(100)).max(20).default([]),
+  maxFileSizeBytes: z.number().int().positive().nullable().optional(),
+  minDurationDays: z.number().int().positive().nullable().optional(),
+  maxDurationDays: z.number().int().positive().nullable().optional(),
+  displayOrder: z.number().int().default(0),
+  externalUrl: z.string().trim().nullable().optional(),
+  notes: z.string().trim().max(2000).nullable().optional(),
+  integrationId: z.string().trim().max(200).nullable().optional(),
+  externalPartner: z.string().trim().max(200).nullable().optional(),
+  archived: z.boolean().default(false),
+  reason: z.string().trim().max(500).optional(),
+});
+
+// The only channel-registry write path -- validates format keys against the
+// ad_campaign_formats registry (catches typos/unknown keys at write time,
+// matching createDraftCampaign's placementPriceId validation above) and
+// reuses the existing URL-safety check for logo/external URLs (CO-1).
+export const adminUpsertAdChannel = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => channelSchema.parse(raw))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const supabaseAdmin = await adminClient();
+
+    if (data.externalUrl && !isSafeProfileUrl(data.externalUrl))
+      throw new Error("Invalid external URL");
+    if (data.logoUrl && !isSafeProfileUrl(data.logoUrl)) throw new Error("Invalid logo URL");
+    if (
+      data.minDurationDays != null &&
+      data.maxDurationDays != null &&
+      data.maxDurationDays < data.minDurationDays
+    ) {
+      throw new Error("Maximum duration cannot be less than minimum duration");
+    }
+
+    if (data.allowedFormatKeys.length > 0) {
+      const { data: formats } = await supabaseAdmin
+        .from("ad_campaign_formats")
+        .select("key")
+        .in("key", data.allowedFormatKeys);
+      const validKeys = new Set((formats ?? []).map((f) => f.key));
+      const unknownKeys = data.allowedFormatKeys.filter((k) => !validKeys.has(k));
+      if (unknownKeys.length > 0)
+        throw new Error(`Unknown campaign format(s): ${unknownKeys.join(", ")}`);
+    }
+
+    let previous: unknown = null;
+    if (data.id) {
+      const { data: existing } = await supabaseAdmin
+        .from("ad_channels")
+        .select("*")
+        .eq("id", data.id)
+        .maybeSingle();
+      previous = existing;
+    }
+
+    const payload = {
+      key: data.key,
+      name: data.name,
+      channel_type_key: data.channelTypeKey,
+      description: data.description ?? null,
+      logo_url: data.logoUrl ?? null,
+      enabled: data.enabled,
+      purchasable: data.purchasable,
+      allowed_format_keys: data.allowedFormatKeys,
+      allowed_media_types: data.allowedMediaTypes,
+      max_file_size_bytes: data.maxFileSizeBytes ?? null,
+      min_duration_days: data.minDurationDays ?? null,
+      max_duration_days: data.maxDurationDays ?? null,
+      display_order: data.displayOrder,
+      external_url: data.externalUrl ?? null,
+      notes: data.notes ?? null,
+      integration_id: data.integrationId ?? null,
+      external_partner: data.externalPartner ?? null,
+      archived: data.archived,
+    };
+    const { data: row, error } = data.id
+      ? await supabaseAdmin
+          .from("ad_channels")
+          .update(payload)
+          .eq("id", data.id)
+          .select("*")
+          .single()
+      : await supabaseAdmin.from("ad_channels").insert(payload).select("*").single();
+    if (error) throw new Error(error.message);
+
+    await writeAuditLog({
+      userId: context.userId,
+      action: data.id ? "ad_channel.update" : "ad_channel.create",
+      entityType: "ad_channel",
+      entityId: row.id,
+      oldData: previous,
+      newData: row,
+      reason: data.reason ?? null,
+    });
+    return row;
+  });
+
+export const adminListAdChannels = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { data, error } = await context.supabase
+      .from("ad_channels")
+      .select("*")
+      .order("display_order", { ascending: true });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+// Which application(s) a channel is offered under -- a plain association,
+// not a soft-lifecycle registry itself (existence = associated), same shape
+// as adminSetTrustedAdvertiser above.
+const channelAppSchema = z.object({
+  channelId: z.string().uuid(),
+  appId: z.string().uuid(),
+  associated: z.boolean(),
+  reason: z.string().trim().max(500).optional(),
+});
+
+export const adminSetAdChannelApp = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => channelAppSchema.parse(raw))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const supabaseAdmin = await adminClient();
+
+    if (data.associated) {
+      const { error } = await supabaseAdmin
+        .from("ad_channel_apps")
+        .upsert(
+          { channel_id: data.channelId, app_id: data.appId },
+          { onConflict: "channel_id,app_id" },
+        );
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await supabaseAdmin
+        .from("ad_channel_apps")
+        .delete()
+        .eq("channel_id", data.channelId)
+        .eq("app_id", data.appId);
+      if (error) throw new Error(error.message);
+    }
+
+    await writeAuditLog({
+      userId: context.userId,
+      action: data.associated ? "ad_channel_app.associate" : "ad_channel_app.dissociate",
+      entityType: "ad_channel_app",
+      entityId: data.channelId,
+      newData: { appId: data.appId },
+      reason: data.reason ?? null,
+    });
+    return { ok: true };
+  });
+
+const listChannelAppsSchema = z.object({ channelId: z.string().uuid() });
+
+export const adminListAdChannelApps = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => listChannelAppsSchema.parse(raw))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const supabaseAdmin = await adminClient();
+    const { data: rows, error } = await supabaseAdmin
+      .from("ad_channel_apps")
+      .select("*, applications(name, slug)")
+      .eq("channel_id", data.channelId);
+    if (error) throw new Error(error.message);
+    return rows ?? [];
   });

@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, Check, Gift, Plus, ShieldCheck, X } from "lucide-react";
+import { ArrowLeft, Check, Gift, Plus, Settings2, ShieldCheck, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
@@ -13,6 +13,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { getMyIsAdmin } from "@/lib/admin.functions";
 import {
   adminFulfillAdvertisingCreditRedemption,
+  adminListAdCampaignFormats,
+  adminListAdChannelApps,
+  adminListAdChannelTypes,
+  adminListAdChannels,
   adminListAdPlacementPrices,
   adminListAdPlacements,
   adminListCampaigns,
@@ -20,9 +24,13 @@ import {
   adminListTrustedAdvertisers,
   adminModerateCampaign,
   adminSetAdApplicationSettings,
+  adminSetAdChannelApp,
   adminSetAdConfig,
   adminSetAdDraftExpiryHours,
   adminSetTrustedAdvertiser,
+  adminUpsertAdCampaignFormat,
+  adminUpsertAdChannel,
+  adminUpsertAdChannelType,
   adminUpsertAdPlacement,
   adminUpsertAdPlacementPrice,
 } from "@/lib/advertising.functions";
@@ -32,7 +40,10 @@ export const Route = createFileRoute("/admin/advertising")({
   head: () => ({
     meta: [
       { title: "Admin · Advertising — Core Platform" },
-      { name: "description", content: "Manage placements, pricing, moderation and trusted advertisers." },
+      {
+        name: "description",
+        content: "Manage placements, pricing, moderation and trusted advertisers.",
+      },
     ],
   }),
   component: () => (
@@ -54,7 +65,10 @@ function AdminAdvertising() {
   const appsQ = useQuery({
     queryKey: ["admin-apps"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("applications").select("*").order("sort_order", { ascending: true });
+      const { data, error } = await supabase
+        .from("applications")
+        .select("*")
+        .order("sort_order", { ascending: true });
       if (error) throw error;
       return (data ?? []) as ApplicationRow[];
     },
@@ -63,7 +77,10 @@ function AdminAdvertising() {
   return (
     <main className="min-h-screen bg-[#F7F8FA] px-6 py-10">
       <div className="mx-auto max-w-5xl">
-        <Link to="/admin" className="mb-4 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900">
+        <Link
+          to="/admin"
+          className="mb-4 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900"
+        >
           <ArrowLeft className="h-4 w-4" /> {t("admin.common.back")}
         </Link>
         <h1 className="text-2xl font-semibold text-gray-900">{t("admin.advertising.title")}</h1>
@@ -76,6 +93,9 @@ function AdminAdvertising() {
         <TrustedAdvertisersSection apps={appsQ.data ?? []} />
         <ModerationQueueSection />
         <CreditFulfillmentSection />
+        <ChannelTypesSection />
+        <CampaignFormatsSection />
+        <ChannelsSection apps={appsQ.data ?? []} />
       </div>
     </main>
   );
@@ -100,7 +120,8 @@ function PlacementsSection() {
   const [label, setLabel] = useState("");
 
   const mut = useMutation({
-    mutationFn: () => upsertFn({ data: { key, label, enabled: true, archived: false, displayOrder: 0 } }),
+    mutationFn: () =>
+      upsertFn({ data: { key, label, enabled: true, archived: false, displayOrder: 0 } }),
     onSuccess: () => {
       toast.success(t("admin.advertising.placementCreated"));
       setKey("");
@@ -175,8 +196,14 @@ function PricesSection({ apps }: { apps: ApplicationRow[] }) {
   const listPlacementsFn = useServerFn(adminListAdPlacements);
   const listPricesFn = useServerFn(adminListAdPlacementPrices);
   const upsertFn = useServerFn(adminUpsertAdPlacementPrice);
-  const placementsQ = useQuery({ queryKey: ["admin-ad-placements"], queryFn: () => listPlacementsFn() });
-  const pricesQ = useQuery({ queryKey: ["admin-ad-prices"], queryFn: () => listPricesFn({ data: {} }) });
+  const placementsQ = useQuery({
+    queryKey: ["admin-ad-placements"],
+    queryFn: () => listPlacementsFn(),
+  });
+  const pricesQ = useQuery({
+    queryKey: ["admin-ad-prices"],
+    queryFn: () => listPricesFn({ data: {} }),
+  });
 
   const [placementKey, setPlacementKey] = useState("");
   const [appId, setAppId] = useState(""); // "" = global
@@ -284,7 +311,9 @@ function PricesSection({ apps }: { apps: ApplicationRow[] }) {
               </span>
             </span>
             {!p.stripe_payment_link && !p.paypal_payment_link && (
-              <span className="shrink-0 text-xs text-amber-600">{t("admin.advertising.noPaymentLink")}</span>
+              <span className="shrink-0 text-xs text-amber-600">
+                {t("admin.advertising.noPaymentLink")}
+              </span>
             )}
           </li>
         ))}
@@ -295,14 +324,19 @@ function PricesSection({ apps }: { apps: ApplicationRow[] }) {
 
 type AdConfigInput =
   | { key: "moderation_mode"; value: "manual" | "auto" | "trusted_only" }
-  | { key: "eligibility_rule"; value: "anyone" | "premium_only" | "verified_only" | "trusted_only" };
+  | {
+      key: "eligibility_rule";
+      value: "anyone" | "premium_only" | "verified_only" | "trusted_only";
+    };
 
 function ConfigSection({ apps }: { apps: ApplicationRow[] }) {
   const { t } = useTranslation();
   const setConfigFn = useServerFn(adminSetAdConfig);
   const setAppSettingsFn = useServerFn(adminSetAdApplicationSettings);
   const [appId, setAppId] = useState("");
-  const [moderationMode, setModerationMode] = useState<"manual" | "auto" | "trusted_only">("manual");
+  const [moderationMode, setModerationMode] = useState<"manual" | "auto" | "trusted_only">(
+    "manual",
+  );
   const [eligibilityRule, setEligibilityRule] = useState<
     "anyone" | "premium_only" | "verified_only" | "trusted_only"
   >("anyone");
@@ -333,7 +367,9 @@ function ConfigSection({ apps }: { apps: ApplicationRow[] }) {
               onClick={() => globalMut.mutate({ key: "moderation_mode", value: m })}
               className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm hover:bg-gray-50"
             >
-              {t("admin.advertising.moderationPrefix", { mode: t(`admin.advertising.moderationMode.${m}`) })}
+              {t("admin.advertising.moderationPrefix", {
+                mode: t(`admin.advertising.moderationMode.${m}`),
+              })}
             </button>
           ))}
         </div>
@@ -344,7 +380,9 @@ function ConfigSection({ apps }: { apps: ApplicationRow[] }) {
               onClick={() => globalMut.mutate({ key: "eligibility_rule", value: r })}
               className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm hover:bg-gray-50"
             >
-              {t("admin.advertising.eligibilityPrefix", { rule: t(`admin.advertising.eligibilityRule.${r}`) })}
+              {t("admin.advertising.eligibilityPrefix", {
+                rule: t(`admin.advertising.eligibilityRule.${r}`),
+              })}
             </button>
           ))}
         </div>
@@ -377,7 +415,9 @@ function ConfigSection({ apps }: { apps: ApplicationRow[] }) {
             >
               <option value="manual">{t("admin.advertising.moderationMode.manual")}</option>
               <option value="auto">{t("admin.advertising.moderationMode.auto")}</option>
-              <option value="trusted_only">{t("admin.advertising.moderationMode.trusted_only")}</option>
+              <option value="trusted_only">
+                {t("admin.advertising.moderationMode.trusted_only")}
+              </option>
             </select>
           </label>
           <label className="text-sm">
@@ -388,9 +428,15 @@ function ConfigSection({ apps }: { apps: ApplicationRow[] }) {
               className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
             >
               <option value="anyone">{t("admin.advertising.eligibilityRule.anyone")}</option>
-              <option value="premium_only">{t("admin.advertising.eligibilityRule.premium_only")}</option>
-              <option value="verified_only">{t("admin.advertising.eligibilityRule.verified_only")}</option>
-              <option value="trusted_only">{t("admin.advertising.eligibilityRule.trusted_only")}</option>
+              <option value="premium_only">
+                {t("admin.advertising.eligibilityRule.premium_only")}
+              </option>
+              <option value="verified_only">
+                {t("admin.advertising.eligibilityRule.verified_only")}
+              </option>
+              <option value="trusted_only">
+                {t("admin.advertising.eligibilityRule.trusted_only")}
+              </option>
             </select>
           </label>
           <button
@@ -518,7 +564,10 @@ function TrustedAdvertisersSection({ apps }: { apps: ApplicationRow[] }) {
       </div>
       <ul className="mt-4 divide-y divide-gray-100">
         {(q.data ?? []).map((row) => (
-          <li key={row.user_id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+          <li
+            key={row.user_id}
+            className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm"
+          >
             <span className="min-w-0 flex-1 truncate">
               {[row.profiles?.first_name, row.profiles?.last_name].filter(Boolean).join(" ") ||
                 row.profiles?.username ||
@@ -532,7 +581,11 @@ function TrustedAdvertisersSection({ apps }: { apps: ApplicationRow[] }) {
             </button>
           </li>
         ))}
-        {(q.data ?? []).length === 0 && <p className="py-2 text-sm text-gray-500">{t("admin.advertising.noTrustedAdvertisers")}</p>}
+        {(q.data ?? []).length === 0 && (
+          <p className="py-2 text-sm text-gray-500">
+            {t("admin.advertising.noTrustedAdvertisers")}
+          </p>
+        )}
       </ul>
     </Card>
   );
@@ -543,7 +596,10 @@ function ModerationQueueSection() {
   const qc = useQueryClient();
   const listFn = useServerFn(adminListCampaigns);
   const moderateFn = useServerFn(adminModerateCampaign);
-  const q = useQuery({ queryKey: ["admin-campaigns", "pending"], queryFn: () => listFn({ data: { status: "pending" } }) });
+  const q = useQuery({
+    queryKey: ["admin-campaigns", "pending"],
+    queryFn: () => listFn({ data: { status: "pending" } }),
+  });
 
   const mut = useMutation({
     mutationFn: (v: { campaignId: string; approve: boolean }) => moderateFn({ data: v }),
@@ -561,7 +617,10 @@ function ModerationQueueSection() {
       ) : (
         <ul className="divide-y divide-gray-100">
           {q.data!.map((c) => (
-            <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
+            <li
+              key={c.id}
+              className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm"
+            >
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium text-gray-800">{c.title}</p>
                 <p className="truncate text-xs text-gray-500">
@@ -616,10 +675,14 @@ function CreditFulfillmentSection() {
       ) : (
         <ul className="divide-y divide-gray-100">
           {q.data!.map((r) => (
-            <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
+            <li
+              key={r.id}
+              className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm"
+            >
               <span className="min-w-0 flex-1 truncate">
                 <Gift className="mr-1 inline h-4 w-4 text-amber-500" />
-                {[r.profiles?.first_name, r.profiles?.last_name].filter(Boolean).join(" ") || r.profiles?.username}
+                {[r.profiles?.first_name, r.profiles?.last_name].filter(Boolean).join(" ") ||
+                  r.profiles?.username}
               </span>
               <button
                 onClick={() => mut.mutate(r.id)}
@@ -632,5 +695,556 @@ function CreditFulfillmentSection() {
         </ul>
       )}
     </Card>
+  );
+}
+
+// ---------- Priority 13, Phase C: Universal Advertising Distribution Network ----------
+// Admin registry for channel types, campaign formats, and the exact
+// purchasable distribution channels (applications / external websites /
+// social media) -- same soft-lifecycle create+list+toggle pattern as
+// PlacementsSection above. Pricing and campaign-target selection are later
+// phases, not part of this registry UI.
+
+function ChannelTypesSection() {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const listFn = useServerFn(adminListAdChannelTypes);
+  const upsertFn = useServerFn(adminUpsertAdChannelType);
+  const q = useQuery({ queryKey: ["admin-ad-channel-types"], queryFn: () => listFn() });
+  const [key, setKey] = useState("");
+  const [label, setLabel] = useState("");
+
+  const mut = useMutation({
+    mutationFn: () =>
+      upsertFn({ data: { key, label, enabled: true, archived: false, displayOrder: 0 } }),
+    onSuccess: () => {
+      toast.success(t("admin.advertising.channelTypeCreated"));
+      setKey("");
+      setLabel("");
+      void qc.invalidateQueries({ queryKey: ["admin-ad-channel-types"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const toggle = useMutation({
+    mutationFn: (row: NonNullable<typeof q.data>[number]) =>
+      upsertFn({
+        data: {
+          id: row.id,
+          key: row.key,
+          label: row.label,
+          displayOrder: row.display_order,
+          enabled: !row.enabled,
+          archived: row.archived,
+        },
+      }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["admin-ad-channel-types"] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Card title={t("admin.advertising.channelTypesTitle")}>
+      <div className="grid grid-cols-1 items-end gap-2 sm:flex sm:flex-wrap">
+        <label className="text-sm">
+          {t("admin.common.key")}
+          <input
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+            placeholder={t("admin.advertising.placementKeyPlaceholder")}
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
+          />
+        </label>
+        <label className="text-sm">
+          {t("admin.common.label")}
+          <input
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
+          />
+        </label>
+        <button
+          onClick={() => mut.mutate()}
+          disabled={!key.trim() || !label.trim() || mut.isPending}
+          className="inline-flex items-center justify-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+        >
+          <Plus className="h-4 w-4" /> {t("admin.common.add")}
+        </button>
+      </div>
+      <ul className="mt-4 divide-y divide-gray-100">
+        {(q.data ?? []).map((c) => (
+          <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+            <span className="min-w-0 flex-1 truncate">
+              <span className="font-medium">{c.label}</span>{" "}
+              <span className="text-gray-400">({c.key})</span>
+            </span>
+            <AdminTogglePill enabled={c.enabled} onClick={() => toggle.mutate(c)} />
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+function CampaignFormatsSection() {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const listFn = useServerFn(adminListAdCampaignFormats);
+  const upsertFn = useServerFn(adminUpsertAdCampaignFormat);
+  const q = useQuery({ queryKey: ["admin-ad-campaign-formats"], queryFn: () => listFn() });
+  const [key, setKey] = useState("");
+  const [label, setLabel] = useState("");
+
+  const mut = useMutation({
+    mutationFn: () =>
+      upsertFn({ data: { key, label, enabled: true, archived: false, displayOrder: 0 } }),
+    onSuccess: () => {
+      toast.success(t("admin.advertising.campaignFormatCreated"));
+      setKey("");
+      setLabel("");
+      void qc.invalidateQueries({ queryKey: ["admin-ad-campaign-formats"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const toggle = useMutation({
+    mutationFn: (row: NonNullable<typeof q.data>[number]) =>
+      upsertFn({
+        data: {
+          id: row.id,
+          key: row.key,
+          label: row.label,
+          displayOrder: row.display_order,
+          enabled: !row.enabled,
+          archived: row.archived,
+        },
+      }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["admin-ad-campaign-formats"] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Card title={t("admin.advertising.campaignFormatsTitle")}>
+      <div className="grid grid-cols-1 items-end gap-2 sm:flex sm:flex-wrap">
+        <label className="text-sm">
+          {t("admin.common.key")}
+          <input
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+            placeholder="e.g. banner"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
+          />
+        </label>
+        <label className="text-sm">
+          {t("admin.common.label")}
+          <input
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
+          />
+        </label>
+        <button
+          onClick={() => mut.mutate()}
+          disabled={!key.trim() || !label.trim() || mut.isPending}
+          className="inline-flex items-center justify-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+        >
+          <Plus className="h-4 w-4" /> {t("admin.common.add")}
+        </button>
+      </div>
+      <ul className="mt-4 divide-y divide-gray-100">
+        {(q.data ?? []).map((f) => (
+          <li key={f.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+            <span className="min-w-0 flex-1 truncate">
+              <span className="font-medium">{f.label}</span>{" "}
+              <span className="text-gray-400">({f.key})</span>
+            </span>
+            <AdminTogglePill enabled={f.enabled} onClick={() => toggle.mutate(f)} />
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+function ChannelsSection({ apps }: { apps: ApplicationRow[] }) {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const listTypesFn = useServerFn(adminListAdChannelTypes);
+  const listFormatsFn = useServerFn(adminListAdCampaignFormats);
+  const listChannelsFn = useServerFn(adminListAdChannels);
+  const upsertFn = useServerFn(adminUpsertAdChannel);
+  const typesQ = useQuery({ queryKey: ["admin-ad-channel-types"], queryFn: () => listTypesFn() });
+  const formatsQ = useQuery({
+    queryKey: ["admin-ad-campaign-formats"],
+    queryFn: () => listFormatsFn(),
+  });
+  const channelsQ = useQuery({ queryKey: ["admin-ad-channels"], queryFn: () => listChannelsFn() });
+
+  const [key, setKey] = useState("");
+  const [name, setName] = useState("");
+  const [channelTypeKey, setChannelTypeKey] = useState("");
+  const [description, setDescription] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [selectedFormats, setSelectedFormats] = useState<string[]>([]);
+  const [mediaTypes, setMediaTypes] = useState("");
+  const [maxFileSizeMb, setMaxFileSizeMb] = useState("");
+  const [minDurationDays, setMinDurationDays] = useState("");
+  const [maxDurationDays, setMaxDurationDays] = useState("");
+  const [externalUrl, setExternalUrl] = useState("");
+  const [notes, setNotes] = useState("");
+  const [integrationId, setIntegrationId] = useState("");
+  const [externalPartner, setExternalPartner] = useState("");
+  const [managingChannelId, setManagingChannelId] = useState<string | null>(null);
+
+  function resetForm() {
+    setKey("");
+    setName("");
+    setChannelTypeKey("");
+    setDescription("");
+    setLogoUrl("");
+    setSelectedFormats([]);
+    setMediaTypes("");
+    setMaxFileSizeMb("");
+    setMinDurationDays("");
+    setMaxDurationDays("");
+    setExternalUrl("");
+    setNotes("");
+    setIntegrationId("");
+    setExternalPartner("");
+  }
+
+  const mut = useMutation({
+    mutationFn: () =>
+      upsertFn({
+        data: {
+          key,
+          name,
+          channelTypeKey,
+          description: description.trim() || null,
+          logoUrl: logoUrl.trim() || null,
+          enabled: true,
+          purchasable: true,
+          allowedFormatKeys: selectedFormats,
+          allowedMediaTypes: mediaTypes
+            .split(",")
+            .map((m) => m.trim())
+            .filter(Boolean),
+          maxFileSizeBytes: maxFileSizeMb.trim()
+            ? Math.round(Number(maxFileSizeMb) * 1024 * 1024)
+            : null,
+          minDurationDays: minDurationDays.trim() ? Number(minDurationDays) : null,
+          maxDurationDays: maxDurationDays.trim() ? Number(maxDurationDays) : null,
+          displayOrder: 0,
+          externalUrl: externalUrl.trim() || null,
+          notes: notes.trim() || null,
+          integrationId: integrationId.trim() || null,
+          externalPartner: externalPartner.trim() || null,
+          archived: false,
+        },
+      }),
+    onSuccess: () => {
+      toast.success(t("admin.advertising.channelCreated"));
+      resetForm();
+      void qc.invalidateQueries({ queryKey: ["admin-ad-channels"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const toggleEnabled = useMutation({
+    mutationFn: (row: NonNullable<typeof channelsQ.data>[number]) =>
+      upsertFn({
+        data: {
+          id: row.id,
+          key: row.key,
+          name: row.name,
+          channelTypeKey: row.channel_type_key,
+          description: row.description,
+          logoUrl: row.logo_url,
+          enabled: !row.enabled,
+          purchasable: row.purchasable,
+          allowedFormatKeys: row.allowed_format_keys,
+          allowedMediaTypes: row.allowed_media_types,
+          maxFileSizeBytes: row.max_file_size_bytes,
+          minDurationDays: row.min_duration_days,
+          maxDurationDays: row.max_duration_days,
+          displayOrder: row.display_order,
+          externalUrl: row.external_url,
+          notes: row.notes,
+          integrationId: row.integration_id,
+          externalPartner: row.external_partner,
+          archived: row.archived,
+        },
+      }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["admin-ad-channels"] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const togglePurchasable = useMutation({
+    mutationFn: (row: NonNullable<typeof channelsQ.data>[number]) =>
+      upsertFn({
+        data: {
+          id: row.id,
+          key: row.key,
+          name: row.name,
+          channelTypeKey: row.channel_type_key,
+          description: row.description,
+          logoUrl: row.logo_url,
+          enabled: row.enabled,
+          purchasable: !row.purchasable,
+          allowedFormatKeys: row.allowed_format_keys,
+          allowedMediaTypes: row.allowed_media_types,
+          maxFileSizeBytes: row.max_file_size_bytes,
+          minDurationDays: row.min_duration_days,
+          maxDurationDays: row.max_duration_days,
+          displayOrder: row.display_order,
+          externalUrl: row.external_url,
+          notes: row.notes,
+          integrationId: row.integration_id,
+          externalPartner: row.external_partner,
+          archived: row.archived,
+        },
+      }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["admin-ad-channels"] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  function toggleFormat(formatKey: string) {
+    setSelectedFormats((prev) =>
+      prev.includes(formatKey) ? prev.filter((f) => f !== formatKey) : [...prev, formatKey],
+    );
+  }
+
+  return (
+    <Card title={t("admin.advertising.channelsTitle")}>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <label className="text-sm">
+          {t("admin.common.key")}
+          <input
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+            placeholder={t("admin.advertising.channelKeyPlaceholder")}
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          />
+        </label>
+        <label className="text-sm">
+          {t("admin.common.name")}
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={t("admin.advertising.channelNamePlaceholder")}
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          />
+        </label>
+        <label className="text-sm">
+          {t("admin.advertising.channelType")}
+          <select
+            value={channelTypeKey}
+            onChange={(e) => setChannelTypeKey(e.target.value)}
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          >
+            <option value="">{t("admin.common.select")}</option>
+            {(typesQ.data ?? []).map((ct) => (
+              <option key={ct.key} value={ct.key}>
+                {ct.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-sm">
+          {t("admin.advertising.externalUrl")}
+          <input
+            value={externalUrl}
+            onChange={(e) => setExternalUrl(e.target.value)}
+            placeholder="https://"
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          />
+        </label>
+        <label className="text-sm sm:col-span-2">
+          {t("admin.common.label")}
+          <input
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          />
+        </label>
+        <label className="text-sm">
+          {t("admin.advertising.mediaTypes")}
+          <input
+            value={mediaTypes}
+            onChange={(e) => setMediaTypes(e.target.value)}
+            placeholder={t("admin.advertising.mediaTypesPlaceholder")}
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          />
+        </label>
+        <label className="text-sm">
+          {t("admin.advertising.maxFileSizeMb")}
+          <input
+            type="number"
+            value={maxFileSizeMb}
+            onChange={(e) => setMaxFileSizeMb(e.target.value)}
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          />
+        </label>
+        <label className="text-sm">
+          {t("admin.advertising.minDurationDays")}
+          <input
+            type="number"
+            value={minDurationDays}
+            onChange={(e) => setMinDurationDays(e.target.value)}
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          />
+        </label>
+        <label className="text-sm">
+          {t("admin.advertising.maxDurationDays")}
+          <input
+            type="number"
+            value={maxDurationDays}
+            onChange={(e) => setMaxDurationDays(e.target.value)}
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          />
+        </label>
+        <label className="text-sm">
+          {t("admin.advertising.integrationId")}
+          <input
+            value={integrationId}
+            onChange={(e) => setIntegrationId(e.target.value)}
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          />
+        </label>
+        <label className="text-sm">
+          {t("admin.advertising.externalPartner")}
+          <input
+            value={externalPartner}
+            onChange={(e) => setExternalPartner(e.target.value)}
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          />
+        </label>
+        <label className="text-sm sm:col-span-2">
+          {t("admin.advertising.notes")}
+          <input
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          />
+        </label>
+      </div>
+
+      <div className="mt-3">
+        <p className="text-sm font-medium text-gray-700">{t("admin.advertising.formats")}</p>
+        <div className="mt-1 flex flex-wrap gap-2">
+          {(formatsQ.data ?? []).map((f) => (
+            <button
+              key={f.key}
+              type="button"
+              onClick={() => toggleFormat(f.key)}
+              className={`rounded-lg border px-3 py-1.5 text-sm ${
+                selectedFormats.includes(f.key)
+                  ? "border-[#1D6BF3] bg-[#1D6BF3]/10 text-[#1D6BF3]"
+                  : "border-gray-200 text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <button
+        onClick={() => mut.mutate()}
+        disabled={!key.trim() || !name.trim() || !channelTypeKey || mut.isPending}
+        className="mt-4 inline-flex items-center justify-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+      >
+        <Plus className="h-4 w-4" /> {t("admin.common.add")}
+      </button>
+
+      <ul className="mt-4 divide-y divide-gray-100">
+        {(channelsQ.data ?? []).length === 0 && (
+          <p className="py-2 text-sm text-gray-500">{t("admin.advertising.noChannels")}</p>
+        )}
+        {(channelsQ.data ?? []).map((c) => (
+          <li key={c.id} className="py-3 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="min-w-0 flex-1 truncate">
+                <span className="font-medium">{c.name}</span>{" "}
+                <span className="text-gray-400">
+                  ({c.key} ·{" "}
+                  {typesQ.data?.find((ct) => ct.key === c.channel_type_key)?.label ??
+                    c.channel_type_key}
+                  )
+                </span>
+              </span>
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => togglePurchasable.mutate(c)}
+                  className={`rounded-lg border px-2 py-1 text-xs ${
+                    c.purchasable
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      : "border-gray-200 text-gray-500"
+                  }`}
+                >
+                  {t("admin.advertising.purchasable")}
+                </button>
+                <AdminTogglePill enabled={c.enabled} onClick={() => toggleEnabled.mutate(c)} />
+                <button
+                  type="button"
+                  onClick={() => setManagingChannelId(managingChannelId === c.id ? null : c.id)}
+                  className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+                >
+                  <Settings2 className="h-3 w-3" /> {t("admin.advertising.manageApps")}
+                </button>
+              </div>
+            </div>
+            {managingChannelId === c.id && <ChannelAppsManager channelId={c.id} apps={apps} />}
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+function ChannelAppsManager({ channelId, apps }: { channelId: string; apps: ApplicationRow[] }) {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const listFn = useServerFn(adminListAdChannelApps);
+  const setFn = useServerFn(adminSetAdChannelApp);
+  const q = useQuery({
+    queryKey: ["admin-ad-channel-apps", channelId],
+    queryFn: () => listFn({ data: { channelId } }),
+  });
+  const associatedIds = new Set((q.data ?? []).map((r) => r.app_id));
+
+  const mut = useMutation({
+    mutationFn: (v: { appId: string; associated: boolean }) => setFn({ data: { channelId, ...v } }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["admin-ad-channel-apps", channelId] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <div className="mt-2 rounded-lg bg-gray-50 p-3">
+      <p className="text-xs text-gray-500">
+        {associatedIds.size === 0
+          ? t("admin.advertising.allApplications")
+          : t("admin.advertising.supportedApps")}
+      </p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {apps.map((a) => {
+          const active = associatedIds.has(a.id);
+          return (
+            <button
+              key={a.id}
+              type="button"
+              onClick={() => mut.mutate({ appId: a.id, associated: !active })}
+              className={`rounded-lg border px-3 py-1.5 text-xs ${
+                active
+                  ? "border-[#1D6BF3] bg-[#1D6BF3]/10 text-[#1D6BF3]"
+                  : "border-gray-200 text-gray-600 hover:bg-white"
+              }`}
+            >
+              {a.name}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
