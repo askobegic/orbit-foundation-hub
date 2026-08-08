@@ -297,9 +297,13 @@ function EditProfilePage() {
           {!hasPremium && (
             <div className="mb-4 rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50 to-blue-50 p-4">
               <p className="text-sm font-medium text-purple-900">{t("profile.premiumLocked")}</p>
-              <button className="mt-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-700">
+              <Link
+                to="/pricing"
+                search={{ app: undefined }}
+                className="mt-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-700"
+              >
                 {t("profile.upgradeNow")}
-              </button>
+              </Link>
             </div>
           )}
           <div className="flex flex-col gap-4">
