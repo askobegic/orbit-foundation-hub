@@ -5,6 +5,7 @@ import { z } from "zod";
 import { ApiError, apiData, parseBody, readJsonBody, withRoute } from "@/lib/v1/http.server";
 import { mintAccessToken } from "@/lib/v1/jwt.server";
 import { rotateRefreshToken } from "@/lib/v1/refresh-token.server";
+import { clientIp, enforceRateLimit } from "@/lib/rate-limit.server";
 
 const bodySchema = z.object({ refreshToken: z.string().trim().min(1) });
 
@@ -12,6 +13,11 @@ export const Route = createFileRoute("/v1/auth/refresh")({
   server: {
     handlers: {
       POST: withRoute(async ({ request }) => {
+        // Priority 11 security audit: no rate limiting existed on this
+        // endpoint. The presented token is a 256-bit random value (not
+        // brute-forceable), so this guards against sustained hammering/DoS
+        // rather than credential guessing.
+        enforceRateLimit(`auth-refresh:${clientIp(request)}`, 30, 5 * 60 * 1000);
         const data = parseBody(bodySchema, await readJsonBody(request));
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

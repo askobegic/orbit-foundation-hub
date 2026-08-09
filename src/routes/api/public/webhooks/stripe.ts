@@ -4,6 +4,7 @@ import Stripe from "stripe";
 import { addMonthsIso, writeAuditLog } from "@/lib/admin.server";
 import { activateCampaignFromPurchase } from "@/lib/advertising.server";
 import { verifyCampaignReference, verifyPaymentReference } from "@/lib/payment-reference.server";
+import { clientIp, isRateLimited } from "@/lib/rate-limit.server";
 
 // Verifies the HMAC signature created by createPaymentReference
 // (src/lib/payments.functions.ts) -- see PROJECT_AUDIT.md -> SE-7. A
@@ -23,6 +24,13 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        // Priority 11 security audit: defense-in-depth against a request
+        // flood, even though signature verification below already rejects
+        // invalid deliveries cheaply. 60/min per IP is generous for
+        // legitimate Stripe webhook delivery volume.
+        if (isRateLimited(`webhook-stripe:${clientIp(request)}`, 60, 60 * 1000)) {
+          return new Response("Too Many Requests", { status: 429 });
+        }
         const secret = process.env.STRIPE_SECRET_KEY;
         const whsec = process.env.STRIPE_WEBHOOK_SECRET;
         if (!secret || !whsec) return new Response("Not configured", { status: 500 });

@@ -101,6 +101,7 @@ No `npm start` script exists in `package.json` — point Hostinger's Node.js App
 - **Webhook endpoints**: register these two URLs with Stripe and PayPal respectively, once the domain is live:
   - Stripe: `https://yourdomain.com/api/public/webhooks/stripe`
   - PayPal: `https://yourdomain.com/api/public/webhooks/paypal`
+- **Security headers (known limitation, Priority 11 security audit)**: `src/server.ts` sets `X-Frame-Options`, a minimal `Content-Security-Policy: frame-ancestors 'none'`, `X-Content-Type-Options`, and `Referrer-Policy` on every response, but empirical testing showed these do not reach the client for TanStack Start's streamed page responses — Node's HTTP layer commits headers to the socket before this app-level wrapper runs, and this project's Vite config wrapper (`@lovable.dev/vite-tanstack-config`) does not expose Nitro's `routeRules`/header-injection options, so there is no supported way to set them earlier in the pipeline from application code alone. **If Hostinger's panel exposes custom response-header injection at the reverse-proxy level, configure the four headers above there** — that's the correct fix for this hosting setup. Otherwise this needs a dedicated follow-up (e.g. bypassing the config wrapper to pass Nitro `routeRules` directly, at the cost of losing the wrapper's other defaults) before these headers can be considered actually enforced in production.
 
 ## 8. Deployment steps
 

@@ -13,6 +13,7 @@ import { ApiError, apiData, parseBody, readJsonBody, withRoute } from "@/lib/v1/
 import { ensureProfile } from "@/lib/identity.server";
 import { mintAccessToken } from "@/lib/v1/jwt.server";
 import { issueRefreshToken } from "@/lib/v1/refresh-token.server";
+import { clientIp, enforceRateLimit } from "@/lib/rate-limit.server";
 
 const bodySchema = z.object({
   googleIdToken: z.string().trim().min(1),
@@ -23,12 +24,16 @@ export const Route = createFileRoute("/v1/auth/session")({
   server: {
     handlers: {
       POST: withRoute(async ({ request }) => {
+        // Priority 11 security audit: no rate limiting existed on this
+        // endpoint. 20 attempts/5min per IP is generous for legitimate use
+        // (one sign-in is one call) while bounding scripted abuse.
+        enforceRateLimit(`auth-session:${clientIp(request)}`, 20, 5 * 60 * 1000);
         const data = parseBody(bodySchema, await readJsonBody(request));
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { data: app } = await supabaseAdmin
           .from("applications")
-          .select("id")
+          .select("id, visibility")
           .eq("id", data.appId)
           .maybeSingle();
         if (!app) {
@@ -36,6 +41,19 @@ export const Route = createFileRoute("/v1/auth/session")({
             "VALIDATION_ERROR",
             "appId does not resolve to a registered application",
             [{ field: "appId", issue: "not_found" }],
+          );
+        }
+        // archived = retired, per PROJECT_KNOWLEDGE.md -> Application
+        // Visibility. draft/coming_soon are deliberately still allowed to
+        // mint sessions -- draft also covers Core's own permanently-hidden-
+        // from-the-dashboard-but-fully-functional application row (see
+        // PROJECT_AUDIT.md), and coming_soon applications legitimately need
+        // to authenticate for pre-launch testing.
+        if (app.visibility === "archived") {
+          throw new ApiError(
+            "VALIDATION_ERROR",
+            "This application is archived and no longer accepts sign-ins",
+            [{ field: "appId", issue: "archived" }],
           );
         }
 

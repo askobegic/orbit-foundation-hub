@@ -27,7 +27,7 @@ export function AvatarUpload({ userId, value, onChange, size = 96 }: Props) {
     }
     setUploading(true);
     try {
-      const path = avatarPath(userId, file.name);
+      const path = avatarPath(userId, file.type);
       const { url } = await getMediaStorageProvider().upload(path, file, file.type);
       onChange(url);
     } catch {

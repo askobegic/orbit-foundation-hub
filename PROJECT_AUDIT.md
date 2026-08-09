@@ -40,6 +40,7 @@ A separate, non-severity tag, **Architecture Deviation**, marks findings where t
 | Performance | 0 | 0 | 2 | 5 |
 | Billing / Subscription Lifecycle | 0 | 1 | 0 | 0 |
 | Messaging | 0 | 0 | 1 | 2 |
+| Priority 11 — Security Audit (v1 API / live RLS) | 4 | 7 | 9 | 3 |
 
 Several issues are cross-cutting (e.g. the profile self-escalation bug is a Database/RLS root cause with an Authentication code path and a Security consequence). Each is written up **once**, in the section that owns its root cause, with short cross-reference entries elsewhere.
 
@@ -1116,6 +1117,221 @@ This section aggregates the highest-impact, trust-boundary-crossing issues found
 - **Resolution:** —
 - **Commit:** —
 - **Date:** 2026-08-03
+
+---
+
+## 12. Priority 11 — Complete Security Audit & Hardening
+
+**Scope:** A dedicated security pass covering everything built since the audit above was last updated (2026-08-05) — principally the entire `/v1` REST API (~90 endpoint files: auth/session/refresh/logout, CORE-minted JWTs, opaque rotating refresh tokens, and every `/v1/admin/*`/`/v1/me/*`/public endpoint), plus a fresh **live** check of RLS/grant state against every migration that claims to define it (this repo has a documented, recurring history — DB-6, SE-16, SE-17 — of a migration being tracked as "applied" without ever actually having run against the live database; this pass exists specifically to catch further recurrences of that pattern). Six parallel read-only audits covered: auth core/JWT/sessions, `/v1/admin/*` authorization, `/v1/me/*` and public API authorization, webhooks/payments/n8n, uploads/secrets/CORS/headers/logging, and live RLS/cross-app isolation (verified via direct `pg_policies`/`information_schema` queries against the linked database, not just migration-file inspection). Every Critical/High finding below was independently re-verified against the live database or the actual source before being fixed — none were taken on an audit agent's word alone.
+
+### Critical
+
+**PR11-1 — `profiles_public`/`premium_profiles_public` views granted full CRUD (not just SELECT) to `anon`/`authenticated`, completely bypassing `profiles`/`premium_profiles` RLS**
+- **Status:** ✅ Resolved (2026-08-07)
+- **Files:** `supabase/migrations/20260807100000_priority11_security_hardening.sql`
+- **Description:** Confirmed live via `information_schema.role_table_grants`: both views (owned by the migration runner, not `security_invoker`) held `INSERT, UPDATE, DELETE, TRUNCATE` for `anon` and `authenticated`, in addition to `SELECT`. Since DML through a non-`security_invoker` view runs with the *owner's* privileges, this completely bypassed the base tables' RLS. `20260729130300` (which recreated these views) only ever `GRANT SELECT`ed — it never had occasion to `REVOKE` anything broader, because this Supabase project's baseline default-privilege configuration already grants new relations broad access to `anon`/`authenticated`/`service_role`, and a *view* has no RLS of its own to close that gap the way a table's RLS normally would.
+- **Risk:** Any anonymous caller could rewrite or delete **any** user's name/photo/bio/verified-badge/tier (`profiles_public`) or phone/WhatsApp/email/website/social links (`premium_profiles_public`) via a direct PostgREST call — no authentication required.
+- **Resolution:** `REVOKE INSERT, UPDATE, DELETE, TRUNCATE` on both views from `anon, authenticated`; both also set `security_invoker = on` as defense-in-depth so even a future stray grant on the base tables can't be reached through them. Verified live post-fix: only `SELECT`/`REFERENCES`/`TRIGGER` remain.
+- **Commit:** —
+- **Date:** 2026-08-07
+
+**PR11-2 — `profiles.user_type`/`is_verified`/`is_active` self-escalation (AU-1/DB-1) was live again, and the original fix never covered the INSERT path**
+- **Status:** ✅ Resolved (2026-08-07)
+- **Files:** `supabase/migrations/20260807100000_priority11_security_hardening.sql`, `supabase/migrations/20260807100100_profiles_insert_column_lockdown.sql`
+- **Description:** Live inspection showed `authenticated` held unrestricted column-level `UPDATE`/`INSERT` on `user_type`/`is_verified`/`is_active`/`id`, and the `"Users can update own profile"` policy's `WITH CHECK` was `null` — i.e. `20260726120000` (DB-1's fix, logged Resolved on 2026-07-26) never actually executed against the live database, the same "tracked applied, never ran" pattern as DB-6/SE-16/SE-17. Separately, and never covered by the original fix even when it did run: `INSERT` was never restricted, only `UPDATE` — since all three columns have safe defaults (`user_type='standard'`, `is_verified=false`, `is_active=true`), a user's one-time initial profile INSERT (their own `id`, enforced by the existing INSERT policy) could set `user_type='premium'`/`is_verified=true` directly, before the UPDATE lock ever comes into play.
+- **Risk:** Any authenticated user could grant themselves Premium and a fake Verified badge, via `UPDATE` (regressed) or a crafted first `INSERT` (never fixed).
+- **Resolution:** Re-asserted DB-1's exact original fix (column-level `REVOKE`/`GRANT` on `UPDATE`, explicit `WITH CHECK`) in a new migration (existing migrations are never edited/re-applied — see Migration Rules), then extended the identical allowlist approach to `INSERT`. Verified live post-fix: neither `UPDATE` nor `INSERT` grants remain on `user_type`/`is_verified`/`is_active` for `authenticated`.
+- **Commit:** —
+- **Date:** 2026-08-07
+
+**PR11-3 — Undocumented live RLS policy let any authenticated user self-grant unlimited free Premium for any application**
+- **Status:** ✅ Resolved (2026-08-07)
+- **Files:** `supabase/migrations/20260807100000_priority11_security_hardening.sql`
+- **Description:** A policy named `"Users insert own subscriptions"` (`INSERT`, `WITH CHECK (auth.uid() = user_id)`, no other constraint) existed live on `subscriptions` with no corresponding `CREATE POLICY` anywhere in any of this repo's 50 migration files — unexplained live drift, not a missing-migration gap. It placed no restriction on `status`/`expires_at`/`app_id`/`plan_id`.
+- **Risk:** `POST /rest/v1/subscriptions` with the caller's own JWT and `{"status":"active","expires_at":"2099-01-01",...}` granted free, unlimited, self-service Premium for any application, entirely bypassing every payment webhook.
+- **Resolution:** `DROP POLICY` — every legitimate entitlement write already goes through `service_role` (webhooks, admin grant/revoke, promotional trials), which bypasses RLS entirely and is unaffected. Verified live post-fix: only the pre-existing `SELECT`-own policy remains.
+- **Commit:** —
+- **Date:** 2026-08-07
+
+**PR11-4 — Avatar/campaign-banner uploads had no server-side MIME/size enforcement independent of application code**
+- **Status:** ✅ Resolved (2026-08-07)
+- **Files:** `supabase/migrations/20260807100000_priority11_security_hardening.sql` (bucket `file_size_limit`/`allowed_mime_types`); `src/routes/v1/admin/media/branding.ts`, `src/lib/media-storage.ts`, `src/components/profile/AvatarUpload.tsx`, `src/routes/onboarding.tsx`, `src/routes/dashboard.advertising.tsx`, `src/routes/v1/media/avatar.ts`, `src/routes/v1/media/advertising-banner.ts` (extension-from-MIME-type fix, see PR11-6)
+- **Description:** `AvatarUpload.tsx` uploads directly via the browser Supabase client, never through the `/v1/media/avatar` server route. The only enforcement for that path was the storage RLS `INSERT` policy, which checks only the folder prefix (`avatars/<user_id>/...`) — never content-type or size. The `core` bucket itself had no `file_size_limit`/`allowed_mime_types` set.
+- **Risk:** Any authenticated user could upload an arbitrarily large file of any self-declared `Content-Type` (including `text/html` or `image/svg+xml` with embedded `<script>`) directly via the Storage REST API and get back a public URL that executes it.
+- **Resolution:** Set `file_size_limit = 5MB` and `allowed_mime_types = [image/jpeg, image/png, image/webp, image/x-icon, image/vnd.microsoft.icon]` on the `core` bucket — enforced by Supabase Storage itself for every upload path (client-direct and server-route alike), regardless of what any calling code does or doesn't check. `image/svg+xml` deliberately excluded (see PR11-6). Verified live post-fix.
+- **Commit:** —
+- **Date:** 2026-08-07
+
+### High
+
+**PR11-5 — `conversations` INSERT policy had no eligibility check, letting any authenticated user bypass the messaging paywall via a direct REST call**
+- **Status:** ✅ Resolved (2026-08-07)
+- **Files:** `supabase/migrations/20260807100000_priority11_security_hardening.sql`; `src/lib/conversation.functions.ts`
+- **Description:** `getOrCreateConversation` verifies the `messaging` capability, both-sides-Premium, and recipient `is_contactable` in application code, but performed its actual `INSERT` through the caller's own session. The live RLS `INSERT` policy only checked `auth.uid() = user_a_id OR auth.uid() = user_b_id` — none of those business rules. The `/v1/conversations` equivalent already wrote via `service_role` and was unaffected.
+- **Risk:** `POST /rest/v1/conversations` with the caller's own JWT created a conversation with anyone, Premium or not, contactable or not, entirely bypassing the paywall.
+- **Resolution:** Dropped the policy (matching `ad_campaigns`' existing "writes only via `service_role`, after server-validated checks" pattern); `getOrCreateConversation` now performs its existing-check, insert, and race-refetch through `service_role` instead of the caller's session. Application behavior is unchanged — the eligibility checks already ran server-side, only the final write's privilege level changed.
+- **Commit:** —
+- **Date:** 2026-08-07
+
+**PR11-6 — Admin branding upload accepted `image/svg+xml` (stored XSS on the public storage domain) and derived the storage extension from the unsanitized client filename**
+- **Status:** ✅ Resolved (2026-08-07)
+- **Files:** `src/routes/v1/admin/media/branding.ts`, `src/lib/media-storage.ts` (+ its 5 call sites, see PR11-4)
+- **Description:** SVG is an active-content format (`<script>`, event handlers); the admin logo/favicon/cover upload endpoint accepted it and served it back publicly with `contentType: file.type` as supplied by the caller. Separately (mirrors the already-tracked **CO-2**, but confirmed here as a genuine second occurrence in the `/v1` server route and `avatarPath`/`campaignBannerPath`), the storage extension was taken from `file.name.split(".").pop()` rather than the validated MIME type, letting a crafted filename inject an arbitrary trailing path segment into the storage key.
+- **Risk:** The single administrator (this platform's only privileged account) uploading a crafted "logo" could plant a script that executes when the storage URL is opened directly — low-probability given the Single Administrator Rule, but a real stored-script vector on a public domain, and the same unsafe-extension pattern existed on the user-facing avatar/banner paths too (any authenticated user, not just the admin).
+- **Resolution:** `image/svg+xml` removed from every upload allowlist (`branding.ts`). Extension is now derived from a small MIME-type → extension map in all five upload call sites (`branding.ts`, `avatar.ts`, `advertising-banner.ts`, and the two client-side callers via `media-storage.ts`'s `avatarPath`/`campaignBannerPath`, which now take `fileType` instead of `fileName`) — never from the client-supplied filename. Closes **CO-2** as a byproduct.
+- **Commit:** —
+- **Date:** 2026-08-07
+
+**PR11-7 — `/v1` refresh-token rotation had a TOCTOU race (two concurrent refreshes of one token could both succeed) and reused-token detection didn't revoke the live descendant chain**
+- **Status:** ✅ Resolved (2026-08-07)
+- **Files:** `src/lib/v1/refresh-token.server.ts`
+- **Description:** `rotateRefreshToken` checked `revoked_at IS NULL` in application code, then inserted a child row, then updated the parent to revoked — two concurrent calls presenting the same still-valid token could both pass the check before either `UPDATE` landed, both minting a valid child from one parent (an ordinary client-retry race, not just an attacker). Separately, presenting an already-rotated token was rejected, but its still-live descendant was never revoked — the standard "stolen token replay" signal (OAuth Security BCP) had no consequence for the legitimate holder's active session.
+- **Risk:** A network-retry race could produce two simultaneously-valid sessions from one refresh token; a detected token-reuse event (real signal of compromise) didn't force re-authentication for anyone.
+- **Resolution:** Rotation is now a single atomic conditional `UPDATE ... WHERE id = :id AND revoked_at IS NULL`, checked for whether it actually affected a row; the losing side's freshly-minted child is immediately revoked rather than left valid and unlinked. Presenting an already-rotated token now walks `replaced_by` to the live end of the chain and revokes it too.
+- **Commit:** —
+- **Date:** 2026-08-07
+
+**PR11-8 — `/v1/profiles/{username}` served a suspended user's full profile (including live contact details for an eligible viewer), and an anonymous caller's `appId` was never validated, silently defaulting a user's visibility setting to "visible"**
+- **Status:** ✅ Resolved (2026-08-07)
+- **Files:** `src/routes/v1/profiles/$username.ts`
+- **Description:** The handler never checked `is_active`, unlike the existing `u.$username.tsx` page it's supposed to mirror (which correctly 404s a suspended user) — directly contradicting the admin suspend action's intent. Separately, an anonymous caller's `appId` came straight from a query param with no existence check; since a bogus `appId` guarantees no matching `user_app_settings` row, the visibility gate silently defaulted to `true` regardless of what the profile owner actually configured on any real application.
+- **Risk:** `GET /v1/profiles/{suspendedUser}` returned 200 with full data (and, for an eligible viewer, live phone/email/WhatsApp) for a user an admin had suspended. `GET /v1/profiles/{hiddenUser}?appId=<garbage-uuid>` bypassed that user's own "hide my profile" setting.
+- **Resolution:** Added `.eq("is_active", true)` to the profile lookup, matching `u.$username.tsx` exactly. An anonymous caller's `appId` is now validated against `applications` before use; a nonexistent one is rejected rather than silently falling through to a visible-by-default outcome. An authenticated caller's `appId` (from their verified JWT) is unaffected — it was already trustworthy.
+- **Commit:** —
+- **Date:** 2026-08-07
+
+**PR11-9 — No security headers (`Content-Security-Policy`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`) set anywhere**
+- **Status:** ⚠️ Partially Resolved / attempted, not verified effective (2026-08-07)
+- **Files:** `src/server.ts`; `DEPLOYMENT.md`
+- **Description:** Confirmed absent at every layer (app code, and no `nitro.config`/hosting config exists in this repo to set them either) — including on `/login`, which handles Google OAuth and had no clickjacking protection.
+- **Risk:** `/login` was framable by a third-party page for a clickjacking attack against the sign-in flow; no baseline hardening against MIME-sniffing or unintended cross-origin framing anywhere.
+- **Resolution attempted:** Added a `withSecurityHeaders()` wrapper in `src/server.ts`'s single top-level `fetch()` choke-point, setting all four headers on every response. **Empirically verified NOT to reach the client** for this app's actual response path: TanStack Start's streamed SSR responses commit HTTP headers to the underlying Node socket before this application-level wrapper ever runs (confirmed by tracing the compiled Nitro/h3 output — `writeHead()` is guarded by `if (!nodeRes.headersSent)`, and headers were already sent by the time this wrapper's Response reaches it), and this project's Vite config wrapper (`@lovable.dev/vite-tanstack-config`) deliberately does not expose Nitro's `routeRules`/header-injection surface (confirmed by reading its own type definitions) as a way to set headers earlier in the pipeline. The code is left in place as harmless defense-in-depth (correct in principle, and may take effect for non-streamed response types or if the config surface changes later), but **should not be considered an enforced control today**.
+- **Recommendation:** Set these four headers at the reverse-proxy/hosting layer instead (see `DEPLOYMENT.md` → §7, new note) — the correct fix for this hosting setup, not an application-code problem.
+- **Commit:** —
+- **Date:** 2026-08-07
+
+**PR11-10 — No rate limiting anywhere in the codebase (confirmed: no library installed, no hand-rolled equivalent existed)**
+- **Status:** ⚠️ Partially Resolved (2026-08-07) — highest-risk endpoints only
+- **Files:** `src/lib/rate-limit.server.ts` (new); `src/routes/v1/auth/session.ts`, `src/routes/v1/auth/refresh.ts`, `src/routes/api/public/webhooks/stripe.ts`, `src/routes/api/public/webhooks/paypal.ts`
+- **Description:** `ApiErrorCode` already defined a `RATE_LIMITED` code that was never thrown anywhere. No endpoint — token issuance, either payment webhook, or any `/v1/me/*` mutation (messaging send, referral capture, reward redemption) — had any request-volume protection. The PayPal webhook specifically makes two outbound HTTPS calls to PayPal on *every* delivery, valid or not, before any rejection — a flood of garbage POSTs forces real PayPal API calls per request.
+- **Risk:** Unmetered brute-force/DoS potential against token issuance and both webhook endpoints; PayPal's specific pattern additionally risks real API throttling from a garbage-request flood.
+- **Resolution:** New minimal, dependency-free, in-memory fixed-window limiter (correct for this app's actual single-Node-process deployment target; a multi-instance deployment would need a shared store instead). Applied to `/v1/auth/session` (20/5min/IP), `/v1/auth/refresh` (30/5min/IP), and both webhook endpoints (60/min/IP, rejected before any expensive work). **Not applied to the remaining ~85 `/v1` endpoints** (messaging send, referral, export, reward redemption, etc.) — a deliberate scope decision, not an oversight; see PR11-20.
+- **Commit:** —
+- **Date:** 2026-08-07
+
+**PR11-11 — No CORS handling anywhere, despite `/v1` being explicitly designed for cross-origin browser use by other applications**
+- **Status:** ✅ Resolved (2026-08-09, Priority 14)
+- **Files:** `src/lib/v1/cors.server.ts` (new), `src/server.ts`
+- **Description:** `/v1` is meant to be called by other applications' frontends on other domains (BosniaFans, future apps), but no route sets any `Access-Control-*` header. The *absence* of CORS headers is fail-safe from a security standpoint (a browser blocks the cross-origin read by default) — this is a functionality gap, not an exploitable hole, which is why it's High rather than Critical.
+- **Risk:** Browser-based cross-origin `fetch()`/`XHR` calls to `/v1/*` from another application's own frontend domain will be blocked by the browser's same-origin policy today, unless every consuming application only ever calls `/v1` server-to-server.
+- **Resolution:** Allowed-origins policy explicitly decided (project owner, 2026-08-09): derived dynamically from `applications.domain` (60s in-memory cache) — never a hardcoded list, so a new application becomes CORS-allowed the moment its domain is configured, no code change or redeploy. Applied at the single global response choke-point in `server.ts` (same pattern already used for security headers), scoped strictly to `/v1/*` — same-origin SSR/HTML routes are untouched. Preflight `OPTIONS` intercepted before the file-based router (no route defines its own `OPTIONS` handler). Never a wildcard origin; `Access-Control-Allow-Origin` always echoes the exact validated `Origin`, paired with `Access-Control-Allow-Credentials: true` and `Vary: Origin` (required since the allow-origin value is per-request). An unrecognized origin never blocks the server from processing the request (CORS is a browser-enforced read-side control, not a server access gate) — it only withholds the header, which is what keeps the browser blocking that page's JS from reading the response. Verified end-to-end against real production data: allowed-origin preflight/actual requests get full CORS headers; disallowed-origin requests get `Vary: Origin` only; requests with no `Origin` header (server-to-server) are unaffected; non-`/v1` routes are unaffected.
+- **Commit:** —
+- **Date:** 2026-08-09
+
+### Medium
+
+**PR11-12 — `/v1/auth/session` didn't check application `visibility`, letting a `draft`/`archived` application's Google Client ID still mint CORE sessions**
+- **Status:** ✅ Resolved (2026-08-07)
+- **Files:** `src/routes/v1/auth/session.ts`
+- **Description:** Only checked that `appId` resolves to *some* row, never its `visibility`. `archived` (retired, per `PROJECT_KNOWLEDGE.md` → Application Visibility) applications could still authenticate users.
+- **Resolution:** Rejects `visibility === "archived"`. Deliberately does **not** reject `draft`/`coming_soon` — `draft` also covers Core's own permanently-hidden-from-the-dashboard-but-fully-functional application row (see AU-10's resolution), and `coming_soon` applications legitimately need to authenticate for pre-launch testing.
+- **Commit:** —
+- **Date:** 2026-08-07
+
+**PR11-13 — `/v1/me/rewards/redeem` has a TOCTOU race allowing over-redemption of Reward Points**
+- **Status:** Open
+- **Files:** `src/routes/v1/me/rewards/redeem.ts`
+- **Description:** Balance is computed in application code (sum of `reward_ledger` minus `reward_redemptions`), checked against `item.points_cost`, then a redemption row is inserted — no DB constraint, row lock, or atomic RPC ties the check to the write.
+- **Risk:** Two concurrent redemption requests can both read the same starting balance and both pass the check, letting a user redeem more points than they actually have.
+- **Recommendation:** Move the balance check + insert into a single atomic Postgres function (row-locked or constraint-enforced), matching the append-only-ledger pattern already used elsewhere in this codebase.
+- **Resolution:** — (not fixed this pass; narrow blast radius — a points-ledger integrity issue, not an auth/data-exposure issue)
+- **Commit:** —
+- **Date:** 2026-08-07
+
+**PR11-14 — Stripe webhook redelivery race can produce duplicate reward points, notifications, and n8n events (not duplicate entitlement or charges)**
+- **Status:** Open
+- **Files:** `src/routes/api/public/webhooks/stripe.ts`
+- **Description:** Unlike the PayPal handler (which returns early with `duplicate: true` if its `payments` insert fails), Stripe's fulfillment path only logs a failed `payments` insert and continues to notification/audit/reward/n8n regardless. Two near-simultaneous redeliveries of the same event can both pass the pre-check before either inserts, so the second `payments` insert fails on the UNIQUE constraint but the side-effects downstream of it still run a second time.
+- **Risk:** Duplicate reward-point grants, duplicate user notifications, duplicate outbound n8n events on a genuine webhook-redelivery race. No double entitlement and no double charge (the `subscriptions` upsert is idempotent).
+- **Recommendation:** Mirror PayPal's guard — check the `payments` insert error and return `{ received: true, duplicate: true }` before the notification/audit/reward/n8n block.
+- **Resolution:** —
+- **Commit:** —
+- **Date:** 2026-08-07
+
+**PR11-15 — `has_any_active_premium`/`get_premium_application_ids`/`get_visible_application_ids` accept an arbitrary `_user_id` with no caller-identity check**
+- **Status:** ⚪ Reviewed — confirmed intentional, not a defect
+- **Files:** `src/lib/premium.ts` (client-callable RPC wrappers)
+- **Description:** All three are `SECURITY DEFINER` functions callable by `anon`/`authenticated` for any `_user_id`, initially flagged as a potential information-disclosure gap. Traced against actual usage: a user's Premium status (and, per `u.$username.tsx`, which specific applications they're Premium on) is **already a deliberately public fact** — the public profile page's "Premium" badge and "Premium on: ..." list are rendered for anonymous visitors by design (Global Premium Visibility & Contact System, `PROJECT_KNOWLEDGE.md` → Premium Model). Restricting these RPCs to the target user/an admin would break that existing, intentional feature.
+- **Resolution:** No change — confirmed correct as-is after tracing real call sites, not assumed.
+- **Commit:** —
+- **Date:** 2026-08-07
+
+**PR11-16 — Avatar/banner MIME type is validated via the client-declared `Content-Type` header, not content-sniffed**
+- **Status:** 🟡 Partially mitigated (2026-08-07)
+- **Files:** `src/routes/v1/media/avatar.ts`, `src/routes/v1/media/advertising-banner.ts`, `src/routes/v1/admin/media/branding.ts`
+- **Description:** `file.type` is attacker-controllable (the caller sets it on the multipart form part); none of the three upload endpoints sniff actual file bytes.
+- **Risk:** A caller could declare `Content-Type: image/png` while uploading non-image bytes. Residual risk after PR11-4/PR11-6: the bucket-level `allowed_mime_types` now blocks anything outside a narrow image allowlist regardless of what's declared, and `image/svg+xml` (the actual script-execution vector) is excluded — so a mismatched-but-declared-safe file can no longer execute as script, only be mis-typed.
+- **Recommendation:** Sniff magic bytes (or a small library) instead of trusting `file.type`, if stricter content-integrity guarantees are needed later.
+- **Resolution:** Not fully fixed — the higher-severity execution vector (PR11-4/PR11-6) is closed; header-spoofing within the safe-type allowlist remains possible.
+- **Commit:** —
+- **Date:** 2026-08-07
+
+**PR11-17 — Several live defense-in-depth gaps found via direct Postgres/Supabase-advisor inspection**
+- **Status:** Open — explained, not fixed (narrow/no realistic exploit path)
+- **Files:** N/A (database configuration)
+- **Description:** **(a)** `premium_profiles`' `ALL` policy has no explicit `WITH CHECK` (relies on the USING→WITH CHECK implicit fallback for UPDATE — the exact anti-pattern DB-1 was about, though here the fallback happens to enforce the same condition, so not currently exploitable). **(b)** `rls_auto_enable()` (an event-trigger function) has default `PUBLIC EXECUTE`, callable via RPC by `anon`/`authenticated`, but errors out immediately outside a real DDL event — unnecessary surface, not exploitable. **(c)** `enforce_identity_lock()` has a mutable `search_path` (missing `SET search_path`) — standard hardening item, low risk since it's a trigger, not directly callable. **(d)** Supabase Auth's leaked-password protection is disabled (a dashboard setting, not code).
+- **Recommendation:** Add an explicit `WITH CHECK` to `premium_profiles`' policy for consistency with `user_app_settings`' own `ALL` policy; `REVOKE EXECUTE ON FUNCTION rls_auto_enable() FROM anon, authenticated`; add `SET search_path = public` to `enforce_identity_lock()`; enable leaked-password protection in the Supabase Auth dashboard.
+- **Resolution:** —
+- **Commit:** —
+- **Date:** 2026-08-07
+
+**PR11-18 — Google ID token exchange has no nonce; refresh tokens are delivered via URL fragment with no absolute session lifetime cap**
+- **Status:** Open — explained, largely architectural/deliberate
+- **Files:** `src/routes/login.tsx`, `src/routes/v1/auth/session.ts`, `src/lib/v1/refresh-token.server.ts`
+- **Description:** **(a)** Neither Google Identity Services' `initialize()` nor `signInWithIdToken` is passed a nonce — a captured-but-unexpired (~1hr) Google ID token is replayable to mint additional CORE session pairs; requires the ID token to leak first (XSS/logging/MITM), not remotely exploitable on its own. **(b)** The cross-app login handoff (`login.tsx`) delivers the refresh token via URL fragment (the documented, deliberate OAuth2 Implicit Grant shape for this platform's centralized-IdP architecture — see AU-10) — lands in browser history/autocomplete/any script reading `window.location.href` on the receiving app. **(c)** `rotateRefreshToken` resets `expires_at` to `now + 30 days` on every rotation with no tracked maximum age from original issuance — a continuously-refreshed session can persist indefinitely.
+- **Recommendation:** Add a nonce to the Google ID token exchange as cheap defense-in-depth; consider a one-time-use code exchanged server-side instead of shipping the refresh token itself through the fragment, if the fragment-exposure risk is judged worth the added complexity; decide deliberately whether to cap total session-chain age.
+- **Resolution:** — (deliberately not changed without explicit direction — (b) in particular is an existing, approved architectural decision, not an oversight)
+- **Commit:** —
+- **Date:** 2026-08-07
+
+**PR11-19 — Several `/v1/admin/*` endpoints have minor data-hygiene gaps**
+- **Status:** Open — explained, not fixed
+- **Files:** `src/routes/v1/admin/verification/$userId.ts`, `src/routes/v1/admin/users/$userId/index.ts`, and several `$appId`/`$userId`-scoped upsert endpoints (capabilities, dashboard-widgets, share-invite, advertising-settings, trusted-advertisers, premium/grant)
+- **Description:** `verification/$userId.ts`'s `POST` returns a false-success response for a nonexistent `userId` (0 rows affected, no error). `users/$userId/index.ts`'s `username` field has no format/uniqueness validation (mirrors the pre-existing, non-`/v1` `adminUpdateUser`'s identical gap — not a `/v1`-introduced regression). Several upsert endpoints write rows keyed by a client-supplied ID without first confirming the referenced row exists, risking either a raw FK-constraint error or an orphaned row on a typo'd ID.
+- **Risk:** Low — none let the single administrator affect anything beyond what they're already authorized to touch; the concern is response-shape/data-hygiene, not access control. (Confirmed structurally: classic cross-tenant IDOR doesn't apply the way it would in a multi-admin panel, given this platform's Single Administrator Rule.)
+- **Recommendation:** Add a `maybeSingle()` existence check before each affected upsert/update, matching the pattern most sibling endpoints already use.
+- **Resolution:** —
+- **Commit:** —
+- **Date:** 2026-08-07
+
+### Low
+
+**PR11-20 — No rate limiting across the remaining ~85 `/v1` endpoints (messaging send, referral, export, etc.)**
+- **Status:** Open — deliberately scoped out of this pass
+- **Files:** all `/v1/me/*`/`/v1/conversations/*` mutation endpoints not listed in PR11-10
+- **Description:** Only the 4 highest-risk endpoints (token issuance, both webhooks) were rate-limited. Messaging send, referral-link capture, data export, and reward redemption have no request-volume protection.
+- **Risk:** Spam/abuse potential (messaging spam, referral-link farming), not an entitlement-bypass or data-exposure risk.
+- **Recommendation:** Extend the same `rate-limit.server.ts` helper to these endpoints with appropriately generous per-endpoint thresholds, as a follow-up — comprehensive coverage across dozens of routes with individually-tuned thresholds is a larger scope decision than a security-audit "fix" pass warrants on its own.
+- **Resolution:** —
+- **Commit:** —
+- **Date:** 2026-08-07
+
+**PR11-21 — Minor code-quality items found during the audit**
+- **Status:** Open
+- **Files:** `src/routes/api/public/webhooks/paypal.ts` (stale/contradictory comment about the `paypal_payment_id` UNIQUE constraint — the constraint does exist, one of two comments describing it is outdated); `src/routes/v1/me/advertising/campaigns/index.ts` and `src/routes/v1/me/notifications/index.ts` (query-string filters read without the shared Zod `parseQuery` helper other endpoints use — not exploitable, PostgREST parameterizes filter values, just inconsistent with the established convention); `src/routes/v1/me/index.ts` (`avatarUrl` field accepts any external URL, not just the platform's own storage domain — self-affecting only).
+- **Resolution:** —
+- **Commit:** —
+- **Date:** 2026-08-07
+
+**PR11-22 — `/v1/applications` (and likely other `/v1` GET endpoints) returned HTTP 500 in local testing — confirmed pre-existing, unrelated to this security pass**
+- **Status:** Open — functional bug, not a security finding; flagged for separate follow-up
+- **Files:** `src/routes/v1/applications/index.ts` (or a shared dependency — `optionalUserContext`/`resolveLocale`/`admin.server.ts`)
+- **Description:** Discovered incidentally while boot-testing Priority 11's changes. Reproduced against a clean checkout of the immediately-prior commit (`git stash` isolation test) with the exact same result, confirming this predates every change in this pass and isn't a regression from it. Root cause not investigated further — out of scope for a security-focused pass.
+- **Risk:** Functional, not security — but blocks any real use of at least this endpoint today.
+- **Recommendation:** Investigate and fix in a dedicated pass (capture the actual server-side stack trace, which this environment's process-output capture could not reliably surface).
+- **Resolution:** —
+- **Commit:** —
+- **Date:** 2026-08-07
 
 ---
 

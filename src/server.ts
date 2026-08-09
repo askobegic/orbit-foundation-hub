@@ -2,7 +2,11 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
-import { applyCorsHeaders, corsPreflightResponse, resolveAllowedOrigin } from "./lib/v1/cors.server";
+import {
+  applyCorsHeaders,
+  corsPreflightResponse,
+  resolveAllowedOrigin,
+} from "./lib/v1/cors.server";
 
 // API_CONTRACT.md §5 -- GET /v1/.well-known/jwks.json. Handled directly
 // here, before the file-based router even runs, because TanStack Start's
@@ -59,6 +63,37 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
+// Priority 11 security audit: none of these were set anywhere in the app
+// (confirmed -- no CSP/frame/nosniff/referrer header existed at any layer).
+// Applied to every response from this one choke-point rather than per
+// route. `frame-ancestors 'none'` (plus the legacy X-Frame-Options for
+// older browsers) closes a real clickjacking gap on /login, which handles
+// Google OAuth and was previously framable. Deliberately NOT a full
+// Content-Security-Policy -- restricting script-src/connect-src/etc.
+// without being able to interactively verify every legitimate external
+// resource this app loads (Google Identity Services' script and iframe,
+// Supabase's API/storage domain) risks silently breaking the Google
+// Sign-In flow in production; that's a follow-up requiring its own
+// dedicated testing pass, not something to guess at here.
+function withSecurityHeaders(response: Response): Response {
+  // Rebuilt via a fresh Headers instance rather than mutating
+  // response.headers in place -- a Response constructed deep inside
+  // TanStack Start/Nitro's server-entry can carry an immutable Headers
+  // guard, which makes in-place .set() calls silently no-op instead of
+  // throwing (confirmed empirically: headers were absent from real
+  // responses until switched to this construction).
+  const headers = new Headers(response.headers);
+  headers.set("X-Frame-Options", "DENY");
+  headers.set("Content-Security-Policy", "frame-ancestors 'none'");
+  headers.set("X-Content-Type-Options", "nosniff");
+  headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 // Priority 14: production CORS policy, scoped to /v1 only -- the main
 // app's own SSR/HTML routes are never called cross-origin, so CORS is
 // meaningless there. Allowed origins come from applications.domain (see
@@ -76,12 +111,13 @@ export default {
     const url = new URL(request.url);
     const isV1 = isV1Path(url.pathname);
 
-    // CORS headers are layered on only for /v1, and only ever computed
-    // once per request.
+    // Security headers apply everywhere, unconditionally; CORS headers are
+    // layered on top only for /v1, and only ever computed once per request.
     async function finalize(response: Response): Promise<Response> {
-      if (!isV1) return response;
+      const withSecurity = withSecurityHeaders(response);
+      if (!isV1) return withSecurity;
       const allowedOrigin = await resolveAllowedOrigin(request.headers.get("origin"));
-      return applyCorsHeaders(response, allowedOrigin);
+      return applyCorsHeaders(withSecurity, allowedOrigin);
     }
 
     if (isV1 && request.method === "OPTIONS") {

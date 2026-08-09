@@ -78,7 +78,7 @@ function OnboardingPage() {
     }
     setUploading(true);
     try {
-      const path = avatarPath(user.id, file.name);
+      const path = avatarPath(user.id, file.type);
       const { url } = await getMediaStorageProvider().upload(path, file, file.type);
       setAvatarUrl(url);
     } catch {

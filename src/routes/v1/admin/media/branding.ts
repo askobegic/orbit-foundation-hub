@@ -8,14 +8,24 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ApiError, apiData, withRoute } from "@/lib/v1/http.server";
 import { requireAdminContext } from "@/lib/v1/context.server";
 
+// image/svg+xml deliberately excluded -- SVG is an active-content format
+// (can embed <script>) and these files are served publicly from the
+// storage domain; accepting it here would be a stored-XSS vector
+// (Priority 11 security audit).
 const ALLOWED_TYPES = [
   "image/png",
-  "image/svg+xml",
   "image/jpeg",
   "image/webp",
   "image/x-icon",
   "image/vnd.microsoft.icon",
 ];
+const EXTENSION_BY_TYPE: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
+  "image/x-icon": "ico",
+  "image/vnd.microsoft.icon": "ico",
+};
 const PURPOSES = ["logo", "favicon", "cover"] as const;
 
 export const Route = createFileRoute("/v1/admin/media/branding")({
@@ -67,7 +77,11 @@ export const Route = createFileRoute("/v1/admin/media/branding")({
           .maybeSingle();
         if (!app) throw new ApiError("NOT_FOUND", "Application not found.");
 
-        const ext = file.name.split(".").pop() || "png";
+        // Extension is derived from the validated file.type, never from the
+        // client-supplied filename -- a filename can carry an arbitrary
+        // trailing path segment that would otherwise become part of the
+        // storage object key (Priority 11 security audit).
+        const ext = EXTENSION_BY_TYPE[file.type] ?? "png";
         const path = `applications/${app.slug}/${purpose}.${ext}`;
         const { error } = await supabaseAdmin.storage.from("core").upload(path, file, {
           upsert: true,

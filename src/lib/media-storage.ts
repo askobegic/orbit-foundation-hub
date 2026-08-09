@@ -46,9 +46,22 @@ export function getMediaStorageProvider(): MediaStorageProvider {
   return provider;
 }
 
-export function campaignBannerPath(userId: string, fileName: string): string {
-  const ext = fileName.split(".").pop() || "jpg";
-  return `advertising/${userId}/${Date.now()}.${ext}`;
+// Extension is derived from the validated MIME type, never from the
+// client-supplied filename -- a filename's trailing segment would
+// otherwise become part of the storage object key unsanitized (Priority
+// 11 security audit; see also PROJECT_AUDIT.md -> CO-2).
+const EXTENSION_BY_TYPE: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
+function extensionForType(fileType: string): string {
+  return EXTENSION_BY_TYPE[fileType] ?? "jpg";
+}
+
+export function campaignBannerPath(userId: string, fileType: string): string {
+  return `advertising/${userId}/${Date.now()}.${extensionForType(fileType)}`;
 }
 
 // Priority 8.7 (R-6/R-10): avatars are Tier-2-classified content per
@@ -61,7 +74,6 @@ export function campaignBannerPath(userId: string, fileName: string): string {
 // accumulating one per upload, unlike campaignBannerPath's timestamped
 // name) -- this only changes which function performs the upload, not the
 // storage layout or behavior.
-export function avatarPath(userId: string, fileName: string): string {
-  const ext = fileName.split(".").pop() || "jpg";
-  return `avatars/${userId}/avatar.${ext}`;
+export function avatarPath(userId: string, fileType: string): string {
+  return `avatars/${userId}/avatar.${extensionForType(fileType)}`;
 }

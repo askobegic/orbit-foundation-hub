@@ -38,7 +38,7 @@ export const Route = createFileRoute("/v1/media/avatar")({
           ]);
         }
 
-        const path = avatarPath(ctx.userId, file.name);
+        const path = avatarPath(ctx.userId, file.type);
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { error } = await supabaseAdmin.storage.from("core").upload(path, file, {
           upsert: true,

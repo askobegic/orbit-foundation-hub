@@ -126,7 +126,7 @@ function AdvertisingPage() {
     }
     setUploading(true);
     try {
-      const path = campaignBannerPath(user.id, file.name);
+      const path = campaignBannerPath(user.id, file.type);
       const { url } = await getMediaStorageProvider().upload(path, file, file.type);
       setImageUrl(url);
     } catch {

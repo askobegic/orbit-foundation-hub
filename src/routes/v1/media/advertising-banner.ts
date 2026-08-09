@@ -48,7 +48,7 @@ export const Route = createFileRoute("/v1/media/advertising-banner")({
           ]);
         }
 
-        const path = campaignBannerPath(ctx.userId, file.name);
+        const path = campaignBannerPath(ctx.userId, file.type);
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { error } = await supabaseAdmin.storage.from("core").upload(path, file, {
           upsert: true,

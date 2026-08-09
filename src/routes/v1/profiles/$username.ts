@@ -33,10 +33,32 @@ export const Route = createFileRoute("/v1/profiles/$username")({
         }
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+        // An authenticated viewer's appId is already trustworthy (it comes
+        // from their verified JWT's azp claim). An anonymous caller's is
+        // client-supplied, so it's validated here -- otherwise a bogus
+        // appId guarantees no matching user_app_settings row below, and
+        // the per-application visibility gate silently defaults to
+        // visible regardless of what the profile owner actually
+        // configured on any real application (Priority 11 security audit).
+        if (!viewer) {
+          const { data: appRow } = await supabaseAdmin
+            .from("applications")
+            .select("id")
+            .eq("id", appId)
+            .maybeSingle();
+          if (!appRow) {
+            throw new ApiError("VALIDATION_ERROR", "appId does not resolve to a registered application", [
+              { field: "appId", issue: "not_found" },
+            ]);
+          }
+        }
+
         const { data: profile, error } = await supabaseAdmin
           .from("profiles")
           .select("*")
           .eq("username", params.username)
+          .eq("is_active", true)
           .maybeSingle();
         if (error) throw new Error(error.message);
         const owner = profile as ProfileRow | null;

@@ -39,9 +39,48 @@ export async function issueRefreshToken(
 
 export type RotatedRefreshToken = { userId: string; appId: string; refreshToken: string };
 
-// Single-use rotation: the presented token is immediately marked revoked
-// (linked via replaced_by to its successor) the moment it's exchanged --
-// reusing an already-rotated token is rejected the same as a revoked one.
+// Walks replaced_by from an already-rotated token to the live end of its
+// chain and revokes it too. Presenting a token that's already been rotated
+// away is the standard signal that it was stolen and is being replayed
+// alongside the legitimate rotated chain (OAuth Security BCP "refresh
+// token reuse detection") -- without this, a thief who captured an old
+// token gets rejected, but the legitimate holder's still-active descendant
+// token is left untouched and neither side is forced to re-authenticate.
+async function revokeDescendantChain(
+  supabaseAdmin: SupabaseClient,
+  startReplacedBy: string | null,
+): Promise<void> {
+  let currentId = startReplacedBy;
+  const visited = new Set<string>();
+  while (currentId && !visited.has(currentId)) {
+    visited.add(currentId);
+    const { data: child } = await supabaseAdmin
+      .from("v1_refresh_tokens")
+      .select("id, revoked_at, replaced_by")
+      .eq("id", currentId)
+      .maybeSingle();
+    if (!child) return;
+    if (!child.revoked_at) {
+      await supabaseAdmin
+        .from("v1_refresh_tokens")
+        .update({ revoked_at: new Date().toISOString() })
+        .eq("id", child.id)
+        .is("revoked_at", null);
+      return; // reached and revoked the live end of the chain
+    }
+    currentId = child.replaced_by;
+  }
+}
+
+// Single-use rotation: the presented token is atomically claimed (a
+// conditional UPDATE ... WHERE revoked_at IS NULL, not a plain UPDATE) the
+// moment it's exchanged, so two concurrent callers presenting the same
+// still-valid token can never both succeed -- only whichever request wins
+// the row lock revokes the parent and its newly-minted child stays valid;
+// the loser's own freshly-inserted child is revoked immediately so it's
+// never left behind as an unlinked, valid token. Reusing an
+// already-rotated token revokes its whole live descendant chain (see
+// revokeDescendantChain) rather than just being rejected.
 export async function rotateRefreshToken(
   supabaseAdmin: SupabaseClient,
   presentedToken: string,
@@ -53,8 +92,12 @@ export async function rotateRefreshToken(
     .eq("token_hash", hash)
     .maybeSingle();
   if (!row) return null;
-  if (row.revoked_at) return null;
   if (new Date(row.expires_at).getTime() < Date.now()) return null;
+
+  if (row.revoked_at) {
+    await revokeDescendantChain(supabaseAdmin, row.replaced_by);
+    return null;
+  }
 
   const newToken = newOpaqueToken();
   const expiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_SECONDS * 1000).toISOString();
@@ -70,11 +113,24 @@ export async function rotateRefreshToken(
     .single();
   if (insertErr) throw new Error(insertErr.message);
 
-  const { error: revokeErr } = await supabaseAdmin
+  const { data: claimed, error: revokeErr } = await supabaseAdmin
     .from("v1_refresh_tokens")
     .update({ revoked_at: new Date().toISOString(), replaced_by: newRow.id })
-    .eq("id", row.id);
+    .eq("id", row.id)
+    .is("revoked_at", null)
+    .select("id");
   if (revokeErr) throw new Error(revokeErr.message);
+
+  if (!claimed || claimed.length === 0) {
+    // Lost the race: another concurrent request already rotated this
+    // token first. Revoke the child we just minted rather than leaving it
+    // valid and unlinked.
+    await supabaseAdmin
+      .from("v1_refresh_tokens")
+      .update({ revoked_at: new Date().toISOString() })
+      .eq("id", newRow.id);
+    return null;
+  }
 
   return { userId: row.user_id, appId: row.app_id, refreshToken: newToken };
 }

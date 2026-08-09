@@ -15,6 +15,20 @@ import { getApplicationCapabilities } from "@/lib/capabilities.functions";
 import { hasAnyActivePremium } from "@/lib/premium";
 import type { Conversation, ConversationSummary } from "@/types/messaging";
 
+// conversations' RLS INSERT policy was removed (Priority 11 security audit)
+// -- it had no way to express "both sides Premium, recipient contactable,
+// messaging capability enabled", which this function already checks in
+// application code below. The actual row creation goes through
+// service_role, exactly like ad_campaigns does for the same reason, so a
+// direct REST/Supabase-client call can no longer create a conversation
+// bypassing these checks. Reads/hide/updates are unaffected and continue
+// through the caller's own session under the existing participant-only
+// RLS policies.
+async function adminClient() {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  return supabaseAdmin;
+}
+
 type ConversationRow = {
   id: string;
   user_a_id: string;
@@ -53,7 +67,8 @@ export const getOrCreateConversation = createServerFn({ method: "POST" })
     // one conversation per pair" regardless of who initiates.
     const [userAId, userBId] = [initiatorId, data.recipientUserId].sort();
 
-    const { data: existing, error: existingError } = await context.supabase
+    const supabaseAdmin = await adminClient();
+    const { data: existing, error: existingError } = await supabaseAdmin
       .from("conversations")
       .select("*")
       .eq("user_a_id", userAId)
@@ -91,7 +106,7 @@ export const getOrCreateConversation = createServerFn({ method: "POST" })
       throw new Error("This user is not accepting contact right now");
     }
 
-    const { data: created, error: createError } = await context.supabase
+    const { data: created, error: createError } = await supabaseAdmin
       .from("conversations")
       .insert({ user_a_id: userAId, user_b_id: userBId })
       .select("*")
@@ -104,7 +119,7 @@ export const getOrCreateConversation = createServerFn({ method: "POST" })
       // re-fetch and return the row the other request just created, so both
       // callers land in the same conversation.
       if (createError.code === "23505") {
-        const { data: raceWinner, error: refetchError } = await context.supabase
+        const { data: raceWinner, error: refetchError } = await supabaseAdmin
           .from("conversations")
           .select("*")
           .eq("user_a_id", userAId)
