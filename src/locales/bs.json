@@ -340,7 +340,21 @@
     "editModerationNotice": "Spremanje izmjena može vratiti ovu kampanju na pregled, zavisno od postavki moderacije ove aplikacije.",
     "saveChanges": "Sačuvaj izmjene",
     "editSuccess": "Kampanja je ažurirana.",
-    "editError": "Nije moguće ažurirati ovu kampanju."
+    "editError": "Nije moguće ažurirati ovu kampanju.",
+    "manageTargets": "Dodatne destinacije",
+    "additionalDestinationsTitle": "Dodatne distribucijske destinacije",
+    "additionalDestinationsHint": "Dodajte još mjesta gdje se ova kampanja prikazuje, pored njenog banner oglasnog prostora iznad.",
+    "noAdditionalChannels": "Trenutno nema dostupnih dodatnih destinacija za ovu kampanju.",
+    "targetTotal": "Ukupno za dodatne destinacije",
+    "targetAdded": "Destinacija je dodana",
+    "targetRemoved": "Destinacija je uklonjena",
+    "targetError": "Nije moguće ažurirati odabrane destinacije.",
+    "targetStatusDraft": "Odabrano",
+    "channelType": {
+      "application": "Aplikacije",
+      "external_website": "Eksterni websajtovi",
+      "social_media": "Društvene mreže"
+    }
   },
   "help": {
     "title": "Pomoć i podrška",

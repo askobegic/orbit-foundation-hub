@@ -104,7 +104,8 @@ export async function resolveInitialCampaignStatus(
 ): Promise<"pending" | "active"> {
   const mode = await resolveModerationMode(appId);
   if (mode === "auto") return "active";
-  if (mode === "trusted_only") return (await isTrustedAdvertiser(userId, appId)) ? "active" : "pending";
+  if (mode === "trusted_only")
+    return (await isTrustedAdvertiser(userId, appId)) ? "active" : "pending";
   return "pending";
 }
 
@@ -190,7 +191,10 @@ export async function resolvePlacementPriceById(
 // carried over from the rest of the payment system.
 export async function getAdAccountCreditBalance(userId: string): Promise<number> {
   const supabaseAdmin = await admin();
-  const { data } = await supabaseAdmin.from("ad_account_credits").select("amount").eq("user_id", userId);
+  const { data } = await supabaseAdmin
+    .from("ad_account_credits")
+    .select("amount")
+    .eq("user_id", userId);
   return (data ?? []).reduce((sum, r) => sum + Number(r.amount), 0);
 }
 
@@ -303,7 +307,12 @@ export async function expireStaleDraftCampaigns(userId: string): Promise<void> {
 export async function getActivePlacementCreative(
   appId: string,
   placementKey: string,
-): Promise<{ campaignId: string; title: string; imageUrl: string | null; linkUrl: string | null } | null> {
+): Promise<{
+  campaignId: string;
+  title: string;
+  imageUrl: string | null;
+  linkUrl: string | null;
+} | null> {
   const supabaseAdmin = await admin();
   const { data } = await supabaseAdmin
     .from("ad_campaigns")
@@ -316,5 +325,115 @@ export async function getActivePlacementCreative(
     .limit(1)
     .maybeSingle();
   if (!data) return null;
-  return { campaignId: data.id, title: data.title, imageUrl: data.image_url, linkUrl: data.link_url };
+  return {
+    campaignId: data.id,
+    title: data.title,
+    imageUrl: data.image_url,
+    linkUrl: data.link_url,
+  };
+}
+
+// ---------- Priority 13, Phase D: campaign target selection ----------
+// Additional distribution channels layered onto an existing campaign.
+// Pricing resolution mirrors resolvePlacementPrices/resolvePlacementPriceById
+// above exactly -- the client only ever sends a channelPriceId; the actual
+// price is always looked up here, never trusted from the caller.
+
+export type ResolvedChannelPrice = {
+  id: string;
+  channelId: string;
+  durationDays: number;
+  price: number;
+  currency: string;
+  pricingStrategy: string;
+};
+
+export async function resolveChannelPrices(channelId: string): Promise<ResolvedChannelPrice[]> {
+  const supabaseAdmin = await admin();
+  const { data } = await supabaseAdmin
+    .from("ad_channel_prices")
+    .select("*")
+    .eq("channel_id", channelId)
+    .eq("enabled", true)
+    .eq("archived", false)
+    .order("display_order", { ascending: true });
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    channelId: row.channel_id,
+    durationDays: row.duration_days,
+    price: Number(row.price),
+    currency: row.currency,
+    pricingStrategy: row.pricing_strategy,
+  }));
+}
+
+export async function resolveChannelPriceById(
+  channelPriceId: string,
+): Promise<ResolvedChannelPrice | null> {
+  const supabaseAdmin = await admin();
+  const { data } = await supabaseAdmin
+    .from("ad_channel_prices")
+    .select("*")
+    .eq("id", channelPriceId)
+    .eq("enabled", true)
+    .eq("archived", false)
+    .maybeSingle();
+  if (!data) return null;
+  return {
+    id: data.id,
+    channelId: data.channel_id,
+    durationDays: data.duration_days,
+    price: Number(data.price),
+    currency: data.currency,
+    pricingStrategy: data.pricing_strategy,
+  };
+}
+
+export type AvailableAdChannel = {
+  id: string;
+  key: string;
+  name: string;
+  channelTypeKey: string;
+  description: string | null;
+  logoUrl: string | null;
+  externalUrl: string | null;
+  prices: ResolvedChannelPrice[];
+};
+
+// A channel is offered for an application if it has no ad_channel_apps rows
+// at all (unscoped -- offered under every application, e.g. a global
+// external website) or is explicitly associated with that application (e.g.
+// a per-application social account). Only enabled+purchasable+non-archived
+// channels that resolve at least one enabled price are ever returned -- an
+// unavailable/inactive channel is filtered out here, at the single place
+// every selection surface reads from, not left to client-side filtering.
+export async function getAvailableChannelsForApp(appId: string): Promise<AvailableAdChannel[]> {
+  const supabaseAdmin = await admin();
+  const { data: channels } = await supabaseAdmin
+    .from("ad_channels")
+    .select("*, ad_channel_apps(app_id)")
+    .eq("enabled", true)
+    .eq("purchasable", true)
+    .eq("archived", false)
+    .order("display_order", { ascending: true });
+
+  const inScope = (channels ?? []).filter((c) => {
+    const associations = (c.ad_channel_apps ?? []) as { app_id: string }[];
+    return associations.length === 0 || associations.some((a) => a.app_id === appId);
+  });
+
+  const results = await Promise.all(
+    inScope.map(async (c) => ({
+      id: c.id,
+      key: c.key,
+      name: c.name,
+      channelTypeKey: c.channel_type_key,
+      description: c.description,
+      logoUrl: c.logo_url,
+      externalUrl: c.external_url,
+      prices: await resolveChannelPrices(c.id),
+    })),
+  );
+  return results.filter((c) => c.prices.length > 0);
 }

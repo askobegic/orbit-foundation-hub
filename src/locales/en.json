@@ -340,7 +340,21 @@
     "editModerationNotice": "Saving changes may return this campaign to review, depending on this application's moderation settings.",
     "saveChanges": "Save changes",
     "editSuccess": "Campaign updated.",
-    "editError": "Could not update this campaign."
+    "editError": "Could not update this campaign.",
+    "manageTargets": "Additional destinations",
+    "additionalDestinationsTitle": "Additional distribution destinations",
+    "additionalDestinationsHint": "Add more places this campaign is shown, on top of its banner placement above.",
+    "noAdditionalChannels": "No additional destinations are available for this campaign right now.",
+    "targetTotal": "Additional destinations total",
+    "targetAdded": "Destination added",
+    "targetRemoved": "Destination removed",
+    "targetError": "Could not update the selected destinations.",
+    "targetStatusDraft": "Selected",
+    "channelType": {
+      "application": "Applications",
+      "external_website": "External websites",
+      "social_media": "Social media"
+    }
   },
   "help": {
     "title": "Help & support",

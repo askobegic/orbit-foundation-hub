@@ -13,6 +13,8 @@ import {
   expireStaleDraftCampaigns,
   getAdAccountCreditBalance,
   getActivePlacementCreative,
+  getAvailableChannelsForApp,
+  resolveChannelPriceById,
   resolveInitialCampaignStatus,
   resolvePlacementPriceById,
   resolvePlacementPrices,
@@ -272,6 +274,157 @@ export const getMyCampaigns = createServerFn({ method: "POST" })
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return data ?? [];
+  });
+
+// ---------- Authenticated: campaign target selection (Priority 13, Phase D) ----------
+//
+// Purely additive extra distribution channels layered onto an existing
+// campaign (see getMyCampaigns above for the campaign itself, unchanged).
+// No checkout/payment here yet -- targets are created/removed in 'draft'
+// status only; Phase F wires up per-target checkout the same way
+// createCampaignCheckoutReference/activateCampaignFromPurchase already do
+// for the campaign-level purchase above.
+
+const campaignChannelsSchema = z.object({ campaignId: z.string().uuid() });
+
+// Channels available for this campaign's application, each already carrying
+// its resolved, enabled price list -- same shape as getAdPlacementsForApp
+// above, so the UI never guesses at or invents a price.
+export const getAvailableAdChannelsForCampaign = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => campaignChannelsSchema.parse(raw))
+  .handler(async ({ data, context }) => {
+    const { data: campaign } = await context.supabase
+      .from("ad_campaigns")
+      .select("id, app_id")
+      .eq("id", data.campaignId)
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    if (!campaign) throw new Error("Campaign not found");
+    return getAvailableChannelsForApp(campaign.app_id);
+  });
+
+export const getMyCampaignTargets = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => campaignChannelsSchema.parse(raw))
+  .handler(async ({ data, context }) => {
+    const { data: campaign } = await context.supabase
+      .from("ad_campaigns")
+      .select("id")
+      .eq("id", data.campaignId)
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    if (!campaign) throw new Error("Campaign not found");
+
+    const { data: rows, error } = await context.supabase
+      .from("ad_campaign_targets")
+      .select("*")
+      .eq("campaign_id", data.campaignId)
+      .order("created_at", { ascending: true });
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+const addTargetSchema = z.object({
+  campaignId: z.string().uuid(),
+  channelPriceId: z.string().uuid(),
+});
+
+// The client only ever sends a channelPriceId -- the price itself is always
+// resolved server-side (resolveChannelPriceById) and re-validated against
+// the campaign's own application scope (getAvailableChannelsForApp), so a
+// disabled/unavailable/unrelated channel can never be added regardless of
+// what the client requests.
+export const addCampaignTarget = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => addTargetSchema.parse(raw))
+  .handler(async ({ data, context }) => {
+    const { data: campaign } = await context.supabase
+      .from("ad_campaigns")
+      .select("id, app_id, status")
+      .eq("id", data.campaignId)
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    if (!campaign) throw new Error("Campaign not found");
+    if (["ended", "cancelled", "rejected"].includes(campaign.status)) {
+      throw new Error("This campaign can no longer be edited");
+    }
+
+    const price = await resolveChannelPriceById(data.channelPriceId);
+    if (!price) throw new Error("Invalid channel price");
+
+    const available = await getAvailableChannelsForApp(campaign.app_id);
+    const isAvailable = available.some((c) => c.prices.some((p) => p.id === price.id));
+    if (!isAvailable) throw new Error("This channel is not available for this campaign");
+
+    const supabaseAdmin = await adminClient();
+
+    const { data: existing } = await supabaseAdmin
+      .from("ad_campaign_targets")
+      .select("*")
+      .eq("campaign_id", data.campaignId)
+      .eq("channel_price_id", data.channelPriceId)
+      .eq("status", "draft")
+      .maybeSingle();
+    if (existing) return existing;
+
+    const { data: row, error } = await supabaseAdmin
+      .from("ad_campaign_targets")
+      .insert({
+        campaign_id: data.campaignId,
+        channel_id: price.channelId,
+        channel_price_id: price.id,
+        status: "draft",
+      })
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+
+    await writeAuditLog({
+      userId: context.userId,
+      action: "ad_campaign_target.add",
+      entityType: "ad_campaign_target",
+      entityId: row.id,
+      newData: row,
+    });
+    return row;
+  });
+
+const removeTargetSchema = z.object({ targetId: z.string().uuid() });
+
+// Only a still-'draft' (unpaid) target can be removed -- once a target has
+// progressed past draft it is no longer a pending selection, so removal
+// through this path is refused (matching how updateCampaignCreative already
+// refuses to touch a campaign past its terminal states).
+export const removeCampaignTarget = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => removeTargetSchema.parse(raw))
+  .handler(async ({ data, context }) => {
+    const supabaseAdmin = await adminClient();
+    const { data: target } = await supabaseAdmin
+      .from("ad_campaign_targets")
+      .select("*, ad_campaigns!inner(user_id)")
+      .eq("id", data.targetId)
+      .maybeSingle();
+    if (!target || target.ad_campaigns.user_id !== context.userId)
+      throw new Error("Target not found");
+    if (target.status !== "draft") throw new Error("This target can no longer be removed");
+
+    const { error } = await supabaseAdmin
+      .from("ad_campaign_targets")
+      .delete()
+      .eq("id", data.targetId)
+      .eq("status", "draft");
+    if (error) throw new Error(error.message);
+
+    await writeAuditLog({
+      userId: context.userId,
+      action: "ad_campaign_target.remove",
+      entityType: "ad_campaign_target",
+      entityId: data.targetId,
+      oldData: target,
+    });
+    return { ok: true };
   });
 
 // ---------- Admin ----------

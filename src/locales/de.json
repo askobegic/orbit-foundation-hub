@@ -340,7 +340,21 @@
     "editModerationNotice": "Das Speichern von Änderungen kann diese Kampagne je nach Moderationseinstellungen dieser Anwendung erneut zur Prüfung zurückschicken.",
     "saveChanges": "Änderungen speichern",
     "editSuccess": "Kampagne aktualisiert.",
-    "editError": "Diese Kampagne konnte nicht aktualisiert werden."
+    "editError": "Diese Kampagne konnte nicht aktualisiert werden.",
+    "manageTargets": "Zusätzliche Ziele",
+    "additionalDestinationsTitle": "Zusätzliche Vertriebsziele",
+    "additionalDestinationsHint": "Fügen Sie weitere Orte hinzu, an denen diese Kampagne gezeigt wird, zusätzlich zu ihrer Banner-Platzierung oben.",
+    "noAdditionalChannels": "Für diese Kampagne sind derzeit keine zusätzlichen Ziele verfügbar.",
+    "targetTotal": "Summe zusätzliche Ziele",
+    "targetAdded": "Ziel hinzugefügt",
+    "targetRemoved": "Ziel entfernt",
+    "targetError": "Die ausgewählten Ziele konnten nicht aktualisiert werden.",
+    "targetStatusDraft": "Ausgewählt",
+    "channelType": {
+      "application": "Anwendungen",
+      "external_website": "Externe Websites",
+      "social_media": "Soziale Medien"
+    }
   },
   "help": {
     "title": "Hilfe & Support",

@@ -155,6 +155,73 @@ export type Database = {
         }
         Relationships: []
       }
+      ad_campaign_targets: {
+        Row: {
+          campaign_id: string
+          channel_id: string
+          channel_price_id: string
+          created_at: string
+          expires_at: string | null
+          external_reference: string | null
+          id: string
+          metrics: Json
+          moderation_note: string | null
+          starts_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          campaign_id: string
+          channel_id: string
+          channel_price_id: string
+          created_at?: string
+          expires_at?: string | null
+          external_reference?: string | null
+          id?: string
+          metrics?: Json
+          moderation_note?: string | null
+          starts_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string
+          channel_id?: string
+          channel_price_id?: string
+          created_at?: string
+          expires_at?: string | null
+          external_reference?: string | null
+          id?: string
+          metrics?: Json
+          moderation_note?: string | null
+          starts_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_campaign_targets_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "ad_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_campaign_targets_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "ad_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_campaign_targets_channel_price_id_fkey"
+            columns: ["channel_price_id"]
+            isOneToOne: false
+            referencedRelation: "ad_channel_prices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ad_campaigns: {
         Row: {
           app_id: string
@@ -272,6 +339,63 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "ad_channels"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_channel_prices: {
+        Row: {
+          archived: boolean
+          channel_id: string
+          created_at: string
+          currency: string
+          display_order: number
+          duration_days: number
+          enabled: boolean
+          id: string
+          price: number
+          pricing_strategy: string
+          updated_at: string
+        }
+        Insert: {
+          archived?: boolean
+          channel_id: string
+          created_at?: string
+          currency?: string
+          display_order?: number
+          duration_days: number
+          enabled?: boolean
+          id?: string
+          price: number
+          pricing_strategy?: string
+          updated_at?: string
+        }
+        Update: {
+          archived?: boolean
+          channel_id?: string
+          created_at?: string
+          currency?: string
+          display_order?: number
+          duration_days?: number
+          enabled?: boolean
+          id?: string
+          price?: number
+          pricing_strategy?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_channel_prices_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "ad_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_channel_prices_pricing_strategy_fkey"
+            columns: ["pricing_strategy"]
+            isOneToOne: false
+            referencedRelation: "ad_pricing_strategies"
+            referencedColumns: ["key"]
           },
         ]
       }

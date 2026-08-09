@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, Megaphone, Upload } from "lucide-react";
@@ -12,11 +12,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/context/AuthContext";
 import { useApplication } from "@/context/ApplicationContext";
 import {
+  addCampaignTarget,
   createCampaignCheckoutReference,
   createDraftCampaign,
   getAdPlacementsForApp,
+  getAvailableAdChannelsForCampaign,
   getMyAdvertisingSummary,
   getMyCampaigns,
+  getMyCampaignTargets,
+  removeCampaignTarget,
   updateCampaignCreative,
 } from "@/lib/advertising.functions";
 import { campaignBannerPath, getMediaStorageProvider } from "@/lib/media-storage";
@@ -75,6 +79,7 @@ function AdvertisingPage() {
   const [selectedPriceId, setSelectedPriceId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null);
+  const [managingTargetsCampaignId, setManagingTargetsCampaignId] = useState<string | null>(null);
   const [checkout, setCheckout] = useState<{
     expectedAmount: number;
     currency: string;
@@ -177,7 +182,12 @@ function AdvertisingPage() {
     setSubmitting(true);
     try {
       await updateCreativeFn({
-        data: { campaignId: editingCampaignId, title: title.trim(), imageUrl, linkUrl: linkUrl.trim() || null },
+        data: {
+          campaignId: editingCampaignId,
+          title: title.trim(),
+          imageUrl,
+          linkUrl: linkUrl.trim() || null,
+        },
       });
       toast.success(t("advertising.editSuccess"));
       resetForm();
@@ -195,7 +205,10 @@ function AdvertisingPage() {
     if (!link) return;
     const url =
       provider === "stripe"
-        ? appendParams(link, { client_reference_id: checkout.reference, prefilled_email: user?.email ?? "" })
+        ? appendParams(link, {
+            client_reference_id: checkout.reference,
+            prefilled_email: user?.email ?? "",
+          })
         : appendParams(link, { custom: checkout.reference });
     window.location.href = url;
   }
@@ -240,7 +253,9 @@ function AdvertisingPage() {
 
             {checkout && !editingCampaignId ? (
               <section className="mt-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
-                <h2 className="text-sm font-semibold text-gray-900">{t("advertising.checkoutTitle")}</h2>
+                <h2 className="text-sm font-semibold text-gray-900">
+                  {t("advertising.checkoutTitle")}
+                </h2>
                 <p className="mt-2 text-sm text-gray-600">
                   {t("advertising.amountToPay", {
                     amount: checkout.expectedAmount,
@@ -297,7 +312,9 @@ function AdvertisingPage() {
                     </label>
                   )}
                   {editingCampaignId && (
-                    <p className="text-xs text-amber-600">{t("advertising.editModerationNotice")}</p>
+                    <p className="text-xs text-amber-600">
+                      {t("advertising.editModerationNotice")}
+                    </p>
                   )}
                   <label className="text-sm font-medium text-gray-700">
                     {t("advertising.campaignTitle")}
@@ -320,7 +337,9 @@ function AdvertisingPage() {
                     />
                   </label>
                   <div>
-                    <span className="text-sm font-medium text-gray-700">{t("advertising.banner")}</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      {t("advertising.banner")}
+                    </span>
                     <div className="mt-1 flex items-center gap-3">
                       {imageUrl && (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -392,30 +411,46 @@ function AdvertisingPage() {
           ) : (
             <ul className="mt-3 divide-y divide-gray-100">
               {campaignsQuery.data!.map((c) => (
-                <li key={c.id} className="flex items-center justify-between py-3 text-sm">
-                  <div>
-                    <p className="font-medium text-gray-800">{c.title}</p>
-                    <p className="text-xs text-gray-500">
-                      {c.placement_key}
-                      {c.expires_at
-                        ? ` · ${t("advertising.until")} ${new Date(c.expires_at).toLocaleDateString(i18n.language)}`
-                        : ""}
-                    </p>
+                <li key={c.id} className="py-3 text-sm">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-gray-800">{c.title}</p>
+                      <p className="text-xs text-gray-500">
+                        {c.placement_key}
+                        {c.expires_at
+                          ? ` · ${t("advertising.until")} ${new Date(c.expires_at).toLocaleDateString(i18n.language)}`
+                          : ""}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600">
+                        {t(STATUS_I18N_KEY[c.status] ?? c.status)}
+                      </span>
+                      {c.status !== "ended" && c.status !== "cancelled" && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => startEdit(c)}
+                            className="text-xs font-medium text-[#1D6BF3] hover:underline"
+                          >
+                            {t("advertising.edit")}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setManagingTargetsCampaignId(
+                                managingTargetsCampaignId === c.id ? null : c.id,
+                              )
+                            }
+                            className="text-xs font-medium text-[#1D6BF3] hover:underline"
+                          >
+                            {t("advertising.manageTargets")}
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600">
-                      {t(STATUS_I18N_KEY[c.status] ?? c.status)}
-                    </span>
-                    {c.status !== "ended" && c.status !== "cancelled" && (
-                      <button
-                        type="button"
-                        onClick={() => startEdit(c)}
-                        className="text-xs font-medium text-[#1D6BF3] hover:underline"
-                      >
-                        {t("advertising.edit")}
-                      </button>
-                    )}
-                  </div>
+                  {managingTargetsCampaignId === c.id && <CampaignTargetsPanel campaignId={c.id} />}
                 </li>
               ))}
             </ul>
@@ -423,5 +458,162 @@ function AdvertisingPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+// ---------- Priority 13, Phase D: additional distribution target selection ----------
+// Purely additive to the campaign above -- its existing banner placement
+// (app_id/placement_key/placement_price_id) is untouched by any of this.
+// No checkout here yet: selecting a destination just creates/removes a
+// 'draft' ad_campaign_targets row (Phase F wires up per-target payment).
+// Every price shown/summed here comes straight from
+// getAvailableAdChannelsForCampaign's server response -- never computed or
+// invented on the client.
+
+function CampaignTargetsPanel({ campaignId }: { campaignId: string }) {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const getChannelsFn = useServerFn(getAvailableAdChannelsForCampaign);
+  const getTargetsFn = useServerFn(getMyCampaignTargets);
+  const addTargetFn = useServerFn(addCampaignTarget);
+  const removeTargetFn = useServerFn(removeCampaignTarget);
+
+  const channelsQ = useQuery({
+    queryKey: ["advertising", "available-channels", campaignId],
+    queryFn: () => getChannelsFn({ data: { campaignId } }),
+  });
+  const targetsQ = useQuery({
+    queryKey: ["advertising", "campaign-targets", campaignId],
+    queryFn: () => getTargetsFn({ data: { campaignId } }),
+  });
+
+  const invalidate = () =>
+    void qc.invalidateQueries({ queryKey: ["advertising", "campaign-targets", campaignId] });
+
+  const addMut = useMutation({
+    mutationFn: (channelPriceId: string) => addTargetFn({ data: { campaignId, channelPriceId } }),
+    onSuccess: () => {
+      toast.success(t("advertising.targetAdded"));
+      invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message || t("advertising.targetError")),
+  });
+
+  const removeMut = useMutation({
+    mutationFn: (targetId: string) => removeTargetFn({ data: { targetId } }),
+    onSuccess: () => {
+      toast.success(t("advertising.targetRemoved"));
+      invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message || t("advertising.targetError")),
+  });
+
+  if (channelsQ.isLoading || targetsQ.isLoading) {
+    return <Skeleton className="mt-3 h-16 w-full rounded-xl" />;
+  }
+
+  const channels = channelsQ.data ?? [];
+  const draftTargets = (targetsQ.data ?? []).filter((tg) => tg.status === "draft");
+  const selectedPriceIds = new Set(draftTargets.map((tg) => tg.channel_price_id));
+  const targetIdByPriceId = new Map(draftTargets.map((tg) => [tg.channel_price_id, tg.id]));
+
+  const totalsByCurrency = new Map<string, number>();
+  for (const channel of channels) {
+    for (const price of channel.prices) {
+      if (selectedPriceIds.has(price.id)) {
+        totalsByCurrency.set(
+          price.currency,
+          (totalsByCurrency.get(price.currency) ?? 0) + price.price,
+        );
+      }
+    }
+  }
+
+  const grouped = new Map<string, typeof channels>();
+  for (const channel of channels) {
+    const list = grouped.get(channel.channelTypeKey) ?? [];
+    list.push(channel);
+    grouped.set(channel.channelTypeKey, list);
+  }
+
+  return (
+    <div className="mt-3 rounded-xl bg-gray-50 p-4">
+      <p className="text-sm font-semibold text-gray-900">
+        {t("advertising.additionalDestinationsTitle")}
+      </p>
+      <p className="mt-1 text-xs text-gray-500">{t("advertising.additionalDestinationsHint")}</p>
+
+      {channels.length === 0 ? (
+        <p className="mt-3 text-sm text-gray-500">{t("advertising.noAdditionalChannels")}</p>
+      ) : (
+        <div className="mt-3 space-y-4">
+          {Array.from(grouped.entries()).map(([typeKey, typeChannels]) => (
+            <div key={typeKey}>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                {t(`advertising.channelType.${typeKey}`, { defaultValue: typeKey })}
+              </p>
+              <ul className="mt-2 space-y-2">
+                {typeChannels.map((channel) => (
+                  <li key={channel.id} className="rounded-lg bg-white p-3 ring-1 ring-gray-100">
+                    <p className="text-sm font-medium text-gray-800">{channel.name}</p>
+                    {channel.description && (
+                      <p className="text-xs text-gray-500">{channel.description}</p>
+                    )}
+                    {channel.externalUrl && (
+                      <p className="truncate text-xs text-gray-400">{channel.externalUrl}</p>
+                    )}
+                    <ul className="mt-2 space-y-1">
+                      {channel.prices.map((price) => {
+                        const selected = selectedPriceIds.has(price.id);
+                        const busy = addMut.isPending || removeMut.isPending;
+                        return (
+                          <li
+                            key={price.id}
+                            className="flex items-center justify-between gap-2 text-sm"
+                          >
+                            <label className="flex flex-1 items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={selected}
+                                disabled={busy}
+                                onChange={() => {
+                                  if (selected) {
+                                    const targetId = targetIdByPriceId.get(price.id);
+                                    if (targetId) removeMut.mutate(targetId);
+                                  } else {
+                                    addMut.mutate(price.id);
+                                  }
+                                }}
+                              />
+                              <span>
+                                {price.durationDays}d — {price.price} {price.currency}
+                              </span>
+                            </label>
+                            {selected && (
+                              <span className="text-xs font-medium text-emerald-600">
+                                {t("advertising.targetStatusDraft")}
+                              </span>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {totalsByCurrency.size > 0 && (
+        <div className="mt-4 border-t border-gray-200 pt-3 text-sm font-semibold text-gray-900">
+          {t("advertising.targetTotal")}:{" "}
+          {Array.from(totalsByCurrency.entries())
+            .map(([currency, amount]) => `${amount} ${currency}`)
+            .join(" + ")}
+        </div>
+      )}
+    </div>
   );
 }
