@@ -13,12 +13,14 @@ import {
   expireStaleDraftCampaigns,
   getAdAccountCreditBalance,
   getActivePlacementCreative,
+  getAvailableApplicationPlacements,
   getAvailableChannelsForApp,
   resolveChannelPriceById,
   resolveInitialCampaignStatus,
   resolvePlacementPriceById,
   resolvePlacementPrices,
 } from "@/lib/advertising.server";
+import type { AdDevice } from "@/lib/advertising.server";
 import { getApplicationCapabilities } from "@/lib/capabilities.functions";
 import { isSafeProfileUrl } from "@/lib/url";
 import { signCampaignReference } from "@/lib/payment-reference.server";
@@ -62,14 +64,25 @@ export const getAdPlacementsForApp = createServerFn({ method: "POST" })
     return results.filter((p) => p.prices.length > 0);
   });
 
-const activeAdSchema = z.object({ appId: z.string().uuid(), placementKey: z.string() });
+const activeAdSchema = z.object({
+  appId: z.string().uuid(),
+  placementKey: z.string(),
+  device: z.enum(["desktop", "mobile"]).optional(),
+});
 
+// device is optional -- omitted entirely, existing callers get the exact
+// same unfiltered behavior as before Phase D1 (see getActivePlacementCreative,
+// which only applies the device check when a device is actually supplied).
 export const getActivePlacementAd = createServerFn({ method: "POST" })
   .inputValidator((raw: unknown) => activeAdSchema.parse(raw))
   .handler(async ({ data }) => {
     const capabilities = await getApplicationCapabilities({ data: { appId: data.appId } });
     if (!capabilities.includes("advertising")) return null;
-    return getActivePlacementCreative(data.appId, data.placementKey);
+    return getActivePlacementCreative(
+      data.appId,
+      data.placementKey,
+      data.device as AdDevice | undefined,
+    );
   });
 
 // ---------- Authenticated: self-serve campaign creation ----------
@@ -304,6 +317,16 @@ export const getAvailableAdChannelsForCampaign = createServerFn({ method: "POST"
     return getAvailableChannelsForApp(campaign.app_id);
   });
 
+// Placements the customer may pick when a selected channel represents a
+// CORE application (channel.representsAppId) -- used by the target-
+// selection UI to offer an optional placement per destination. Empty list
+// is a valid, expected answer (not every application has any configured
+// placements); the target-selection UI must remain fully usable without one.
+export const getAvailablePlacementsForApplication = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => z.object({ appId: z.string().uuid() }).parse(raw))
+  .handler(async ({ data }) => getAvailableApplicationPlacements(data.appId));
+
 export const getMyCampaignTargets = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((raw: unknown) => campaignChannelsSchema.parse(raw))
@@ -328,13 +351,18 @@ export const getMyCampaignTargets = createServerFn({ method: "POST" })
 const addTargetSchema = z.object({
   campaignId: z.string().uuid(),
   channelPriceId: z.string().uuid(),
+  placementKey: z.string().trim().min(1).nullable().optional(),
 });
 
 // The client only ever sends a channelPriceId -- the price itself is always
 // resolved server-side (resolveChannelPriceById) and re-validated against
 // the campaign's own application scope (getAvailableChannelsForApp), so a
 // disabled/unavailable/unrelated channel can never be added regardless of
-// what the client requests.
+// what the client requests. placementKey (Phase D1) is optional -- a
+// social-media-channel target legitimately has no page position; when
+// provided, it's checked to be a real ad_placements key, nothing more --
+// which channel types "should" carry a placement is left as a UI/product
+// decision, not a hard server-side restriction.
 export const addCampaignTarget = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((raw: unknown) => addTargetSchema.parse(raw))
@@ -359,6 +387,15 @@ export const addCampaignTarget = createServerFn({ method: "POST" })
 
     const supabaseAdmin = await adminClient();
 
+    if (data.placementKey) {
+      const { data: placement } = await supabaseAdmin
+        .from("ad_placements")
+        .select("key")
+        .eq("key", data.placementKey)
+        .maybeSingle();
+      if (!placement) throw new Error("Invalid placement");
+    }
+
     const { data: existing } = await supabaseAdmin
       .from("ad_campaign_targets")
       .select("*")
@@ -374,6 +411,7 @@ export const addCampaignTarget = createServerFn({ method: "POST" })
         campaign_id: data.campaignId,
         channel_id: price.channelId,
         channel_price_id: price.id,
+        placement_key: data.placementKey ?? null,
         status: "draft",
       })
       .select("*")
@@ -1109,6 +1147,7 @@ const channelSchema = z.object({
   notes: z.string().trim().max(2000).nullable().optional(),
   integrationId: z.string().trim().max(200).nullable().optional(),
   externalPartner: z.string().trim().max(200).nullable().optional(),
+  representsAppId: z.string().uuid().nullable().optional(),
   archived: z.boolean().default(false),
   reason: z.string().trim().max(500).optional(),
 });
@@ -1174,6 +1213,7 @@ export const adminUpsertAdChannel = createServerFn({ method: "POST" })
       notes: data.notes ?? null,
       integration_id: data.integrationId ?? null,
       external_partner: data.externalPartner ?? null,
+      represents_app_id: data.representsAppId ?? null,
       archived: data.archived,
     };
     const { data: row, error } = data.id
@@ -1269,4 +1309,127 @@ export const adminListAdChannelApps = createServerFn({ method: "POST" })
       .eq("channel_id", data.channelId);
     if (error) throw new Error(error.message);
     return rows ?? [];
+  });
+
+// ---------- Admin: Placement & Delivery Foundation (Priority 13, Phase D1) ----------
+//
+// ad_application_placements is "is this placement live, purchasable, and
+// how, for THIS application" -- the same division of responsibility as
+// ad_channels/ad_channel_apps, applied one level over. purchasable and
+// enabled are intentionally independent fields (see PROJECT_KNOWLEDGE.md):
+// purchasable gates new sales only; enabled gates delivery of everything,
+// including already-active campaigns.
+
+const applicationPlacementSchema = z.object({
+  id: z.string().uuid().optional(),
+  appId: z.string().uuid(),
+  placementKey: z.string().trim().min(1),
+  enabled: z.boolean().default(true),
+  purchasable: z.boolean().default(true),
+  allowedFormatKeys: z.array(z.string().trim().min(1)).max(20).default([]),
+  supportedDevices: z
+    .array(z.enum(["desktop", "mobile"]))
+    .min(1)
+    .default(["desktop", "mobile"]),
+  displayOrder: z.number().int().default(0),
+  reason: z.string().trim().max(500).optional(),
+});
+
+export const adminUpsertAdApplicationPlacement = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => applicationPlacementSchema.parse(raw))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const supabaseAdmin = await adminClient();
+
+    if (data.allowedFormatKeys.length > 0) {
+      const { data: formats } = await supabaseAdmin
+        .from("ad_campaign_formats")
+        .select("key")
+        .in("key", data.allowedFormatKeys);
+      const validKeys = new Set((formats ?? []).map((f) => f.key));
+      const unknownKeys = data.allowedFormatKeys.filter((k) => !validKeys.has(k));
+      if (unknownKeys.length > 0)
+        throw new Error(`Unknown campaign format(s): ${unknownKeys.join(", ")}`);
+    }
+
+    let previous: unknown = null;
+    if (data.id) {
+      const { data: existing } = await supabaseAdmin
+        .from("ad_application_placements")
+        .select("*")
+        .eq("id", data.id)
+        .maybeSingle();
+      previous = existing;
+    }
+
+    const payload = {
+      app_id: data.appId,
+      placement_key: data.placementKey,
+      enabled: data.enabled,
+      purchasable: data.purchasable,
+      allowed_format_keys: data.allowedFormatKeys,
+      supported_devices: data.supportedDevices,
+      display_order: data.displayOrder,
+    };
+    const { data: row, error } = data.id
+      ? await supabaseAdmin
+          .from("ad_application_placements")
+          .update(payload)
+          .eq("id", data.id)
+          .select("*")
+          .single()
+      : await supabaseAdmin
+          .from("ad_application_placements")
+          .upsert(payload, { onConflict: "app_id,placement_key" })
+          .select("*")
+          .single();
+    if (error) throw new Error(error.message);
+
+    await writeAuditLog({
+      userId: context.userId,
+      action: data.id ? "ad_application_placement.update" : "ad_application_placement.create",
+      entityType: "ad_application_placement",
+      entityId: row.id,
+      oldData: previous,
+      newData: row,
+      reason: data.reason ?? null,
+    });
+    return row;
+  });
+
+const listApplicationPlacementsSchema = z.object({ appId: z.string().uuid().optional() });
+
+// Integration status is computed here, server-side, from last_delivery_at +
+// ad_config.integration_freshness_hours (service_role-only, so the raw
+// config value is never exposed to the client -- only the derived label).
+// "Connected" means only "our delivery endpoint was recently called for
+// this placement" -- never a claim that CORE inspected another
+// application's code.
+export const adminListAdApplicationPlacements = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => listApplicationPlacementsSchema.parse(raw))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    let query = context.supabase.from("ad_application_placements").select("*");
+    if (data.appId) query = query.eq("app_id", data.appId);
+    const { data: rows, error } = await query.order("display_order", { ascending: true });
+    if (error) throw new Error(error.message);
+
+    const supabaseAdmin = await adminClient();
+    const { data: config } = await supabaseAdmin
+      .from("ad_config")
+      .select("value")
+      .eq("key", "integration_freshness_hours")
+      .maybeSingle();
+    const freshnessHours = typeof config?.value === "number" ? config.value : 24;
+
+    return (rows ?? []).map((row) => {
+      let integrationStatus: "not_connected" | "connected" | "stale" = "not_connected";
+      if (row.last_delivery_at) {
+        const ageHours = (Date.now() - new Date(row.last_delivery_at).getTime()) / (1000 * 60 * 60);
+        integrationStatus = ageHours <= freshnessHours ? "connected" : "stale";
+      }
+      return { ...row, integrationStatus };
+    });
   });

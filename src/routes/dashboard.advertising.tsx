@@ -17,6 +17,7 @@ import {
   createDraftCampaign,
   getAdPlacementsForApp,
   getAvailableAdChannelsForCampaign,
+  getAvailablePlacementsForApplication,
   getMyAdvertisingSummary,
   getMyCampaigns,
   getMyCampaignTargets,
@@ -487,11 +488,23 @@ function CampaignTargetsPanel({ campaignId }: { campaignId: string }) {
     queryFn: () => getTargetsFn({ data: { campaignId } }),
   });
 
+  // Per-channel placement choice (Phase D1) -- only relevant for channels
+  // that represent a CORE application; stays empty (no placement) for every
+  // other channel, which remains a fully valid selection.
+  const [placementByChannel, setPlacementByChannel] = useState<Record<string, string>>({});
+
   const invalidate = () =>
     void qc.invalidateQueries({ queryKey: ["advertising", "campaign-targets", campaignId] });
 
   const addMut = useMutation({
-    mutationFn: (channelPriceId: string) => addTargetFn({ data: { campaignId, channelPriceId } }),
+    mutationFn: (input: { channelPriceId: string; placementKey?: string }) =>
+      addTargetFn({
+        data: {
+          campaignId,
+          channelPriceId: input.channelPriceId,
+          placementKey: input.placementKey || null,
+        },
+      }),
     onSuccess: () => {
       toast.success(t("advertising.targetAdded"));
       invalidate();
@@ -562,6 +575,15 @@ function CampaignTargetsPanel({ campaignId }: { campaignId: string }) {
                     {channel.externalUrl && (
                       <p className="truncate text-xs text-gray-400">{channel.externalUrl}</p>
                     )}
+                    {channel.representsAppId && (
+                      <ChannelPlacementSelector
+                        appId={channel.representsAppId}
+                        value={placementByChannel[channel.id] ?? ""}
+                        onChange={(v) =>
+                          setPlacementByChannel((prev) => ({ ...prev, [channel.id]: v }))
+                        }
+                      />
+                    )}
                     <ul className="mt-2 space-y-1">
                       {channel.prices.map((price) => {
                         const selected = selectedPriceIds.has(price.id);
@@ -581,7 +603,10 @@ function CampaignTargetsPanel({ campaignId }: { campaignId: string }) {
                                     const targetId = targetIdByPriceId.get(price.id);
                                     if (targetId) removeMut.mutate(targetId);
                                   } else {
-                                    addMut.mutate(price.id);
+                                    addMut.mutate({
+                                      channelPriceId: price.id,
+                                      placementKey: placementByChannel[channel.id],
+                                    });
                                   }
                                 }}
                               />
@@ -615,5 +640,47 @@ function CampaignTargetsPanel({ campaignId }: { campaignId: string }) {
         </div>
       )}
     </div>
+  );
+}
+
+// Only rendered for a channel that represents a CORE application
+// (channel.representsAppId). An empty result is expected and valid -- not
+// every application has any configured placements yet -- in which case
+// nothing is rendered and the target is added with no placement, exactly
+// like a social-media channel.
+function ChannelPlacementSelector({
+  appId,
+  value,
+  onChange,
+}: {
+  appId: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const { t } = useTranslation();
+  const getPlacementsFn = useServerFn(getAvailablePlacementsForApplication);
+  const placementsQ = useQuery({
+    queryKey: ["advertising", "app-placements", appId],
+    queryFn: () => getPlacementsFn({ data: { appId } }),
+  });
+
+  if (!placementsQ.data || placementsQ.data.length === 0) return null;
+
+  return (
+    <label className="mt-2 block text-xs text-gray-600">
+      {t("advertising.placementOptional")}
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-1 block w-full rounded-lg border border-[#E5E7EB] px-2 py-1 text-xs outline-none focus:border-[#1D6BF3]"
+      >
+        <option value="">{t("advertising.noPlacement")}</option>
+        {placementsQ.data.map((p) => (
+          <option key={p.key} value={p.key}>
+            {p.label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }

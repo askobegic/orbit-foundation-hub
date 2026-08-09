@@ -84,6 +84,63 @@ export type Database = {
           },
         ]
       }
+      ad_application_placements: {
+        Row: {
+          allowed_format_keys: string[]
+          app_id: string
+          created_at: string
+          display_order: number
+          enabled: boolean
+          id: string
+          last_delivery_at: string | null
+          placement_key: string
+          purchasable: boolean
+          supported_devices: string[]
+          updated_at: string
+        }
+        Insert: {
+          allowed_format_keys?: string[]
+          app_id: string
+          created_at?: string
+          display_order?: number
+          enabled?: boolean
+          id?: string
+          last_delivery_at?: string | null
+          placement_key: string
+          purchasable?: boolean
+          supported_devices?: string[]
+          updated_at?: string
+        }
+        Update: {
+          allowed_format_keys?: string[]
+          app_id?: string
+          created_at?: string
+          display_order?: number
+          enabled?: boolean
+          id?: string
+          last_delivery_at?: string | null
+          placement_key?: string
+          purchasable?: boolean
+          supported_devices?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_application_placements_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_application_placements_placement_key_fkey"
+            columns: ["placement_key"]
+            isOneToOne: false
+            referencedRelation: "ad_placements"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
       ad_application_settings: {
         Row: {
           app_id: string
@@ -166,6 +223,7 @@ export type Database = {
           id: string
           metrics: Json
           moderation_note: string | null
+          placement_key: string | null
           starts_at: string | null
           status: string
           updated_at: string
@@ -180,6 +238,7 @@ export type Database = {
           id?: string
           metrics?: Json
           moderation_note?: string | null
+          placement_key?: string | null
           starts_at?: string | null
           status?: string
           updated_at?: string
@@ -194,6 +253,7 @@ export type Database = {
           id?: string
           metrics?: Json
           moderation_note?: string | null
+          placement_key?: string | null
           starts_at?: string | null
           status?: string
           updated_at?: string
@@ -219,6 +279,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "ad_channel_prices"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_campaign_targets_placement_key_fkey"
+            columns: ["placement_key"]
+            isOneToOne: false
+            referencedRelation: "ad_placements"
+            referencedColumns: ["key"]
           },
         ]
       }
@@ -457,6 +524,7 @@ export type Database = {
           name: string
           notes: string | null
           purchasable: boolean
+          represents_app_id: string | null
           updated_at: string
         }
         Insert: {
@@ -480,6 +548,7 @@ export type Database = {
           name: string
           notes?: string | null
           purchasable?: boolean
+          represents_app_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -503,6 +572,7 @@ export type Database = {
           name?: string
           notes?: string | null
           purchasable?: boolean
+          represents_app_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -512,6 +582,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "ad_channel_types"
             referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "ad_channels_represents_app_id_fkey"
+            columns: ["represents_app_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
           },
         ]
       }

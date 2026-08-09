@@ -708,15 +708,15 @@ Same soft-lifecycle registry CRUD shape as the Admin registry endpoints above:
 
 ## 14. Advertising
 
-Business rules: `PROJECT_KNOWLEDGE.md` → Advertising. Schema reference: `ad_placements`/`ad_placement_prices`/`ad_campaigns`/`ad_account_credits`/`ad_trusted_advertisers`/`ad_config`/`ad_application_settings`.
+Business rules: `PROJECT_KNOWLEDGE.md` → Advertising, and → Universal Advertising Placement & Delivery Foundation (Priority 13, Phase D1). Schema reference: `ad_placements`/`ad_placement_prices`/`ad_campaigns`/`ad_account_credits`/`ad_trusted_advertisers`/`ad_config`/`ad_application_settings`/`ad_application_placements`.
 
 ### `GET /v1/advertising/placements`
 Placements + resolved prices available for the calling application — empty if `advertising` is disabled (same dependency-validation rule as everywhere else, not a `CAPABILITY_DISABLED` error, since "no placements" is itself a valid empty-list answer for a browsing endpoint). Calling application per §3.3 (`azp` when signed in, otherwise a required `?appId=`).
 - **Auth:** optional. **Response 200:** `{ "data": [ { "key": "hero_banner", "label": "Hero Banner", "prices": [ { "id": "...", "durationDays": 30, "price": 49.00, "currency": "EUR" } ] } ] }`
 
 ### `GET /v1/advertising/placements/{placementKey}/active-ad`
-The currently active creative for a placement, if any — public ad-serving, deliberately minimal fields (never owner, moderation history, or price). Calling application per §3.3.
-- **Auth:** optional. **Query:** `?appId=` required when anonymous. **Response 200:** `{ "data": { "campaignId": "...", "title": "...", "imageUrl": "...", "linkUrl": "..." } }` or `{ "data": null }`.
+The currently eligible creative for a placement, if any — public ad-serving, deliberately minimal fields (never owner, moderation history, or price). Calling application per §3.3. **(Phase D1)** now also considers Priority 13 campaign targets whose destination channel represents the calling application and names this exact placement, in addition to the original single-placement campaign — whichever is more recent wins, same recency rule as before, not a new ranking scheme. Delivery is additionally gated on an `ad_application_placements` mapping existing and being enabled for `(appId, placementKey)` — `purchasable` on that mapping has no effect on this endpoint, it governs new sales only (`POST /v1/me/advertising/campaigns`), never whether an already-active campaign/target keeps delivering.
+- **Auth:** optional. **Query:** `?appId=` required when anonymous; **`?device=desktop|mobile`** (Phase D1, optional — omitted entirely preserves the exact pre-D1 behavior for every existing caller; when supplied, no creative is returned if the resolved placement doesn't support that device). **Response 200:** `{ "data": { "campaignId": "...", "title": "...", "imageUrl": "...", "linkUrl": "..." } }` or `{ "data": null }` — response shape unchanged.
 
 ### `GET /v1/me/advertising/summary`
 Eligibility + available Advertising Credit, for the checkout UI to show before the user commits.

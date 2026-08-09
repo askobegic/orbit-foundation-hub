@@ -354,7 +354,9 @@
       "application": "Anwendungen",
       "external_website": "Externe Websites",
       "social_media": "Soziale Medien"
-    }
+    },
+    "placementOptional": "Platzierung (optional)",
+    "noPlacement": "Keine bestimmte Platzierung"
   },
   "help": {
     "title": "Hilfe & Support",
@@ -625,7 +627,21 @@
       "noChannels": "Noch keine Vertriebskanäle.",
       "supportedApps": "Unterstützte Anwendungen",
       "manageApps": "Verwalten",
-      "allApplications": "Alle Anwendungen (uneingeschränkt)"
+      "allApplications": "Alle Anwendungen (uneingeschränkt)",
+      "representsApp": "Repräsentiert Anwendung",
+      "applicationPlacementsTitle": "Anwendungs-Platzierungen",
+      "applicationPlacementsHint": "Legen Sie fest, welche Platzierungen für welche Anwendung aktiv, käuflich und in welchen Formaten/Geräten verfügbar sind.",
+      "applicationPlacementSaved": "Anwendungs-Platzierung gespeichert",
+      "noApplicationPlacements": "Noch keine Anwendungs-Platzierungen konfiguriert.",
+      "supportedDevices": "Unterstützte Geräte",
+      "device": {
+        "desktop": "Desktop",
+        "mobile": "Mobil"
+      },
+      "integrationConnected": "Verbunden",
+      "integrationStale": "Veraltet",
+      "integrationNotConnected": "Nicht verbunden",
+      "lastDelivery": "Letzte Auslieferung"
     },
     "users": {
       "title": "Nutzer",

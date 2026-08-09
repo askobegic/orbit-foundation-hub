@@ -301,22 +301,115 @@ export async function expireStaleDraftCampaigns(userId: string): Promise<void> {
   if (error) console.error("expireStaleDraftCampaigns: update failed", error);
 }
 
-// Public ad-serving: the currently active campaign for a placement, if
-// any. Deliberately returns only the fields needed to render a creative --
-// never the owner, moderation history, or pricing.
-export async function getActivePlacementCreative(
+// ---------- Priority 13, Phase D1: Placement & Delivery Foundation ----------
+// Placement (WHERE on a page) composes with Channel/Target (WHICH
+// destination, Phase C/D) without merging either concept. ad_placements
+// stays the global "does this position exist" registry; ad_application_
+// placements is "is it live, purchasable, and how, for THIS application" --
+// same division of responsibility as ad_channels/ad_channel_apps.
+
+export type ResolvedApplicationPlacement = {
+  appId: string;
+  placementKey: string;
+  enabled: boolean;
+  purchasable: boolean;
+  allowedFormatKeys: string[];
+  supportedDevices: string[];
+  lastDeliveryAt: string | null;
+};
+
+// The one place "is this placement deliverable for this application"
+// is decided. purchasable is deliberately NOT part of the delivery
+// decision -- it governs new sales only (see getActivePlacementCreative's
+// own gate below, which checks .enabled, never .purchasable). Requires
+// BOTH the global ad_placements row (enabled, non-archived) and a
+// per-application ad_application_placements row to exist -- a placement
+// with no mapping row for this app is treated as not configured, not as
+// "open to everyone."
+export async function resolveApplicationPlacement(
   appId: string,
   placementKey: string,
-): Promise<{
+): Promise<ResolvedApplicationPlacement | null> {
+  const supabaseAdmin = await admin();
+
+  const { data: placement } = await supabaseAdmin
+    .from("ad_placements")
+    .select("enabled, archived")
+    .eq("key", placementKey)
+    .maybeSingle();
+  if (!placement || !placement.enabled || placement.archived) return null;
+
+  const { data: mapping } = await supabaseAdmin
+    .from("ad_application_placements")
+    .select("*")
+    .eq("app_id", appId)
+    .eq("placement_key", placementKey)
+    .maybeSingle();
+  if (!mapping) return null;
+
+  return {
+    appId,
+    placementKey,
+    enabled: mapping.enabled,
+    purchasable: mapping.purchasable,
+    allowedFormatKeys: mapping.allowed_format_keys,
+    supportedDevices: mapping.supported_devices,
+    lastDeliveryAt: mapping.last_delivery_at,
+  };
+}
+
+// Best-effort, non-blocking. This is the only CORE-verifiable "integration"
+// signal -- CORE cannot inspect another application's codebase, it can only
+// record that its own delivery endpoint was actually called for this
+// (app, placement). Never awaited by a caller in a way that could make a
+// delivery response depend on this write succeeding.
+async function touchPlacementDelivery(appId: string, placementKey: string): Promise<void> {
+  try {
+    const supabaseAdmin = await admin();
+    await supabaseAdmin
+      .from("ad_application_placements")
+      .update({ last_delivery_at: new Date().toISOString() })
+      .eq("app_id", appId)
+      .eq("placement_key", placementKey);
+  } catch (err) {
+    console.error("touchPlacementDelivery: update failed", err);
+  }
+}
+
+export type AdDevice = "desktop" | "mobile";
+
+type PlacementCreative = {
   campaignId: string;
   title: string;
   imageUrl: string | null;
   linkUrl: string | null;
-} | null> {
+};
+
+// Public ad-serving: the currently eligible creative for a placement, if
+// any. Deliberately returns only the fields needed to render a creative --
+// never the owner, moderation history, or pricing. Considers two sources --
+// the legacy single-placement campaign (unchanged filter/order/limit from
+// before Phase D1) and Phase D campaign targets (new) -- and picks whichever
+// is more recent, exactly the same recency rule already used, never a new
+// ranking/weighting scheme.
+export async function getActivePlacementCreative(
+  appId: string,
+  placementKey: string,
+  device?: AdDevice,
+): Promise<PlacementCreative | null> {
   const supabaseAdmin = await admin();
-  const { data } = await supabaseAdmin
+
+  const mapping = await resolveApplicationPlacement(appId, placementKey);
+  if (mapping) void touchPlacementDelivery(appId, placementKey);
+  if (!mapping || !mapping.enabled) return null;
+  if (device && !mapping.supportedDevices.includes(device)) return null;
+
+  // Legacy branch -- same WHERE/ORDER/LIMIT as before Phase D1; only
+  // addition is selecting created_at, needed below to compare recency
+  // against a target candidate. Never changes which campaign is matched.
+  const { data: campaignRow } = await supabaseAdmin
     .from("ad_campaigns")
-    .select("id, title, image_url, link_url")
+    .select("id, title, image_url, link_url, created_at")
     .eq("app_id", appId)
     .eq("placement_key", placementKey)
     .eq("status", "active")
@@ -324,13 +417,74 @@ export async function getActivePlacementCreative(
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (!data) return null;
-  return {
-    campaignId: data.id,
-    title: data.title,
-    imageUrl: data.image_url,
-    linkUrl: data.link_url,
-  };
+
+  // Target branch -- eligible when the target itself is 'active', its own
+  // dates are current, it names this exact placement, and its destination
+  // channel both represents this application and is itself still
+  // enabled+non-archived (a disabled/archived channel can never deliver,
+  // regardless of target status). Channel/date checks run in application
+  // code rather than as embedded-relation filters, since this environment
+  // has no live Supabase connection to verify PostgREST embedded-filter
+  // syntax against.
+  const { data: targetRows } = await supabaseAdmin
+    .from("ad_campaign_targets")
+    .select(
+      "id, status, starts_at, expires_at, created_at, ad_campaigns(id, title, image_url, link_url), ad_channels(represents_app_id, enabled, archived)",
+    )
+    .eq("placement_key", placementKey)
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  const now = Date.now();
+  const eligibleTarget = (targetRows ?? []).find((t) => {
+    const channel = t.ad_channels as unknown as {
+      represents_app_id: string | null;
+      enabled: boolean;
+      archived: boolean;
+    } | null;
+    if (!channel || channel.represents_app_id !== appId || !channel.enabled || channel.archived)
+      return false;
+    if (t.starts_at && new Date(t.starts_at).getTime() > now) return false;
+    if (t.expires_at && new Date(t.expires_at).getTime() <= now) return false;
+    return true;
+  });
+
+  type Candidate = PlacementCreative & { createdAt: string };
+  const candidates: Candidate[] = [];
+  if (campaignRow) {
+    candidates.push({
+      campaignId: campaignRow.id,
+      title: campaignRow.title,
+      imageUrl: campaignRow.image_url,
+      linkUrl: campaignRow.link_url,
+      createdAt: campaignRow.created_at,
+    });
+  }
+  if (eligibleTarget) {
+    const c = eligibleTarget.ad_campaigns as unknown as {
+      id: string;
+      title: string;
+      image_url: string | null;
+      link_url: string | null;
+    } | null;
+    // A target with no creative to inherit from its parent campaign (should
+    // never happen -- campaign_id is NOT NULL -- but defensively skipped).
+    if (c) {
+      candidates.push({
+        campaignId: c.id,
+        title: c.title,
+        imageUrl: c.image_url,
+        linkUrl: c.link_url,
+        createdAt: eligibleTarget.created_at,
+      });
+    }
+  }
+  if (candidates.length === 0) return null;
+
+  candidates.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const { campaignId, title, imageUrl, linkUrl } = candidates[0];
+  return { campaignId, title, imageUrl, linkUrl };
 }
 
 // ---------- Priority 13, Phase D: campaign target selection ----------
@@ -398,6 +552,7 @@ export type AvailableAdChannel = {
   description: string | null;
   logoUrl: string | null;
   externalUrl: string | null;
+  representsAppId: string | null;
   prices: ResolvedChannelPrice[];
 };
 
@@ -432,8 +587,52 @@ export async function getAvailableChannelsForApp(appId: string): Promise<Availab
       description: c.description,
       logoUrl: c.logo_url,
       externalUrl: c.external_url,
+      representsAppId: c.represents_app_id,
       prices: await resolveChannelPrices(c.id),
     })),
   );
   return results.filter((c) => c.prices.length > 0);
+}
+
+export type AvailableApplicationPlacement = {
+  key: string;
+  label: string;
+  description: string | null;
+};
+
+// Placements a customer may pick for a target whose channel represents this
+// application -- enabled+purchasable at both the global ad_placements level
+// and the per-application ad_application_placements level. Not every
+// application has any (the mapping is admin-configured, additive), which is
+// exactly why placement selection stays optional in the target-selection UI.
+export async function getAvailableApplicationPlacements(
+  appId: string,
+): Promise<AvailableApplicationPlacement[]> {
+  const supabaseAdmin = await admin();
+  // Filtered in application code rather than via embedded-relation filter
+  // syntax, matching getActivePlacementCreative's same reasoning above --
+  // this environment has no live Supabase connection to verify
+  // PostgREST's dot-path embedded filters against.
+  const { data } = await supabaseAdmin
+    .from("ad_application_placements")
+    .select("placement_key, ad_placements(key, label, enabled, archived)")
+    .eq("app_id", appId)
+    .eq("enabled", true)
+    .eq("purchasable", true);
+
+  return (data ?? [])
+    .map(
+      (row) =>
+        row.ad_placements as unknown as {
+          key: string;
+          label: string;
+          enabled: boolean;
+          archived: boolean;
+        } | null,
+    )
+    .filter(
+      (p): p is { key: string; label: string; enabled: boolean; archived: boolean } =>
+        !!p && p.enabled && !p.archived,
+    )
+    .map((p) => ({ key: p.key, label: p.label, description: null }));
 }

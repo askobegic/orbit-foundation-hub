@@ -354,7 +354,9 @@
       "application": "Aplikacije",
       "external_website": "Eksterni websajtovi",
       "social_media": "Društvene mreže"
-    }
+    },
+    "placementOptional": "Oglasni prostor (opcionalno)",
+    "noPlacement": "Bez određenog oglasnog prostora"
   },
   "help": {
     "title": "Pomoć i podrška",
@@ -625,7 +627,21 @@
       "noChannels": "Još uvijek nema distribucijskih kanala.",
       "supportedApps": "Podržane aplikacije",
       "manageApps": "Upravljaj",
-      "allApplications": "Sve aplikacije (bez ograničenja)"
+      "allApplications": "Sve aplikacije (bez ograničenja)",
+      "representsApp": "Predstavlja aplikaciju",
+      "applicationPlacementsTitle": "Oglasni prostori po aplikaciji",
+      "applicationPlacementsHint": "Podesite koji oglasni prostori su aktivni, dostupni za kupovinu i u kojim formatima/uređajima, za svaku aplikaciju.",
+      "applicationPlacementSaved": "Oglasni prostor za aplikaciju je sačuvan",
+      "noApplicationPlacements": "Još uvijek nema podešenih oglasnih prostora po aplikaciji.",
+      "supportedDevices": "Podržani uređaji",
+      "device": {
+        "desktop": "Desktop",
+        "mobile": "Mobilni"
+      },
+      "integrationConnected": "Povezano",
+      "integrationStale": "Zastarjelo",
+      "integrationNotConnected": "Nije povezano",
+      "lastDelivery": "Posljednja isporuka"
     },
     "users": {
       "title": "Korisnici",

@@ -354,7 +354,9 @@
       "application": "Applications",
       "external_website": "External websites",
       "social_media": "Social media"
-    }
+    },
+    "placementOptional": "Placement (optional)",
+    "noPlacement": "No specific placement"
   },
   "help": {
     "title": "Help & support",
@@ -625,7 +627,21 @@
       "noChannels": "No distribution channels yet.",
       "supportedApps": "Supported applications",
       "manageApps": "Manage",
-      "allApplications": "All applications (unscoped)"
+      "allApplications": "All applications (unscoped)",
+      "representsApp": "Represents application",
+      "applicationPlacementsTitle": "Application placements",
+      "applicationPlacementsHint": "Configure which placements are live, purchasable, and in which formats/devices, for each application.",
+      "applicationPlacementSaved": "Application placement saved",
+      "noApplicationPlacements": "No application placements configured yet.",
+      "supportedDevices": "Supported devices",
+      "device": {
+        "desktop": "Desktop",
+        "mobile": "Mobile"
+      },
+      "integrationConnected": "Connected",
+      "integrationStale": "Stale",
+      "integrationNotConnected": "Not connected",
+      "lastDelivery": "Last delivery"
     },
     "users": {
       "title": "Users",

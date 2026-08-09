@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getMyIsAdmin } from "@/lib/admin.functions";
 import {
   adminFulfillAdvertisingCreditRedemption,
+  adminListAdApplicationPlacements,
   adminListAdCampaignFormats,
   adminListAdChannelApps,
   adminListAdChannelTypes,
@@ -28,6 +29,7 @@ import {
   adminSetAdConfig,
   adminSetAdDraftExpiryHours,
   adminSetTrustedAdvertiser,
+  adminUpsertAdApplicationPlacement,
   adminUpsertAdCampaignFormat,
   adminUpsertAdChannel,
   adminUpsertAdChannelType,
@@ -96,6 +98,7 @@ function AdminAdvertising() {
         <ChannelTypesSection />
         <CampaignFormatsSection />
         <ChannelsSection apps={appsQ.data ?? []} />
+        <ApplicationPlacementsSection apps={appsQ.data ?? []} />
       </div>
     </main>
   );
@@ -893,6 +896,7 @@ function ChannelsSection({ apps }: { apps: ApplicationRow[] }) {
   const [notes, setNotes] = useState("");
   const [integrationId, setIntegrationId] = useState("");
   const [externalPartner, setExternalPartner] = useState("");
+  const [representsAppId, setRepresentsAppId] = useState("");
   const [managingChannelId, setManagingChannelId] = useState<string | null>(null);
 
   function resetForm() {
@@ -910,6 +914,7 @@ function ChannelsSection({ apps }: { apps: ApplicationRow[] }) {
     setNotes("");
     setIntegrationId("");
     setExternalPartner("");
+    setRepresentsAppId("");
   }
 
   const mut = useMutation({
@@ -938,6 +943,7 @@ function ChannelsSection({ apps }: { apps: ApplicationRow[] }) {
           notes: notes.trim() || null,
           integrationId: integrationId.trim() || null,
           externalPartner: externalPartner.trim() || null,
+          representsAppId: representsAppId || null,
           archived: false,
         },
       }),
@@ -971,6 +977,7 @@ function ChannelsSection({ apps }: { apps: ApplicationRow[] }) {
           notes: row.notes,
           integrationId: row.integration_id,
           externalPartner: row.external_partner,
+          representsAppId: row.represents_app_id,
           archived: row.archived,
         },
       }),
@@ -1000,6 +1007,7 @@ function ChannelsSection({ apps }: { apps: ApplicationRow[] }) {
           notes: row.notes,
           integrationId: row.integration_id,
           externalPartner: row.external_partner,
+          representsAppId: row.represents_app_id,
           archived: row.archived,
         },
       }),
@@ -1057,6 +1065,21 @@ function ChannelsSection({ apps }: { apps: ApplicationRow[] }) {
             placeholder="https://"
             className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
           />
+        </label>
+        <label className="text-sm">
+          {t("admin.advertising.representsApp")}
+          <select
+            value={representsAppId}
+            onChange={(e) => setRepresentsAppId(e.target.value)}
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+          >
+            <option value="">{t("admin.common.none")}</option>
+            {apps.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
         </label>
         <label className="text-sm sm:col-span-2">
           {t("admin.common.label")}
@@ -1169,6 +1192,10 @@ function ChannelsSection({ apps }: { apps: ApplicationRow[] }) {
                   ({c.key} ·{" "}
                   {typesQ.data?.find((ct) => ct.key === c.channel_type_key)?.label ??
                     c.channel_type_key}
+                  {c.represents_app_id &&
+                    ` · ${t("admin.advertising.representsApp")}: ${
+                      apps.find((a) => a.id === c.represents_app_id)?.name ?? c.represents_app_id
+                    }`}
                   )
                 </span>
               </span>
@@ -1246,5 +1273,271 @@ function ChannelAppsManager({ channelId, apps }: { channelId: string; apps: Appl
         })}
       </div>
     </div>
+  );
+}
+
+// ---------- Priority 13, Phase D1: Placement & Delivery Foundation ----------
+// ad_application_placements is "is this placement live, purchasable, and
+// how, for THIS application" -- ad_placements itself (PlacementsSection
+// above) stays the global "does this position exist" registry, untouched.
+// purchasable and enabled are shown as two independent toggles: enabled
+// gates delivery of everything (including already-active campaigns);
+// purchasable gates new sales only.
+
+const DEVICE_OPTIONS = ["desktop", "mobile"] as const;
+
+function ApplicationPlacementsSection({ apps }: { apps: ApplicationRow[] }) {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const listPlacementsFn = useServerFn(adminListAdPlacements);
+  const listFormatsFn = useServerFn(adminListAdCampaignFormats);
+  const listAppPlacementsFn = useServerFn(adminListAdApplicationPlacements);
+  const upsertFn = useServerFn(adminUpsertAdApplicationPlacement);
+
+  const placementsQ = useQuery({
+    queryKey: ["admin-ad-placements"],
+    queryFn: () => listPlacementsFn(),
+  });
+  const formatsQ = useQuery({
+    queryKey: ["admin-ad-campaign-formats"],
+    queryFn: () => listFormatsFn(),
+  });
+  const appPlacementsQ = useQuery({
+    queryKey: ["admin-ad-application-placements"],
+    queryFn: () => listAppPlacementsFn({ data: {} }),
+  });
+
+  const [appId, setAppId] = useState("");
+  const [placementKey, setPlacementKey] = useState("");
+  const [selectedFormats, setSelectedFormats] = useState<string[]>([]);
+  const [selectedDevices, setSelectedDevices] = useState<string[]>(["desktop", "mobile"]);
+
+  const invalidate = () =>
+    void qc.invalidateQueries({ queryKey: ["admin-ad-application-placements"] });
+
+  const mut = useMutation({
+    mutationFn: () =>
+      upsertFn({
+        data: {
+          appId,
+          placementKey,
+          enabled: true,
+          purchasable: true,
+          allowedFormatKeys: selectedFormats,
+          supportedDevices: selectedDevices as ("desktop" | "mobile")[],
+          displayOrder: 0,
+        },
+      }),
+    onSuccess: () => {
+      toast.success(t("admin.advertising.applicationPlacementSaved"));
+      setSelectedFormats([]);
+      setSelectedDevices(["desktop", "mobile"]);
+      invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const toggleEnabled = useMutation({
+    mutationFn: (row: NonNullable<typeof appPlacementsQ.data>[number]) =>
+      upsertFn({
+        data: {
+          id: row.id,
+          appId: row.app_id,
+          placementKey: row.placement_key,
+          enabled: !row.enabled,
+          purchasable: row.purchasable,
+          allowedFormatKeys: row.allowed_format_keys,
+          supportedDevices: row.supported_devices as ("desktop" | "mobile")[],
+          displayOrder: row.display_order,
+        },
+      }),
+    onSuccess: invalidate,
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const togglePurchasable = useMutation({
+    mutationFn: (row: NonNullable<typeof appPlacementsQ.data>[number]) =>
+      upsertFn({
+        data: {
+          id: row.id,
+          appId: row.app_id,
+          placementKey: row.placement_key,
+          enabled: row.enabled,
+          purchasable: !row.purchasable,
+          allowedFormatKeys: row.allowed_format_keys,
+          supportedDevices: row.supported_devices as ("desktop" | "mobile")[],
+          displayOrder: row.display_order,
+        },
+      }),
+    onSuccess: invalidate,
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  function toggleFormat(formatKey: string) {
+    setSelectedFormats((prev) =>
+      prev.includes(formatKey) ? prev.filter((f) => f !== formatKey) : [...prev, formatKey],
+    );
+  }
+
+  function toggleDevice(device: string) {
+    setSelectedDevices((prev) =>
+      prev.includes(device) ? prev.filter((d) => d !== device) : [...prev, device],
+    );
+  }
+
+  const statusLabel: Record<string, string> = {
+    connected: t("admin.advertising.integrationConnected"),
+    stale: t("admin.advertising.integrationStale"),
+    not_connected: t("admin.advertising.integrationNotConnected"),
+  };
+  const statusClass: Record<string, string> = {
+    connected: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    stale: "border-amber-200 bg-amber-50 text-amber-700",
+    not_connected: "border-gray-200 text-gray-500",
+  };
+
+  return (
+    <Card title={t("admin.advertising.applicationPlacementsTitle")}>
+      <p className="text-xs text-gray-500">{t("admin.advertising.applicationPlacementsHint")}</p>
+      <div className="mt-3 grid grid-cols-1 items-end gap-2 sm:flex sm:flex-wrap">
+        <label className="text-sm">
+          {t("admin.common.application")}
+          <select
+            value={appId}
+            onChange={(e) => setAppId(e.target.value)}
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
+          >
+            <option value="">{t("admin.common.select")}</option>
+            {apps.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-sm">
+          {t("admin.advertising.placement")}
+          <select
+            value={placementKey}
+            onChange={(e) => setPlacementKey(e.target.value)}
+            className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm sm:w-auto"
+          >
+            <option value="">{t("admin.common.select")}</option>
+            {(placementsQ.data ?? []).map((p) => (
+              <option key={p.key} value={p.key}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          onClick={() => mut.mutate()}
+          disabled={!appId || !placementKey || mut.isPending}
+          className="inline-flex items-center justify-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+        >
+          <Plus className="h-4 w-4" /> {t("admin.common.add")}
+        </button>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-4">
+        <div>
+          <p className="text-xs font-medium text-gray-700">{t("admin.advertising.formats")}</p>
+          <div className="mt-1 flex flex-wrap gap-2">
+            {(formatsQ.data ?? []).map((f) => (
+              <button
+                key={f.key}
+                type="button"
+                onClick={() => toggleFormat(f.key)}
+                className={`rounded-lg border px-3 py-1.5 text-xs ${
+                  selectedFormats.includes(f.key)
+                    ? "border-[#1D6BF3] bg-[#1D6BF3]/10 text-[#1D6BF3]"
+                    : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <p className="text-xs font-medium text-gray-700">
+            {t("admin.advertising.supportedDevices")}
+          </p>
+          <div className="mt-1 flex flex-wrap gap-2">
+            {DEVICE_OPTIONS.map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => toggleDevice(d)}
+                className={`rounded-lg border px-3 py-1.5 text-xs ${
+                  selectedDevices.includes(d)
+                    ? "border-[#1D6BF3] bg-[#1D6BF3]/10 text-[#1D6BF3]"
+                    : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                {t(`admin.advertising.device.${d}`)}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <ul className="mt-4 divide-y divide-gray-100">
+        {(appPlacementsQ.data ?? []).length === 0 && (
+          <p className="py-2 text-sm text-gray-500">
+            {t("admin.advertising.noApplicationPlacements")}
+          </p>
+        )}
+        {(appPlacementsQ.data ?? []).map((row) => (
+          <li key={row.id} className="py-3 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="min-w-0 flex-1 truncate">
+                <span className="font-medium">
+                  {apps.find((a) => a.id === row.app_id)?.name ?? row.app_id}
+                </span>{" "}
+                <span className="text-gray-400">
+                  (
+                  {placementsQ.data?.find((p) => p.key === row.placement_key)?.label ??
+                    row.placement_key}
+                  )
+                </span>
+              </span>
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
+                <span
+                  className={`rounded-lg border px-2 py-1 text-xs ${
+                    statusClass[
+                      (row as { integrationStatus?: string }).integrationStatus ?? "not_connected"
+                    ]
+                  }`}
+                >
+                  {
+                    statusLabel[
+                      (row as { integrationStatus?: string }).integrationStatus ?? "not_connected"
+                    ]
+                  }
+                </span>
+                <button
+                  type="button"
+                  onClick={() => togglePurchasable.mutate(row)}
+                  className={`rounded-lg border px-2 py-1 text-xs ${
+                    row.purchasable
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      : "border-gray-200 text-gray-500"
+                  }`}
+                >
+                  {t("admin.advertising.purchasable")}
+                </button>
+                <AdminTogglePill enabled={row.enabled} onClick={() => toggleEnabled.mutate(row)} />
+              </div>
+            </div>
+            <p className="mt-1 text-xs text-gray-400">
+              {row.last_delivery_at
+                ? `${t("admin.advertising.lastDelivery")}: ${new Date(row.last_delivery_at).toLocaleString()}`
+                : t("admin.advertising.integrationNotConnected")}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </Card>
   );
 }
