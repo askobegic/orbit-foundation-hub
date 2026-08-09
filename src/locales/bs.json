@@ -165,7 +165,13 @@
     "trustSecure": "Sigurno plaćanje",
     "trustGDPR": "GDPR usklađeno",
     "trustSupport": "24/7 podrška",
-    "footerRights": "Sva prava zadržana."
+    "footerRights": "Sva prava zadržana.",
+    "activityOverview": "Pregled aktivnosti",
+    "rewardsPoints": "Bodovi nagrada",
+    "campaigns": "Aktivne kampanje",
+    "ofTotalCampaigns": "od ukupno {{count}}",
+    "connectedApps": "Povezane aplikacije",
+    "activeSubscriptionsCount": "{{count}} aktivnih pretplata"
   },
   "subscription": {
     "title": "Moje pretplate",

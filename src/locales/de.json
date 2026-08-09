@@ -165,7 +165,13 @@
     "trustSecure": "Sichere Zahlungen",
     "trustGDPR": "DSGVO-konform",
     "trustSupport": "24/7 Support",
-    "footerRights": "Alle Rechte vorbehalten."
+    "footerRights": "Alle Rechte vorbehalten.",
+    "activityOverview": "Aktivitätsübersicht",
+    "rewardsPoints": "Prämienpunkte",
+    "campaigns": "Aktive Kampagnen",
+    "ofTotalCampaigns": "von {{count}} insgesamt",
+    "connectedApps": "Verbundene Anwendungen",
+    "activeSubscriptionsCount": "{{count}} aktive Abonnements"
   },
   "subscription": {
     "title": "Meine Abonnements",

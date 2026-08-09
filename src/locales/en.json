@@ -165,7 +165,13 @@
     "trustSecure": "Secure payments",
     "trustGDPR": "GDPR compliant",
     "trustSupport": "24/7 support",
-    "footerRights": "All rights reserved."
+    "footerRights": "All rights reserved.",
+    "activityOverview": "Activity Overview",
+    "rewardsPoints": "Reward Points",
+    "campaigns": "Active Campaigns",
+    "ofTotalCampaigns": "of {{count}} total",
+    "connectedApps": "Connected Applications",
+    "activeSubscriptionsCount": "{{count}} active subscription(s)"
   },
   "subscription": {
     "title": "My subscriptions",
