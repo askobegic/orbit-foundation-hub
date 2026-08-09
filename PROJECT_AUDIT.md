@@ -34,7 +34,7 @@ A separate, non-severity tag, **Architecture Deviation**, marks findings where t
 | Dashboard | 0 | 1 | 6 | 4 |
 | Admin Panel | 1 | 0 | 8 | 5 |
 | Database | 2 | 0 | 1 | 5 |
-| Routing | 0 | 0 | 0 | 3 |
+| Routing | 0 | 1 | 0 | 3 |
 | Components | 0 | 1 | 4 | 2 |
 | Security (cross-cutting + payments) | 4 | 2 | 5 | 4 |
 | Performance | 0 | 0 | 2 | 5 |
@@ -633,6 +633,18 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 ## 6. Routing
 
 **Structure:** File-based routing under `src/routes/`, compiled into `src/routeTree.gen.ts` by `@tanstack/router-plugin`. Public routes (`index`, `login`, `pricing`, `u.$username*`), authenticated routes (`dashboard.*`, gated by `ProtectedRoute`), and admin routes (`admin.*`, gated by the `AdminGate` parent in `admin.tsx`) are cleanly separated. Two server-only API routes exist under `src/routes/api/public/webhooks/`.
+
+### High
+
+**RT-5 — `getAdPlacementsForApp` uses the browser Supabase client server-side, crashing both `/v1/advertising/placements` endpoints under Node SSR**
+- **Status:** Open
+- **Files:** `src/lib/advertising.functions.ts` (`getAdPlacementsForApp`), `src/integrations/supabase/client.ts`, `src/routes/v1/advertising/placements/index.ts`, `src/routes/v1/advertising/placements/$placementKey/active-ad.ts`
+- **Description:** Found while running the built `node-server` bundle against the real production database for Priority 13's D2 verification. `getAdPlacementsForApp` dynamically imports `@/integrations/supabase/client` (the *browser* client) inside its server-function handler, instead of the server/admin client every other read-only function in this file uses. `client.ts` calls `createClient()` at module scope with `auth.persistSession: true` and `storage: typeof window !== 'undefined' ? window.localStorage : undefined` — which resolves to `undefined` outside a browser — and the Supabase JS SDK is known to throw when session persistence is requested with no usable storage adapter. Both `GET /v1/advertising/placements` and `GET /v1/advertising/placements/{placementKey}/active-ad` (bundled in the same module, so both fail even though only the first directly touches the browser client) returned `INTERNAL_ERROR` for every request against real data, while an unrelated `/v1/capabilities` call succeeded normally in the same test run. Predates Priority 13 entirely (Phase 8.4) — not introduced by it. Every one of Priority 13's own new functions was individually verified correct via direct database queries during the same session, working around this pre-existing endpoint failure rather than through it.
+- **Risk:** Any real integrating application calling either endpoint gets a 500 instead of placement/ad data. Not confirmed whether this reproduces on the actual deployed `core.logid.pro` server (its build/runtime wasn't checked as part of this finding) or is specific to a locally-built `node-server` bundle.
+- **Recommendation:** Change `getAdPlacementsForApp` to use the server/admin client (`await import("@/integrations/supabase/client.server")`), matching the pattern already used by every other function in `advertising.functions.ts`.
+- **Resolution:** —
+- **Commit:** —
+- **Date:** 2026-08-09
 
 ### Low
 
