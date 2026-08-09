@@ -2,6 +2,7 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { applyCorsHeaders, corsPreflightResponse, resolveAllowedOrigin } from "./lib/v1/cors.server";
 
 // API_CONTRACT.md §5 -- GET /v1/.well-known/jwks.json. Handled directly
 // here, before the file-based router even runs, because TanStack Start's
@@ -58,20 +59,50 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
+// Priority 14: production CORS policy, scoped to /v1 only -- the main
+// app's own SSR/HTML routes are never called cross-origin, so CORS is
+// meaningless there. Allowed origins come from applications.domain (see
+// cors.server.ts); an unrecognized Origin never blocks the request itself,
+// it only withholds Access-Control-Allow-Origin, which is what keeps a
+// browser's own same-origin policy blocking that page's JS from reading
+// the response. Preflight OPTIONS is intercepted here, before the
+// file-based router, since no /v1 route defines its own OPTIONS handler.
+function isV1Path(pathname: string): boolean {
+  return pathname === "/v1" || pathname.startsWith("/v1/");
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    const url = new URL(request.url);
+    const isV1 = isV1Path(url.pathname);
+
+    // CORS headers are layered on only for /v1, and only ever computed
+    // once per request.
+    async function finalize(response: Response): Promise<Response> {
+      if (!isV1) return response;
+      const allowedOrigin = await resolveAllowedOrigin(request.headers.get("origin"));
+      return applyCorsHeaders(response, allowedOrigin);
+    }
+
+    if (isV1 && request.method === "OPTIONS") {
+      const allowedOrigin = await resolveAllowedOrigin(request.headers.get("origin"));
+      return corsPreflightResponse(allowedOrigin);
+    }
+
     try {
       const jwks = await handleJwks(request);
-      if (jwks) return jwks;
+      if (jwks) return finalize(jwks);
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+      return finalize(await normalizeCatastrophicSsrResponse(response));
     } catch (error) {
       console.error(error);
-      return new Response(renderErrorPage(), {
-        status: 500,
-        headers: { "content-type": "text/html; charset=utf-8" },
-      });
+      return finalize(
+        new Response(renderErrorPage(), {
+          status: 500,
+          headers: { "content-type": "text/html; charset=utf-8" },
+        }),
+      );
     }
   },
 };
