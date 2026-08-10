@@ -68,6 +68,20 @@ export function DashboardPage() {
   const advertisingEnabled = isWidgetEnabled("advertising");
   const messagingEnabled = isWidgetEnabled("messaging");
 
+  // isWidgetEnabled defaults to "enabled" while widgetsQuery is still
+  // loading (see comment above) so the Sidebar/Quick Links don't flash
+  // empty for the common case where a widget ends up enabled. But for a
+  // widget that resolves to genuinely disabled, that same default means
+  // the Activity Overview cards below would briefly mount as "enabled"
+  // and then unmount the instant the real value arrives -- a visible
+  // appear-then-disappear, not a real regression in the enabled/disabled
+  // result itself. These two flags exist only to keep those two specific
+  // cards from rendering until the true answer is known, landing on it
+  // directly instead of flickering through the optimistic default.
+  const widgetsPending = !!application && widgetsQuery.isLoading;
+  const showRewardsCard = !widgetsPending && rewardsEnabled;
+  const showAdvertisingCard = !widgetsPending && advertisingEnabled;
+
   // Priority 8.9: Application Visibility -- draft and archived are hidden
   // from every normal user (draft: not ready yet, admin-only; archived:
   // retired, preserved for history/administration only), excluded at the
@@ -597,11 +611,11 @@ export function DashboardPage() {
                 existing widget or aggregate server function -- no new
                 business logic, just a summary view with a link through to
                 the full page for each. */}
-            {(rewardsEnabled || advertisingEnabled || isWidgetEnabled("my_applications")) && (
+            {(showRewardsCard || showAdvertisingCard || isWidgetEnabled("my_applications")) && (
               <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
                 <h3 className="mb-3 text-sm font-semibold">{t("dashboard.activityOverview")}</h3>
                 <div className="space-y-3">
-                  {rewardsEnabled && (
+                  {showRewardsCard && (
                     <Link
                       to="/dashboard/rewards"
                       className="block rounded-xl border border-gray-100 p-3 transition hover:border-gray-200 hover:bg-gray-50"
@@ -637,7 +651,7 @@ export function DashboardPage() {
                     </Link>
                   )}
 
-                  {advertisingEnabled && (
+                  {showAdvertisingCard && (
                     <Link
                       to="/dashboard/advertising"
                       className="block rounded-xl border border-gray-100 p-3 transition hover:border-gray-200 hover:bg-gray-50"
