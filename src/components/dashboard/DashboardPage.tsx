@@ -201,15 +201,6 @@ export function DashboardPage() {
         </header>
 
         <main className="grid grid-cols-1 gap-6 overflow-x-hidden p-4 lg:grid-cols-3 lg:p-8">
-          {/* Rewards / Advertising: permanently visible CORE Dashboard
-              features, rendered unconditionally at the very top so they're
-              visible immediately on page load -- see
-              RewardsAdvertisingCards.tsx for why this bypasses every other
-              gating mechanism on this page. */}
-          <div className="lg:col-span-3">
-            <RewardsAdvertisingCards />
-          </div>
-
           {/* LEFT (2 cols) */}
           <div className="flex min-w-0 flex-col gap-6 lg:col-span-2">
             {isWidgetEnabled("trial_banner") && <TrialBanner />}
@@ -533,6 +524,13 @@ export function DashboardPage() {
                 )}
               </section>
             )}
+
+            {/* Rewards / Advertising: permanently visible CORE Dashboard
+                features, rendered unconditionally directly below "Moje
+                aplikacije" -- see RewardsAdvertisingCards.tsx for why this
+                bypasses every other gating mechanism on this page. Layout
+                position only; the component itself is untouched. */}
+            <RewardsAdvertisingCards />
           </div>
 
           {/* RIGHT column */}
@@ -580,9 +578,10 @@ export function DashboardPage() {
 
             {/* Activity overview: connected applications. Rewards and
                 Advertising have their own permanent, unconditional section
-                at the top of the page (RewardsAdvertisingCards) -- this
-                remaining stat is unrelated and keeps its existing
-                my_applications widget gating, unchanged. */}
+                (RewardsAdvertisingCards, rendered directly below "Moje
+                aplikacije" above) -- this remaining stat is unrelated and
+                keeps its existing my_applications widget gating,
+                unchanged. */}
             <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
               <h3 className="mb-3 text-sm font-semibold">{t("dashboard.activityOverview")}</h3>
               <div className="space-y-3">
