@@ -26,8 +26,7 @@ import { useApplication } from "@/context/ApplicationContext";
 import { supabase } from "@/integrations/supabase/client";
 import { hasAnyActivePremium } from "@/lib/premium";
 import { getDashboardWidgets } from "@/lib/dashboard-widgets.functions";
-import { getRewardsMe } from "@/lib/rewards.functions";
-import { getMyCampaigns } from "@/lib/advertising.functions";
+import { RewardsAdvertisingCards } from "@/components/dashboard/RewardsAdvertisingCards";
 import { DashboardMobileNav } from "@/components/dashboard/DashboardNav";
 import { getDashboardNavItems } from "@/lib/dashboard-nav";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
@@ -49,8 +48,6 @@ export function DashboardPage() {
   const { application } = useApplication();
   const lang = (i18n.language?.slice(0, 2) ?? "bs") as "bs" | "en" | "de";
   const getDashboardWidgetsFn = useServerFn(getDashboardWidgets);
-  const getRewardsMeFn = useServerFn(getRewardsMe);
-  const getMyCampaignsFn = useServerFn(getMyCampaigns);
 
   // Priority 8.2: Dashboard Widget Modularity -- which of this page's
   // sections are enabled, globally or overridden for the application
@@ -130,30 +127,6 @@ export function DashboardPage() {
       return count ?? 0;
     },
   });
-
-  // Central Dashboard activity overview -- reuses the exact same
-  // aggregate server functions the dedicated Rewards/Advertising pages
-  // already call (getRewardsMe / getMyCampaigns). Rewards and Advertising
-  // are product-mandated as permanently visible Dashboard features (not
-  // gated by the rewards/advertising capability, unlike the Sidebar/Quick
-  // Links entries above, which are unaffected by this) -- so these two
-  // queries are enabled unconditionally on auth alone, independent of
-  // rewardsEnabled/advertisingEnabled/widgetsQuery, matching the cards'
-  // own always-rendered visibility below.
-  const rewardsQuery = useQuery({
-    queryKey: ["rewards", "me", application?.id],
-    enabled: !!user?.id,
-    queryFn: () => getRewardsMeFn({ data: { appId: application?.id } }),
-  });
-  const campaignsQuery = useQuery({
-    queryKey: ["dashboard", "campaigns", user?.id],
-    enabled: !!user?.id,
-    queryFn: () => getMyCampaignsFn(),
-  });
-  const activeCampaignCount = useMemo(
-    () => (campaignsQuery.data ?? []).filter((c) => c.status === "active").length,
-    [campaignsQuery.data],
-  );
 
   // Global Premium Visibility & Contact System: the one shared "is this
   // user Premium" check, same as every other surface (Profile Card,
@@ -597,90 +570,18 @@ export function DashboardPage() {
             )}
 
             {/* Activity overview: Rewards / Advertising / connected
-                applications, each reusing data already fetched by an
-                existing widget or aggregate server function -- no new
-                business logic, just a summary view with a link through to
-                the full page for each. Rewards and Advertising are
-                product-mandated as permanently visible Dashboard features:
-                unlike every other section on this page, they are rendered
-                unconditionally -- never gated by rewardsEnabled/
-                advertisingEnabled, application_capabilities, widgetsQuery,
-                or the state of rewardsQuery/campaignsQuery. Loading and
-                error states resolve to a stable zero/empty state inside
-                each card (rewardsQuery.data?.x ?? 0, etc.) rather than
-                removing the card -- there is no code path in either block
-                below that unmounts it after first render. This section
-                therefore always has content, so it's rendered
-                unconditionally too, rather than gated on any one card's
-                state. */}
+                applications. Rewards and Advertising are product-mandated
+                as permanently visible Dashboard features, so they're
+                rendered via RewardsAdvertisingCards -- a component that
+                deliberately bypasses this page's widget/capability
+                mechanism entirely (see that file) -- called here with no
+                surrounding condition of any kind. The connected-apps stat
+                below remains gated by the existing my_applications widget,
+                unchanged. */}
             <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
               <h3 className="mb-3 text-sm font-semibold">{t("dashboard.activityOverview")}</h3>
               <div className="space-y-3">
-                <Link
-                  to="/dashboard/rewards"
-                  className="block rounded-xl border border-gray-100 p-3 transition hover:border-gray-200 hover:bg-gray-50"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-xs font-semibold text-gray-500">
-                      <Gift className="h-3.5 w-3.5 text-[#1D6BF3]" />
-                      {t("dashboard.rewardsPoints")}
-                    </span>
-                    <ChevronRight className="h-3 w-3 shrink-0 text-gray-400" />
-                  </div>
-                  {rewardsQuery.isLoading ? (
-                    <Skeleton className="mt-2 h-6 w-16" />
-                  ) : (
-                    <>
-                      <div className="mt-1.5 flex items-baseline justify-between gap-2">
-                        <p className="text-xl font-semibold text-gray-900">
-                          {rewardsQuery.data?.lifetimePoints ?? 0}
-                        </p>
-                        <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600">
-                          {rewardsQuery.data?.level?.label ?? t("dashboard.standard")}
-                        </span>
-                      </div>
-                      <p className="mt-2 truncate text-[11px] text-gray-500">
-                        {(rewardsQuery.data?.redeemHistory?.length ?? 0) > 0
-                          ? t("dashboard.recentActivityCount", {
-                              count: rewardsQuery.data!.redeemHistory.length,
-                            })
-                          : t("dashboard.noRecentActivity")}
-                      </p>
-                    </>
-                  )}
-                </Link>
-
-                <Link
-                  to="/dashboard/advertising"
-                  className="block rounded-xl border border-gray-100 p-3 transition hover:border-gray-200 hover:bg-gray-50"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-xs font-semibold text-gray-500">
-                      <Megaphone className="h-3.5 w-3.5 text-[#1D6BF3]" />
-                      {t("dashboard.campaigns")}
-                    </span>
-                    <ChevronRight className="h-3 w-3 shrink-0 text-gray-400" />
-                  </div>
-                  {campaignsQuery.isLoading ? (
-                    <Skeleton className="mt-2 h-6 w-16" />
-                  ) : (
-                    <>
-                      <div className="mt-1.5 flex items-baseline justify-between gap-2">
-                        <p className="text-xl font-semibold text-gray-900">{activeCampaignCount}</p>
-                        <span className="shrink-0 text-[11px] text-gray-500">
-                          {t("dashboard.ofTotalCampaigns", {
-                            count: campaignsQuery.data?.length ?? 0,
-                          })}
-                        </span>
-                      </div>
-                      {(campaignsQuery.data?.length ?? 0) === 0 && (
-                        <p className="mt-2 text-[11px] text-gray-500">
-                          {t("dashboard.noCampaignsYet")}
-                        </p>
-                      )}
-                    </>
-                  )}
-                </Link>
+                <RewardsAdvertisingCards />
 
                 {isWidgetEnabled("my_applications") && (
                   <div className="rounded-xl border border-gray-100 p-3">
