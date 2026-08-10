@@ -616,14 +616,23 @@ export function DashboardPage() {
                       {rewardsQuery.isLoading ? (
                         <Skeleton className="mt-2 h-6 w-16" />
                       ) : (
-                        <div className="mt-1.5 flex items-baseline justify-between gap-2">
-                          <p className="text-xl font-semibold text-gray-900">
-                            {rewardsQuery.data?.lifetimePoints ?? 0}
+                        <>
+                          <div className="mt-1.5 flex items-baseline justify-between gap-2">
+                            <p className="text-xl font-semibold text-gray-900">
+                              {rewardsQuery.data?.lifetimePoints ?? 0}
+                            </p>
+                            <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600">
+                              {rewardsQuery.data?.level?.label ?? t("dashboard.standard")}
+                            </span>
+                          </div>
+                          <p className="mt-2 truncate text-[11px] text-gray-500">
+                            {(rewardsQuery.data?.redeemHistory?.length ?? 0) > 0
+                              ? t("dashboard.recentActivityCount", {
+                                  count: rewardsQuery.data!.redeemHistory.length,
+                                })
+                              : t("dashboard.noRecentActivity")}
                           </p>
-                          <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600">
-                            {rewardsQuery.data?.level.label ?? t("dashboard.standard")}
-                          </span>
-                        </div>
+                        </>
                       )}
                     </Link>
                   )}
@@ -643,16 +652,23 @@ export function DashboardPage() {
                       {campaignsQuery.isLoading ? (
                         <Skeleton className="mt-2 h-6 w-16" />
                       ) : (
-                        <div className="mt-1.5 flex items-baseline justify-between gap-2">
-                          <p className="text-xl font-semibold text-gray-900">
-                            {activeCampaignCount}
-                          </p>
-                          <span className="shrink-0 text-[11px] text-gray-500">
-                            {t("dashboard.ofTotalCampaigns", {
-                              count: campaignsQuery.data?.length ?? 0,
-                            })}
-                          </span>
-                        </div>
+                        <>
+                          <div className="mt-1.5 flex items-baseline justify-between gap-2">
+                            <p className="text-xl font-semibold text-gray-900">
+                              {activeCampaignCount}
+                            </p>
+                            <span className="shrink-0 text-[11px] text-gray-500">
+                              {t("dashboard.ofTotalCampaigns", {
+                                count: campaignsQuery.data?.length ?? 0,
+                              })}
+                            </span>
+                          </div>
+                          {(campaignsQuery.data?.length ?? 0) === 0 && (
+                            <p className="mt-2 text-[11px] text-gray-500">
+                              {t("dashboard.noCampaignsYet")}
+                            </p>
+                          )}
+                        </>
                       )}
                     </Link>
                   )}

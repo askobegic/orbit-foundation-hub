@@ -171,7 +171,10 @@
     "campaigns": "Aktivne kampanje",
     "ofTotalCampaigns": "od ukupno {{count}}",
     "connectedApps": "Povezane aplikacije",
-    "activeSubscriptionsCount": "{{count}} aktivnih pretplata"
+    "activeSubscriptionsCount": "{{count}} aktivnih pretplata",
+    "recentActivityCount": "{{count}} nedavnih iskorištavanja",
+    "noRecentActivity": "Još nema aktivnosti",
+    "noCampaignsYet": "Još nema kampanja"
   },
   "subscription": {
     "title": "Moje pretplate",

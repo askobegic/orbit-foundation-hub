@@ -171,7 +171,10 @@
     "campaigns": "Aktive Kampagnen",
     "ofTotalCampaigns": "von {{count}} insgesamt",
     "connectedApps": "Verbundene Anwendungen",
-    "activeSubscriptionsCount": "{{count}} aktive Abonnements"
+    "activeSubscriptionsCount": "{{count}} aktive Abonnements",
+    "recentActivityCount": "{{count}} kürzliche Einlösungen",
+    "noRecentActivity": "Noch keine Aktivität",
+    "noCampaignsYet": "Noch keine Kampagnen"
   },
   "subscription": {
     "title": "Meine Abonnements",

@@ -171,7 +171,10 @@
     "campaigns": "Active Campaigns",
     "ofTotalCampaigns": "of {{count}} total",
     "connectedApps": "Connected Applications",
-    "activeSubscriptionsCount": "{{count}} active subscription(s)"
+    "activeSubscriptionsCount": "{{count}} active subscription(s)",
+    "recentActivityCount": "{{count}} recent redemption(s)",
+    "noRecentActivity": "No recent activity yet",
+    "noCampaignsYet": "No campaigns yet"
   },
   "subscription": {
     "title": "My subscriptions",
