@@ -174,7 +174,9 @@
     "activeSubscriptionsCount": "{{count}} active subscription(s)",
     "recentActivityCount": "{{count}} recent redemption(s)",
     "noRecentActivity": "No recent activity yet",
-    "noCampaignsYet": "No campaigns yet"
+    "noCampaignsYet": "No campaigns yet",
+    "viewRewards": "View Rewards",
+    "manageAdvertising": "Manage Advertising"
   },
   "subscription": {
     "title": "My subscriptions",

@@ -174,7 +174,9 @@
     "activeSubscriptionsCount": "{{count}} aktive Abonnements",
     "recentActivityCount": "{{count}} kürzliche Einlösungen",
     "noRecentActivity": "Noch keine Aktivität",
-    "noCampaignsYet": "Noch keine Kampagnen"
+    "noCampaignsYet": "Noch keine Kampagnen",
+    "viewRewards": "Prämien ansehen",
+    "manageAdvertising": "Werbung verwalten"
   },
   "subscription": {
     "title": "Meine Abonnements",

@@ -174,7 +174,9 @@
     "activeSubscriptionsCount": "{{count}} aktivnih pretplata",
     "recentActivityCount": "{{count}} nedavnih iskorištavanja",
     "noRecentActivity": "Još nema aktivnosti",
-    "noCampaignsYet": "Još nema kampanja"
+    "noCampaignsYet": "Još nema kampanja",
+    "viewRewards": "Pogledaj nagrade",
+    "manageAdvertising": "Upravljaj oglašavanjem"
   },
   "subscription": {
     "title": "Moje pretplate",
