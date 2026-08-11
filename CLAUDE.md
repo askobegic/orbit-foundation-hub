@@ -1,3 +1,30 @@
+# CORE PROJECT — MANDATORY STANDARD
+
+This repository is the CORE platform.
+
+Before making architectural or major implementation decisions, Claude Code MUST read:
+
+`CORE-APP-STANDARD.md`
+
+This document is mandatory for this project.
+
+The CORE architecture standard must not be silently bypassed, weakened, duplicated, or contradicted.
+
+If a requested change conflicts with `CORE-APP-STANDARD.md`:
+
+1. Identify the conflict.
+2. Explain the architectural impact.
+3. Do not silently implement the conflicting architecture.
+4. Request an explicit architecture decision when required.
+
+The CORE platform is the central shared platform for all CORE-connected applications.
+
+Applications must communicate with CORE for shared platform functionality and must not independently recreate CORE functionality.
+
+Security, data protection, authentication, permissions, Premium, billing, Rewards, and other shared CORE responsibilities must follow the approved CORE architecture.
+
+Read the full `CORE-APP-STANDARD.md` before making major architectural changes.
+
 # CLAUDE.md
 
 Development rules for working in this repository. Read this file, `PROJECT_KNOWLEDGE.md`, `PROJECT_AUDIT.md`, and `API_CONTRACT.md` before starting any task. `PROJECT_KNOWLEDGE.md` explains what the platform is and how it's meant to work; `PROJECT_AUDIT.md` tracks its known defects; `API_CONTRACT.md` is the frozen public `/v1` REST contract every application integrates through; this file governs how work gets done.
