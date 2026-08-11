@@ -189,23 +189,27 @@ export const adminSetApplicationEvent = createServerFn({ method: "POST" })
 
 // ---------- Reward Rule Engine (event_rules + event_rule_conditions) ----------
 
+// appId: null lists GLOBAL rules (Priority 15 Phase A) -- a specific uuid
+// lists that application's own rules, same as before.
 export const adminListEventRules = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((raw: unknown) => z.object({ appId: z.string().uuid() }).parse(raw))
+  .inputValidator((raw: unknown) => z.object({ appId: z.string().uuid().nullable() }).parse(raw))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
-    const { data: rows, error } = await context.supabase
-      .from("event_rules")
-      .select("*")
-      .eq("app_id", data.appId)
-      .order("display_order", { ascending: true });
+    let query = context.supabase.from("event_rules").select("*");
+    query = data.appId === null ? query.is("app_id", null) : query.eq("app_id", data.appId);
+    const { data: rows, error } = await query.order("display_order", { ascending: true });
     if (error) throw new Error(error.message);
     return rows ?? [];
   });
 
 const eventRuleSchema = z.object({
   id: z.string().uuid().optional(),
-  appId: z.string().uuid(),
+  // null = GLOBAL rule (Priority 15 Phase A) -- applies to every
+  // application that has this event enabled, unless that application also
+  // has its own app-specific rule, which always wins. See
+  // resolveEventRule() in events.server.ts for the precedence.
+  appId: z.string().uuid().nullable(),
   eventKey: z.string().trim().min(1),
   points: z.number().int().min(0).default(0),
   // Independent from `points` (Priority 12 decision 1). Left equal to
@@ -224,8 +228,50 @@ const eventRuleSchema = z.object({
   reason: z.string().trim().max(500).optional(),
 });
 
+type EventRuleUpsertPayload = {
+  app_id: string | null;
+  event_key: string;
+  points: number;
+  lifetime_points: number;
+  cooldown_seconds: number;
+  max_executions: number | null;
+  daily_limit: number | null;
+  weekly_limit: number | null;
+  monthly_limit: number | null;
+  priority: number;
+  repeatable: boolean;
+  display_order: number;
+  enabled: boolean;
+  archived: boolean;
+};
+
+// A plain onConflict upsert can't target the partial unique index
+// (event_key) WHERE app_id IS NULL (Priority 15 Phase A) -- Postgres's ON
+// CONFLICT inference requires the predicate to be specified alongside the
+// column list, which the query builder's onConflict string can't express.
+// Resolve the existing global row explicitly instead, only for the
+// app_id === null create path; the existing per-app upsert path is
+// untouched.
+async function upsertGlobalEventRule(
+  supabaseAdmin: Awaited<ReturnType<typeof adminClient>>,
+  eventKey: string,
+  payload: EventRuleUpsertPayload,
+) {
+  const { data: existingGlobal } = await supabaseAdmin
+    .from("event_rules")
+    .select("id")
+    .is("app_id", null)
+    .eq("event_key", eventKey)
+    .maybeSingle();
+  return existingGlobal
+    ? supabaseAdmin.from("event_rules").update(payload).eq("id", existingGlobal.id).select("*").single()
+    : supabaseAdmin.from("event_rules").insert(payload).select("*").single();
+}
+
 // One rule per (app, event) -- upsert on that pair, matching event_rules'
-// UNIQUE(app_id, event_key) constraint from the Phase 1 migration.
+// UNIQUE(app_id, event_key) constraint from the Phase 1 migration. A null
+// appId (Priority 15 Phase A) is a GLOBAL rule, resolved via
+// upsertGlobalEventRule above instead of the onConflict upsert.
 export const adminUpsertEventRule = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((raw: unknown) => eventRuleSchema.parse(raw))
@@ -266,11 +312,13 @@ export const adminUpsertEventRule = createServerFn({ method: "POST" })
           .eq("id", data.id)
           .select("*")
           .single()
-      : await supabaseAdmin
-          .from("event_rules")
-          .upsert(payload, { onConflict: "app_id,event_key" })
-          .select("*")
-          .single();
+      : data.appId === null
+        ? await upsertGlobalEventRule(supabaseAdmin, data.eventKey, payload)
+        : await supabaseAdmin
+            .from("event_rules")
+            .upsert(payload, { onConflict: "app_id,event_key" })
+            .select("*")
+            .single();
     if (error) throw new Error(error.message);
 
     await writeAuditLog({

@@ -82,6 +82,8 @@ function AdminEvents() {
 
         <EventDefinitionsSection />
 
+        <GlobalRulesSection />
+
         <Card title={t("admin.common.application")}>
           <select
             value={appId}
@@ -263,6 +265,51 @@ function EventDefinitionsSection() {
   );
 }
 
+// Priority 15 Phase A: GLOBAL rules -- one optional event_rules row per
+// event_key with app_id = null, applying to every application that has
+// the event enabled unless that application also has its own
+// app-specific rule (which always wins -- see resolveEventRule() in
+// events.server.ts). Not gated by application_events/an app selection,
+// since a global rule isn't tied to any one application's mapping.
+function GlobalRulesSection() {
+  const { t } = useTranslation();
+  const definitionsListFn = useServerFn(adminListEventDefinitions);
+  const rulesListFn = useServerFn(adminListEventRules);
+  const definitionsQ = useQuery({
+    queryKey: ["admin-event-definitions"],
+    queryFn: () => definitionsListFn(),
+  });
+  const rulesQ = useQuery({
+    // null matches the key RuleRow already invalidates via its own
+    // `appId` prop (also null here) -- see RuleRow's save mutation below.
+    queryKey: ["admin-event-rules", null],
+    queryFn: () => rulesListFn({ data: { appId: null } }),
+  });
+
+  const activeDefinitions = (definitionsQ.data ?? []).filter((d) => !d.archived);
+  const rulesByKey = new Map((rulesQ.data ?? []).map((r) => [r.event_key, r]));
+
+  return (
+    <Card title={t("admin.events.globalRulesTitle")}>
+      <p className="mb-3 text-xs text-gray-500">{t("admin.events.globalRulesDesc")}</p>
+      {activeDefinitions.length === 0 && (
+        <p className="text-sm text-gray-500">{t("admin.events.noDefinitions")}</p>
+      )}
+      <div className="space-y-4">
+        {activeDefinitions.map((d) => (
+          <RuleRow
+            key={d.event_key}
+            appId={null}
+            eventKey={d.event_key}
+            label={d.display_name}
+            rule={rulesByKey.get(d.event_key) ?? null}
+          />
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 function ApplicationMappingSection({ appId }: { appId: string }) {
   const { t } = useTranslation();
   const qc = useQueryClient();
@@ -353,7 +400,8 @@ function RuleRow({
   label,
   rule,
 }: {
-  appId: string;
+  // null = GLOBAL rule (Priority 15 Phase A) -- see GlobalRulesSection.
+  appId: string | null;
   eventKey: string;
   label: string;
   rule: EventRuleRow | null;

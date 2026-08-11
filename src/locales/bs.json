@@ -508,6 +508,8 @@
       "created": "Događaj je kreiran",
       "noDefinitions": "Još nema definicija događaja.",
       "mappingTitle": "Mapiranje po aplikaciji",
+      "globalRulesTitle": "Globalna pravila",
+      "globalRulesDesc": "Primjenjuje se na svaku aplikaciju koja ima omogućen ovaj događaj, osim ako ta aplikacija ima i vlastito pravilo ispod — pravilo specifično za aplikaciju uvijek ima prednost nad globalnim.",
       "rulesTitle": "Pravila nagrađivanja",
       "noEnabledEvents": "Omogućite bar jedan događaj iznad za ovu aplikaciju da biste konfigurisali pravila nagrađivanja.",
       "points": "Bodovi",

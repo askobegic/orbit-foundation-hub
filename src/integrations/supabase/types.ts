@@ -1363,7 +1363,9 @@ export type Database = {
       }
       event_rules: {
         Row: {
-          app_id: string
+          // null = GLOBAL rule (Priority 15 Phase A) -- see
+          // 20260811100000_event_rules_global_scope.sql.
+          app_id: string | null
           archived: boolean
           cooldown_seconds: number
           created_at: string
@@ -1382,7 +1384,7 @@ export type Database = {
           weekly_limit: number | null
         }
         Insert: {
-          app_id: string
+          app_id?: string | null
           archived?: boolean
           cooldown_seconds?: number
           created_at?: string
@@ -1401,7 +1403,7 @@ export type Database = {
           weekly_limit?: number | null
         }
         Update: {
-          app_id?: string
+          app_id?: string | null
           archived?: boolean
           cooldown_seconds?: number
           created_at?: string

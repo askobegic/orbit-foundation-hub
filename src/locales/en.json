@@ -508,6 +508,8 @@
       "created": "Event created",
       "noDefinitions": "No event definitions yet.",
       "mappingTitle": "Application mapping",
+      "globalRulesTitle": "Global rules",
+      "globalRulesDesc": "Applies to every application that has the event enabled, unless that application also has its own rule below — an application-specific rule always overrides the global one.",
       "rulesTitle": "Reward rules",
       "noEnabledEvents": "Enable at least one event above for this application to configure reward rules.",
       "points": "Points",

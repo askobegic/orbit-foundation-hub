@@ -14,6 +14,13 @@
 // gets a row" precedent) -> achievement check (reused from rewards.server.ts
 // -- an event-driven grant can complete the same achievements a
 // CORE-internal action can, since both write the same reward_ledger).
+//
+// Priority 15 Phase A: event_rules.app_id may be null (a GLOBAL rule,
+// available to every application) or a specific application (always
+// overrides the global rule for the same event_key when both exist) --
+// see resolveEventRule() below. application_events is unchanged: an
+// application must still explicitly enable an event before any rule,
+// global or app-specific, is ever evaluated for it.
 import { hasAnyActivePremium } from "@/lib/premium";
 import type { Json } from "@/integrations/supabase/types";
 
@@ -189,6 +196,35 @@ async function evaluateConditions(
   return { passed: true };
 }
 
+// Priority 15 Phase A: Global vs Application scope. A rule with app_id set
+// applies only to that application and always wins when present; a rule
+// with app_id = null is the global fallback, consulted only when no
+// application-specific rule exists for this (appId, eventKey) pair. Same
+// override-with-global-fallback precedence already used by
+// ad_config/ad_application_settings and ad_placement_prices -- not new
+// behavior invented for this engine.
+async function resolveEventRule(
+  supabaseAdmin: Awaited<ReturnType<typeof admin>>,
+  appId: string,
+  eventKey: string,
+) {
+  const { data: appRule } = await supabaseAdmin
+    .from("event_rules")
+    .select("*")
+    .eq("app_id", appId)
+    .eq("event_key", eventKey)
+    .maybeSingle();
+  if (appRule) return appRule;
+
+  const { data: globalRule } = await supabaseAdmin
+    .from("event_rules")
+    .select("*")
+    .is("app_id", null)
+    .eq("event_key", eventKey)
+    .maybeSingle();
+  return globalRule ?? null;
+}
+
 async function countSince(
   supabaseAdmin: Awaited<ReturnType<typeof admin>>,
   userId: string,
@@ -248,12 +284,7 @@ export async function recordEvent(input: RecordEventParams): Promise<RecordEvent
   if (!mapping?.enabled) {
     reason = "event_not_enabled_for_app";
   } else {
-    const { data: rule } = await supabaseAdmin
-      .from("event_rules")
-      .select("*")
-      .eq("app_id", input.appId)
-      .eq("event_key", input.eventKey)
-      .maybeSingle();
+    const rule = await resolveEventRule(supabaseAdmin, input.appId, input.eventKey);
 
     if (!rule || !rule.enabled || rule.archived) {
       reason = "rule_not_configured";

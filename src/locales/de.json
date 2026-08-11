@@ -508,6 +508,8 @@
       "created": "Ereignis erstellt",
       "noDefinitions": "Noch keine Ereignisdefinitionen.",
       "mappingTitle": "Anwendungszuordnung",
+      "globalRulesTitle": "Globale Regeln",
+      "globalRulesDesc": "Gilt für jede Anwendung, die dieses Ereignis aktiviert hat, es sei denn, diese Anwendung hat auch eine eigene Regel unten — eine anwendungsspezifische Regel hat immer Vorrang vor der globalen.",
       "rulesTitle": "Prämienregeln",
       "noEnabledEvents": "Aktivieren Sie oben mindestens ein Ereignis für diese Anwendung, um Prämienregeln zu konfigurieren.",
       "points": "Punkte",
