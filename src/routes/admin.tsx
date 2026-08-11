@@ -8,6 +8,7 @@ import {
   Clock,
   CreditCard,
   Gift,
+  HelpCircle,
   Image,
   LayoutGrid,
   MegaphoneIcon,
@@ -180,6 +181,12 @@ function AdminGate() {
       icon: Target,
       title: t("admin.hub.cards.engagement.title"),
       desc: t("admin.hub.cards.engagement.desc"),
+    },
+    {
+      to: "/admin/support",
+      icon: HelpCircle,
+      title: t("admin.hub.cards.support.title"),
+      desc: t("admin.hub.cards.support.desc"),
     },
   ];
   return (

@@ -2,12 +2,21 @@ import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { useServerFn } from "@tanstack/react-start";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, HelpCircle, Send, BookOpen, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { DashboardMobileNav } from "@/components/dashboard/DashboardNav";
-import { sendSupportRequest } from "@/lib/notifications.functions";
+import { useApplication } from "@/context/ApplicationContext";
+import {
+  createSupportTicket,
+  getMySupportTicketMessages,
+  getMySupportTickets,
+  replySupportTicket,
+} from "@/lib/support.functions";
+
+type TicketRow = Awaited<ReturnType<typeof getMySupportTickets>>[number];
 
 export const Route = createFileRoute("/dashboard/help")({
   head: () => ({
@@ -27,33 +36,66 @@ export const Route = createFileRoute("/dashboard/help")({
 
 function HelpPage() {
   const { t } = useTranslation();
-  const send = useServerFn(sendSupportRequest);
+  const { application } = useApplication();
+  const qc = useQueryClient();
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [category, setCategory] = useState("general");
-  const [busy, setBusy] = useState(false);
   const [openIdx, setOpenIdx] = useState<number | null>(0);
 
   const faqs = (t("help.faqs", { returnObjects: true }) as Array<{ q: string; a: string }>) || [];
 
-  async function onSubmit(e: React.FormEvent) {
+  // Priority 15 Phase D (15.12): a real, persistent support ticket system
+  // -- replaces the previous fire-and-forget sendSupportRequest() n8n
+  // webhook stub (no DB row, no reply, no inbox) with createSupportTicket/
+  // getMySupportTickets/replySupportTicket. Same page, same "Contact"
+  // section -- not a second entry point.
+  const createFn = useServerFn(createSupportTicket);
+  const doCreate = useMutation({
+    mutationFn: () =>
+      createFn({
+        data: { subject: subject.trim(), message: message.trim(), category, appId: application?.id ?? null },
+      }),
+    onSuccess: () => {
+      toast.success(t("help.sent"));
+      setSubject("");
+      setMessage("");
+      void qc.invalidateQueries({ queryKey: ["my-support-tickets"] });
+    },
+    onError: () => toast.error(t("common.errorGeneric")),
+  });
+
+  function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!subject.trim() || message.trim().length < 5) {
       toast.error(t("help.formInvalid"));
       return;
     }
-    setBusy(true);
-    try {
-      await send({ data: { subject, message, category } });
-      toast.success(t("help.sent"));
-      setSubject("");
-      setMessage("");
-    } catch {
-      toast.error(t("common.errorGeneric"));
-    } finally {
-      setBusy(false);
-    }
+    doCreate.mutate();
   }
+
+  const listFn = useServerFn(getMySupportTickets);
+  const ticketsQ = useQuery({ queryKey: ["my-support-tickets"], queryFn: () => listFn() });
+
+  const [selected, setSelected] = useState<TicketRow | null>(null);
+  const msgFn = useServerFn(getMySupportTicketMessages);
+  const messagesQ = useQuery({
+    queryKey: ["my-support-messages", selected?.id],
+    enabled: !!selected,
+    queryFn: () => msgFn({ data: { ticketId: selected!.id } }),
+  });
+
+  const [reply, setReply] = useState("");
+  const replyFn = useServerFn(replySupportTicket);
+  const doReply = useMutation({
+    mutationFn: () => replyFn({ data: { ticketId: selected!.id, body: reply.trim() } }),
+    onSuccess: () => {
+      setReply("");
+      void qc.invalidateQueries({ queryKey: ["my-support-messages", selected?.id] });
+      void qc.invalidateQueries({ queryKey: ["my-support-tickets"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   return (
     <main className="min-h-screen bg-[#F7F8FA] px-4 py-8 lg:px-8">
@@ -167,13 +209,69 @@ function HelpPage() {
             </div>
             <button
               type="submit"
-              disabled={busy}
+              disabled={doCreate.isPending}
               className="inline-flex items-center gap-2 rounded-lg bg-[#1D6BF3] px-4 py-2 text-sm font-medium text-white hover:bg-[#1858cf] disabled:opacity-60"
             >
               <Send className="h-4 w-4" />
-              {busy ? t("common.saving") : t("help.send")}
+              {doCreate.isPending ? t("common.saving") : t("help.send")}
             </button>
           </form>
+        </section>
+
+        <section className="mt-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
+          <h2 className="mb-3 text-sm font-semibold">{t("help.yourRequests")}</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            <ul className="max-h-72 divide-y divide-gray-100 overflow-y-auto">
+              {(ticketsQ.data ?? []).map((ticket) => (
+                <li key={ticket.id}>
+                  <button
+                    type="button"
+                    onClick={() => setSelected(ticket)}
+                    className={`block w-full rounded-lg px-2 py-2 text-left text-sm hover:bg-gray-50 ${selected?.id === ticket.id ? "bg-blue-50" : ""}`}
+                  >
+                    <span className="font-medium text-gray-800">{ticket.subject}</span>
+                    <span className="block text-xs text-gray-500">{t(`help.requestStatus_${ticket.status}`)}</span>
+                  </button>
+                </li>
+              ))}
+              {(ticketsQ.data ?? []).length === 0 && (
+                <p className="py-2 text-sm text-gray-500">{t("help.noRequests")}</p>
+              )}
+            </ul>
+            <div>
+              {selected ? (
+                <div className="rounded-xl border border-gray-100 p-3">
+                  <ul className="max-h-56 space-y-2 overflow-y-auto">
+                    {(messagesQ.data ?? []).map((m) => (
+                      <li
+                        key={m.id}
+                        className={`rounded-lg p-2 text-xs ${m.sender_role === "admin" ? "bg-blue-50" : "bg-gray-50"}`}
+                      >
+                        <span className="font-medium">{t(`help.requestSender_${m.sender_role}`)}</span>: {m.body}
+                      </li>
+                    ))}
+                  </ul>
+                  <textarea
+                    value={reply}
+                    onChange={(e) => setReply(e.target.value)}
+                    rows={3}
+                    placeholder={t("help.requestReplyPlaceholder")}
+                    className="mt-2 w-full rounded-lg border border-gray-200 px-2 py-1 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => doReply.mutate()}
+                    disabled={!reply.trim() || doReply.isPending}
+                    className="mt-2 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                  >
+                    {t("help.requestSend")}
+                  </button>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">{t("help.selectRequest")}</p>
+              )}
+            </div>
+          </div>
         </section>
       </div>
     </main>

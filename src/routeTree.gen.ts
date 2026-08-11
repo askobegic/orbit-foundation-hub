@@ -23,6 +23,7 @@ import { Route as AdminEngagementRouteImport } from './routes/admin.engagement'
 import { Route as AdminEventsRouteImport } from './routes/admin.events'
 import { Route as AdminPaymentsRouteImport } from './routes/admin.payments'
 import { Route as AdminRewardsRouteImport } from './routes/admin.rewards'
+import { Route as AdminSupportRouteImport } from './routes/admin.support'
 import { Route as AdminTrialsRouteImport } from './routes/admin.trials'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminVerificationRouteImport } from './routes/admin.verification'
@@ -211,6 +212,11 @@ const AdminPaymentsRoute = AdminPaymentsRouteImport.update({
 const AdminRewardsRoute = AdminRewardsRouteImport.update({
   id: '/rewards',
   path: '/rewards',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSupportRoute = AdminSupportRouteImport.update({
+  id: '/support',
+  path: '/support',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminTrialsRoute = AdminTrialsRouteImport.update({
@@ -879,6 +885,7 @@ export interface FileRoutesByFullPath {
   '/admin/events': typeof AdminEventsRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/rewards': typeof AdminRewardsRoute
+  '/admin/support': typeof AdminSupportRoute
   '/admin/trials': typeof AdminTrialsRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/verification': typeof AdminVerificationRoute
@@ -1014,6 +1021,7 @@ export interface FileRoutesByTo {
   '/admin/events': typeof AdminEventsRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/rewards': typeof AdminRewardsRoute
+  '/admin/support': typeof AdminSupportRoute
   '/admin/trials': typeof AdminTrialsRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/verification': typeof AdminVerificationRoute
@@ -1150,6 +1158,7 @@ export interface FileRoutesById {
   '/admin/events': typeof AdminEventsRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/rewards': typeof AdminRewardsRoute
+  '/admin/support': typeof AdminSupportRoute
   '/admin/trials': typeof AdminTrialsRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/verification': typeof AdminVerificationRoute
@@ -1287,6 +1296,7 @@ export interface FileRouteTypes {
     | '/admin/events'
     | '/admin/payments'
     | '/admin/rewards'
+    | '/admin/support'
     | '/admin/trials'
     | '/admin/users'
     | '/admin/verification'
@@ -1422,6 +1432,7 @@ export interface FileRouteTypes {
     | '/admin/events'
     | '/admin/payments'
     | '/admin/rewards'
+    | '/admin/support'
     | '/admin/trials'
     | '/admin/users'
     | '/admin/verification'
@@ -1557,6 +1568,7 @@ export interface FileRouteTypes {
     | '/admin/events'
     | '/admin/payments'
     | '/admin/rewards'
+    | '/admin/support'
     | '/admin/trials'
     | '/admin/users'
     | '/admin/verification'
@@ -1898,6 +1910,13 @@ declare module '@tanstack/react-router' {
       path: '/rewards'
       fullPath: '/admin/rewards'
       preLoaderRoute: typeof AdminRewardsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/support': {
+      id: '/admin/support'
+      path: '/support'
+      fullPath: '/admin/support'
+      preLoaderRoute: typeof AdminSupportRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/trials': {
@@ -2746,6 +2765,7 @@ interface AdminRouteChildren {
   AdminEventsRoute: typeof AdminEventsRoute
   AdminPaymentsRoute: typeof AdminPaymentsRoute
   AdminRewardsRoute: typeof AdminRewardsRoute
+  AdminSupportRoute: typeof AdminSupportRoute
   AdminTrialsRoute: typeof AdminTrialsRoute
   AdminUsersRoute: typeof AdminUsersRoute
   AdminVerificationRoute: typeof AdminVerificationRoute
@@ -2761,6 +2781,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminEventsRoute: AdminEventsRoute,
   AdminPaymentsRoute: AdminPaymentsRoute,
   AdminRewardsRoute: AdminRewardsRoute,
+  AdminSupportRoute: AdminSupportRoute,
   AdminTrialsRoute: AdminTrialsRoute,
   AdminUsersRoute: AdminUsersRoute,
   AdminVerificationRoute: AdminVerificationRoute,

@@ -83,6 +83,25 @@ export async function grantEntitlement(params: GrantEntitlementParams): Promise<
     console.error("grantEntitlement: insert failed", error);
     return { ok: false, error: "insert_failed" };
   }
+
+  // Engagement Notifications (Phase D, 15.13): "Benefit granted" -- one
+  // central place so every grant path (admin grant, Mission/Challenge/
+  // Streak fulfillment, reward redemption) notifies uniformly, via the
+  // existing notifications table.
+  await supabaseAdmin.from("notifications").insert({
+    user_id: params.userId,
+    app_id: appId,
+    type: "success",
+    category: "premium",
+    target_path: "/dashboard/rewards",
+    title_bs: "Beneficija dodijeljena",
+    title_en: "Benefit granted",
+    title_de: "Vorteil gewährt",
+    message_bs: params.benefitType,
+    message_en: params.benefitType,
+    message_de: params.benefitType,
+  });
+
   return { ok: true, entitlementId: row.id };
 }
 

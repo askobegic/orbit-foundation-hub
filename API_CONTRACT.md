@@ -850,6 +850,17 @@ The one and only bulk-communication mechanism (`PROJECT_KNOWLEDGE.md` → Commun
 - **Auth:** admin.
 - **Request body:** `{ "target": "premium", "appId": null, "type": "success", "title": { "bs": "...", "en": "...", "de": "..." }, "message": { "bs": "...", "en": "...", "de": "..." } }` — `target` is `"all" | "premium" | "user"` (`userId` required when `target: "user"`); `premium` resolves via the shared resolver (§1, Design Principle 5), reaching Trial-only Premium users too (`PROJECT_AUDIT.md` → `AD-13`'s fix, carried into this contract).
 - **Response 200:** `{ "data": { "sent": 812 } }`
+- **Priority 15 Phase D:** the request body gains two optional fields, `category` (`"information" | "reward" | "premium" | "offer" | "warning" | "system"` — a richer, admin-facing classification, deliberately separate from `type` above, which stays UI severity only) and `targetPath` (a deep link, internal `/dashboard/...` paths only — `PROJECT_AUDIT.md` → `MSG-3`, resolved). `GET /v1/me/notifications`'s response gains the same two fields, both nullable.
+
+### User → Admin Support (Priority 15 Phase D)
+
+A simple support ticket system — explicitly not the Messaging module (§16): different lifecycle (subject/priority/status/replies vs. peer eligibility), genuinely new schema (`support_tickets`/`support_messages`), not a repurposing. Business rules: `PROJECT_KNOWLEDGE.md` → Admin ↔ User Communication & Support.
+
+**Implementation status:** exists today only as internal TanStack server functions (`src/lib/support.functions.ts`, user-facing UI on the existing `/dashboard/help` page, admin UI at `/admin/support`), not as public `/v1` REST routes — same status as every other Priority 15 admin/user surface documented above.
+
+- A ticket has `subject`, `category` (free text, optional), `priority` (`low`/`normal`/`high`, admin-only settable), `status` (`open`/`in_progress`/`closed`), and `appId` (which application the user was using, informational).
+- A user sees and replies only to their own tickets; replying to a `closed` ticket reopens it to `in_progress`. An admin reply moves an `open` ticket to `in_progress` and triggers an "Admin reply" notification (§17, `targetPath: "/dashboard/help"`) unless marked an internal note (`isInternalNote: true`), which is never visible to the user.
+- All writes are server-validated (ownership or admin role) before reaching the database — never a direct client-authenticated insert, the same pattern already established for Messaging (`PROJECT_AUDIT.md` → `PR11-5`).
 
 ---
 

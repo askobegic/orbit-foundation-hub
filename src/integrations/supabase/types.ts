@@ -1896,15 +1896,116 @@ export type Database = {
           },
         ]
       }
+      support_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          is_internal_note: boolean
+          read_at: string | null
+          sender_id: string
+          sender_role: string
+          ticket_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          is_internal_note?: boolean
+          read_at?: string | null
+          sender_id: string
+          sender_role: string
+          ticket_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          is_internal_note?: boolean
+          read_at?: string | null
+          sender_id?: string
+          sender_role?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          app_id: string | null
+          category: string | null
+          created_at: string
+          id: string
+          priority: string
+          status: string
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          app_id?: string | null
+          category?: string | null
+          created_at?: string
+          id?: string
+          priority?: string
+          status?: string
+          subject: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          app_id?: string | null
+          category?: string | null
+          created_at?: string
+          id?: string
+          priority?: string
+          status?: string
+          subject?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           app_id: string | null
+          category: string | null
           created_at: string | null
           id: string
           is_read: boolean | null
           message_bs: string | null
           message_de: string | null
           message_en: string | null
+          target_path: string | null
           title_bs: string | null
           title_de: string | null
           title_en: string | null
@@ -1913,12 +2014,14 @@ export type Database = {
         }
         Insert: {
           app_id?: string | null
+          category?: string | null
           created_at?: string | null
           id?: string
           is_read?: boolean | null
           message_bs?: string | null
           message_de?: string | null
           message_en?: string | null
+          target_path?: string | null
           title_bs?: string | null
           title_de?: string | null
           title_en?: string | null
@@ -1927,12 +2030,14 @@ export type Database = {
         }
         Update: {
           app_id?: string | null
+          category?: string | null
           created_at?: string | null
           id?: string
           is_read?: boolean | null
           message_bs?: string | null
           message_de?: string | null
           message_en?: string | null
+          target_path?: string | null
           title_bs?: string | null
           title_de?: string | null
           title_en?: string | null

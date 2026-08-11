@@ -34,6 +34,10 @@ function CommunicationPage() {
   const [userId, setUserId] = useState("");
   const [appId, setAppId] = useState<string>("");
   const [type, setType] = useState<"info" | "success" | "warning" | "error">("info");
+  const [category, setCategory] = useState<
+    "" | "information" | "reward" | "premium" | "offer" | "warning" | "system"
+  >("");
+  const [targetPath, setTargetPath] = useState("");
   const [titleBs, setTitleBs] = useState("");
   const [titleEn, setTitleEn] = useState("");
   const [titleDe, setTitleDe] = useState("");
@@ -57,6 +61,8 @@ function CommunicationPage() {
           user_id: target === "user" ? userId : undefined,
           app_id: appId || null,
           type,
+          category: category || null,
+          target_path: targetPath.trim() || null,
           title_bs: titleBs,
           title_en: titleEn,
           title_de: titleDe,
@@ -132,6 +138,31 @@ function CommunicationPage() {
                 <option value="warning">{t("admin.communication.typeWarning")}</option>
                 <option value="error">{t("admin.communication.typeError")}</option>
               </select>
+            </label>
+            <label className="text-sm font-medium text-gray-700">
+              {t("admin.communication.category")}
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value as typeof category)}
+                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+              >
+                <option value="">{t("admin.communication.none")}</option>
+                <option value="information">{t("admin.communication.categoryInformation")}</option>
+                <option value="reward">{t("admin.communication.categoryReward")}</option>
+                <option value="premium">{t("admin.communication.categoryPremium")}</option>
+                <option value="offer">{t("admin.communication.categoryOffer")}</option>
+                <option value="warning">{t("admin.communication.categoryWarning")}</option>
+                <option value="system">{t("admin.communication.categorySystem")}</option>
+              </select>
+            </label>
+            <label className="text-sm font-medium text-gray-700">
+              {t("admin.communication.targetPath")}
+              <input
+                value={targetPath}
+                onChange={(e) => setTargetPath(e.target.value)}
+                placeholder="/dashboard/rewards"
+                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+              />
             </label>
           </div>
 

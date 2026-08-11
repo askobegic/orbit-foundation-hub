@@ -440,6 +440,20 @@ const notifySchema = z.object({
   user_id: z.string().uuid().optional(),
   app_id: z.string().uuid().nullable().optional(),
   type: z.enum(["info", "success", "warning", "error"]).default("info"),
+  // Priority 15 Phase D: a richer, admin-facing classification, kept
+  // separate from `type` (UI severity) above so existing notification
+  // semantics never change -- see PROJECT_KNOWLEDGE.md -> Admin -> User
+  // Communication.
+  category: z.enum(["information", "reward", "premium", "offer", "warning", "system"]).nullable().optional(),
+  // Deep link (PROJECT_AUDIT.md -> MSG-3). Internal dashboard paths only
+  // -- validated again here even though the DB CHECK constraint is the
+  // real enforcement boundary, so a bad value fails with a clear message
+  // instead of a raw constraint-violation error.
+  target_path: z
+    .string()
+    .regex(/^\/dashboard\/[a-zA-Z0-9/_-]*$/)
+    .nullable()
+    .optional(),
   title_bs: z.string().min(1),
   title_en: z.string().min(1),
   title_de: z.string().min(1),
@@ -474,6 +488,8 @@ export const adminSendNotification = createServerFn({ method: "POST" })
       user_id: uid,
       app_id: data.app_id ?? null,
       type: data.type,
+      category: data.category ?? null,
+      target_path: data.target_path ?? null,
       title_bs: data.title_bs,
       title_en: data.title_en,
       title_de: data.title_de,

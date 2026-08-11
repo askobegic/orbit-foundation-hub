@@ -425,7 +425,17 @@
     "message": "Message",
     "send": "Send message",
     "sent": "Your message has been sent.",
-    "formInvalid": "Please fill in subject and message."
+    "formInvalid": "Please fill in subject and message.",
+    "yourRequests": "Your requests",
+    "noRequests": "You haven't submitted any requests yet.",
+    "selectRequest": "Select a request to view the conversation.",
+    "requestStatus_open": "Open",
+    "requestStatus_in_progress": "In progress",
+    "requestStatus_closed": "Closed",
+    "requestSender_user": "You",
+    "requestSender_admin": "Support",
+    "requestReplyPlaceholder": "Type a reply…",
+    "requestSend": "Send"
   },
   "install": {
     "title": "Install Core Platform",
@@ -573,6 +583,24 @@
       "thresholdDays": "Threshold (days)",
       "streakTimezone": "Streak timezone (IANA)",
       "configSaved": "Configuration saved"
+    },
+    "support": {
+      "title": "Support",
+      "subtitle": "User support tickets — a simple ticket system, not social messaging.",
+      "ticketsTitle": "Tickets",
+      "all": "All",
+      "status_open": "Open",
+      "status_in_progress": "In progress",
+      "status_closed": "Closed",
+      "priorityLow": "Low",
+      "priorityNormal": "Normal",
+      "priorityHigh": "High",
+      "noTickets": "No tickets.",
+      "selectTicket": "Select a ticket to view the conversation.",
+      "internalNote": "Internal note",
+      "replyPlaceholder": "Reply to the user…",
+      "send": "Send",
+      "statusUpdated": "Status updated"
     },
     "trials": {
       "title": "Promotional Trials",
@@ -930,7 +958,8 @@
         "dashboardWidgets": { "title": "Dashboard Widgets", "desc": "Enable or disable dashboard sections, globally or per application." },
         "rewards": { "title": "Rewards & Loyalty", "desc": "Action rules, levels, achievements, catalog, fulfillment types, config." },
         "events": { "title": "Universal Events", "desc": "Event registry, per-application mapping, and reward rules for application-reported events." },
-        "engagement": { "title": "Missions, Challenges & Streaks", "desc": "Define missions, challenges, and streaks, global or per application." }
+        "engagement": { "title": "Missions, Challenges & Streaks", "desc": "Define missions, challenges, and streaks, global or per application." },
+        "support": { "title": "Support", "desc": "User support tickets and replies." }
       }
     },
     "verification": {
@@ -955,6 +984,14 @@
       "typeSuccess": "Success",
       "typeWarning": "Warning",
       "typeError": "Error",
+      "category": "Category",
+      "categoryInformation": "Information",
+      "categoryReward": "Reward",
+      "categoryPremium": "Premium",
+      "categoryOffer": "Offer",
+      "categoryWarning": "Warning",
+      "categorySystem": "System",
+      "targetPath": "Deep link (optional, e.g. /dashboard/rewards)",
       "titlePlaceholder": "Title",
       "messagePlaceholder": "Message",
       "sending": "Sending…",

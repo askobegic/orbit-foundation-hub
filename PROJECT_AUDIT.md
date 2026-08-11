@@ -266,14 +266,13 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 ### Medium
 
 **DA-2 — Notification bell's unread badge is capped at 5 and disconnected from the correct count**
-- **Status:** Open
-- **Files:** `src/components/dashboard/NotificationBell.tsx:45,51`; dead correct query at `src/components/dashboard/DashboardPage.tsx:124-136`
+- **Status:** ✅ Resolved (2026-08-11, Priority 15 Phase D — fixed while already touching this file for MSG-3, per the commitment noted in `PROJECT_KNOWLEDGE.md` → Missions, Challenges & Streaks)
+- **Files:** `src/components/dashboard/NotificationBell.tsx`
 - **Description:** The bell derives its unread count from only the 5 most-recently-fetched notifications. A correct `count: "exact", head: true` query already exists in `DashboardPage.tsx` but is never referenced again after being declared (dead code — see **CO-5**) and isn't wired to `NotificationBell`.
 - **Risk:** A user with more than 5 unread notifications never sees an accurate badge count; the unused query also wastes a network request every dashboard load (see **PE-5**).
-- **Recommendation:** Wire the exact-count query into the badge (as a prop or by having `NotificationBell` run its own head-count query); delete the dead query if unused elsewhere.
-- **Resolution:** —
-- **Commit:** —
-- **Date:** 2026-07-26
+- **Resolution:** `NotificationBell.tsx` now runs its own `count: "exact", head: true` query (the same pattern `DashboardPage.tsx`'s dead query already used) for the badge, invalidated by the same realtime subscription and mark-read handlers that already refresh the notification list. **Deliberately not touched:** the dead query in `DashboardPage.tsx` itself (**CO-5**/**PE-5**) — a separate file/finding this fix didn't need to depend on; left open, not silently folded in.
+- **Commit:** (Priority 15 Phase D — see `CLAUDE.md` → Priority 15 for the commit hash)
+- **Date:** 2026-08-11
 
 **DA-3 — "Settings" quick-link tile routes back to `/dashboard` instead of `/dashboard/settings`**
 - **Status:** ✅ Resolved (2026-07-28)
@@ -1108,15 +1107,14 @@ This section aggregates the highest-impact, trust-boundary-crossing issues found
 - **Date:** 2026-07-31
 
 **MSG-3 — No deep link from a "new message" notification to its conversation**
-- **Status:** 🚫 Deferred (2026-08-03)
-- **Files:** `supabase/migrations` (`notifications` table schema); consumed at `src/components/dashboard/NotificationBell.tsx`
+- **Status:** ✅ Resolved (2026-08-11, Priority 15 Phase D)
+- **Files:** `supabase/migrations/20260811140000_communication_and_support.sql`; `src/components/dashboard/NotificationBell.tsx`; `src/lib/admin.functions.ts`; `src/lib/entitlements.server.ts`; `src/lib/support.functions.ts`
 - **Description:** Found during the Priority 8.6 audit: `notifications` has no `conversation_id`/target column, so clicking a "new message" notification does nothing but mark it read — it doesn't take the user to the conversation.
 - **Risk:** UX gap only — no data-integrity or security impact.
-- **Recommendation:** Add a nullable target/reference column to `notifications` (or a generic `link_to` path) once notification deep-linking is prioritized for more than one notification type.
-- **Deferral rationale:** Explicitly out of scope for Priority 8.7 by owner instruction ("do not implement" R-13) — adding a notification schema column for one call site is a shared-table change that deserves its own scoped design (e.g., should it generalize to every notification type, or stay messaging-specific) rather than a drive-by addition here.
-- **Resolution:** —
-- **Commit:** —
-- **Date:** 2026-08-03
+- **Deferral rationale (historical):** Explicitly out of scope for Priority 8.7 by owner instruction ("do not implement" R-13) — resolving the open design question ("generalize to every notification type, or stay messaging-specific") required its own scoped decision, made in Priority 15 Phase D.
+- **Resolution:** Generalized, not messaging-specific — `notifications.target_path` (nullable, CHECK-constrained to `^/dashboard/...` only, no external URL ever accepted, the same validate-before-storage rule as `CO-1`). `NotificationBell.tsx` now navigates to `target_path` and marks the notification read on click, for any notification type that sets it (currently: Admin → User Communication broadcasts, "Benefit granted", "Admin reply" on a support ticket). The one-on-one messaging module itself was not touched in this pass — a "new message" notification can adopt `target_path` the same way in a future, separate change.
+- **Commit:** (Priority 15 Phase D — see `CLAUDE.md` → Priority 15 for the commit hash)
+- **Date:** 2026-08-11
 
 ---
 

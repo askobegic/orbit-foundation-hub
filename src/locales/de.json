@@ -425,7 +425,17 @@
     "message": "Nachricht",
     "send": "Nachricht senden",
     "sent": "Ihre Nachricht wurde gesendet.",
-    "formInvalid": "Bitte Betreff und Nachricht ausfüllen."
+    "formInvalid": "Bitte Betreff und Nachricht ausfüllen.",
+    "yourRequests": "Ihre Anfragen",
+    "noRequests": "Sie haben noch keine Anfragen gesendet.",
+    "selectRequest": "Wählen Sie eine Anfrage, um den Verlauf anzuzeigen.",
+    "requestStatus_open": "Offen",
+    "requestStatus_in_progress": "In Bearbeitung",
+    "requestStatus_closed": "Geschlossen",
+    "requestSender_user": "Sie",
+    "requestSender_admin": "Support",
+    "requestReplyPlaceholder": "Antwort eingeben…",
+    "requestSend": "Senden"
   },
   "install": {
     "title": "Core Platform installieren",
@@ -573,6 +583,24 @@
       "thresholdDays": "Schwelle (Tage)",
       "streakTimezone": "Zeitzone für Serien (IANA)",
       "configSaved": "Konfiguration gespeichert"
+    },
+    "support": {
+      "title": "Support",
+      "subtitle": "Support-Anfragen der Nutzer — ein einfaches Ticketsystem, kein soziales Messaging.",
+      "ticketsTitle": "Tickets",
+      "all": "Alle",
+      "status_open": "Offen",
+      "status_in_progress": "In Bearbeitung",
+      "status_closed": "Geschlossen",
+      "priorityLow": "Niedrig",
+      "priorityNormal": "Normal",
+      "priorityHigh": "Hoch",
+      "noTickets": "Keine Tickets.",
+      "selectTicket": "Wählen Sie ein Ticket, um den Verlauf anzuzeigen.",
+      "internalNote": "Interne Notiz",
+      "replyPlaceholder": "An den Nutzer antworten…",
+      "send": "Senden",
+      "statusUpdated": "Status aktualisiert"
     },
     "trials": {
       "title": "Werbe-Testzeiträume",
@@ -930,7 +958,8 @@
         "dashboardWidgets": { "title": "Dashboard-Widgets", "desc": "Dashboard-Bereiche global oder pro Anwendung aktivieren oder deaktivieren." },
         "rewards": { "title": "Prämien & Treue", "desc": "Aktionsregeln, Stufen, Erfolge, Katalog, Erfüllungstypen, Konfiguration." },
         "events": { "title": "Universelle Ereignisse", "desc": "Ereignisregister, Anwendungszuordnung und Prämienregeln für von Anwendungen gemeldete Ereignisse." },
-        "engagement": { "title": "Missionen, Herausforderungen & Serien", "desc": "Missionen, Herausforderungen und Serien definieren, global oder pro Anwendung." }
+        "engagement": { "title": "Missionen, Herausforderungen & Serien", "desc": "Missionen, Herausforderungen und Serien definieren, global oder pro Anwendung." },
+        "support": { "title": "Support", "desc": "Support-Anfragen und Antworten der Nutzer." }
       }
     },
     "verification": {
@@ -955,6 +984,14 @@
       "typeSuccess": "Erfolg",
       "typeWarning": "Warnung",
       "typeError": "Fehler",
+      "category": "Kategorie",
+      "categoryInformation": "Information",
+      "categoryReward": "Prämie",
+      "categoryPremium": "Premium",
+      "categoryOffer": "Angebot",
+      "categoryWarning": "Warnung",
+      "categorySystem": "System",
+      "targetPath": "Deep-Link (optional, z. B. /dashboard/rewards)",
       "titlePlaceholder": "Titel",
       "messagePlaceholder": "Nachricht",
       "sending": "Wird gesendet…",

@@ -425,7 +425,17 @@
     "message": "Poruka",
     "send": "Pošalji poruku",
     "sent": "Vaša poruka je poslana.",
-    "formInvalid": "Molimo popunite naslov i poruku."
+    "formInvalid": "Molimo popunite naslov i poruku.",
+    "yourRequests": "Vaši zahtjevi",
+    "noRequests": "Još niste poslali nijedan zahtjev.",
+    "selectRequest": "Odaberite zahtjev za pregled razgovora.",
+    "requestStatus_open": "Otvoreno",
+    "requestStatus_in_progress": "U toku",
+    "requestStatus_closed": "Zatvoreno",
+    "requestSender_user": "Vi",
+    "requestSender_admin": "Podrška",
+    "requestReplyPlaceholder": "Upišite odgovor…",
+    "requestSend": "Pošalji"
   },
   "install": {
     "title": "Instalirajte Core Platform",
@@ -573,6 +583,24 @@
       "thresholdDays": "Prag (dani)",
       "streakTimezone": "Vremenska zona za nizove (IANA)",
       "configSaved": "Konfiguracija sačuvana"
+    },
+    "support": {
+      "title": "Podrška",
+      "subtitle": "Korisnički zahtjevi za podršku — jednostavan sistem tiketa, ne društveno dopisivanje.",
+      "ticketsTitle": "Tiketi",
+      "all": "Svi",
+      "status_open": "Otvoreno",
+      "status_in_progress": "U toku",
+      "status_closed": "Zatvoreno",
+      "priorityLow": "Nizak",
+      "priorityNormal": "Normalan",
+      "priorityHigh": "Visok",
+      "noTickets": "Nema tiketa.",
+      "selectTicket": "Odaberite tiket za pregled razgovora.",
+      "internalNote": "Interna napomena",
+      "replyPlaceholder": "Odgovorite korisniku…",
+      "send": "Pošalji",
+      "statusUpdated": "Status ažuriran"
     },
     "trials": {
       "title": "Promotivni probni periodi",
@@ -930,7 +958,8 @@
         "dashboardWidgets": { "title": "Dashboard widgeti", "desc": "Omogućite ili onemogućite sekcije dashboarda, globalno ili po aplikaciji." },
         "rewards": { "title": "Nagrade i lojalnost", "desc": "Pravila akcija, nivoi, dostignuća, katalog, tipovi ispunjenja, konfiguracija." },
         "events": { "title": "Univerzalni događaji", "desc": "Registar događaja, mapiranje po aplikaciji i pravila nagrađivanja za događaje koje prijavljuju aplikacije." },
-        "engagement": { "title": "Misije, izazovi i nizovi", "desc": "Definirajte misije, izazove i nizove, globalno ili po aplikaciji." }
+        "engagement": { "title": "Misije, izazovi i nizovi", "desc": "Definirajte misije, izazove i nizove, globalno ili po aplikaciji." },
+        "support": { "title": "Podrška", "desc": "Korisnički zahtjevi za podršku i odgovori." }
       }
     },
     "verification": {
@@ -955,6 +984,14 @@
       "typeSuccess": "Uspjeh",
       "typeWarning": "Upozorenje",
       "typeError": "Greška",
+      "category": "Kategorija",
+      "categoryInformation": "Informacija",
+      "categoryReward": "Nagrada",
+      "categoryPremium": "Premium",
+      "categoryOffer": "Ponuda",
+      "categoryWarning": "Upozorenje",
+      "categorySystem": "Sistem",
+      "targetPath": "Direktna veza (opcionalno, npr. /dashboard/rewards)",
       "titlePlaceholder": "Naslov",
       "messagePlaceholder": "Poruka",
       "sending": "Slanje…",

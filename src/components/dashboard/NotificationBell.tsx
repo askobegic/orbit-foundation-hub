@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useTranslation } from "react-i18next";
@@ -8,7 +8,7 @@ import { toast } from "sonner";
 
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { markAllNotificationsRead } from "@/lib/notifications.functions";
+import { markAllNotificationsRead, markNotificationRead } from "@/lib/notifications.functions";
 
 type NotificationRow = {
   id: string;
@@ -19,6 +19,8 @@ type NotificationRow = {
   message_en: string | null;
   message_de: string | null;
   type: string | null;
+  // Priority 15 Phase D: deep link (PROJECT_AUDIT.md -> MSG-3).
+  target_path: string | null;
   is_read: boolean | null;
   created_at: string | null;
 };
@@ -27,11 +29,13 @@ export function NotificationBell() {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
   const lang = (i18n.language?.slice(0, 2) ?? "bs") as "bs" | "en" | "de";
 
   const markAll = useServerFn(markAllNotificationsRead);
+  const markOne = useServerFn(markNotificationRead);
 
   const query = useQuery({
     queryKey: ["notifications", "recent", user?.id],
@@ -48,7 +52,43 @@ export function NotificationBell() {
     },
   });
 
-  const unread = (query.data ?? []).filter((n) => !n.is_read).length;
+  // PROJECT_AUDIT.md -> DA-2: the badge previously counted unread rows
+  // among only the last 5 fetched (query.data above), undercounting any
+  // user with more than 5 unread. This is the exact-count query
+  // DashboardPage.tsx already had (dead, never wired to this badge) --
+  // wired in here instead of duplicated.
+  const unreadCountQuery = useQuery({
+    queryKey: ["notifications", "unread-count", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user!.id)
+        .eq("is_read", false);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+  const unread = unreadCountQuery.data ?? 0;
+
+  // Priority 15 Phase D (PROJECT_AUDIT.md -> MSG-3): clicking a
+  // notification with a target_path marks it read and navigates there --
+  // generalized to every notification type, not messaging-specific, per
+  // the finding's own open question.
+  async function handleOpen(n: NotificationRow) {
+    setOpen(false);
+    if (!n.is_read) {
+      try {
+        await markOne({ data: { id: n.id } });
+        await qc.invalidateQueries({ queryKey: ["notifications"] });
+        await qc.invalidateQueries({ queryKey: ["dashboard", "notifications"] });
+      } catch {
+        // Non-fatal -- still navigate even if marking read failed.
+      }
+    }
+    if (n.target_path) void navigate({ to: n.target_path });
+  }
 
   // Realtime subscription
   useEffect(() => {
@@ -149,9 +189,12 @@ export function NotificationBell() {
                 return (
                   <div
                     key={n.id}
-                    className={`border-b border-gray-50 px-4 py-3 last:border-0 ${
+                    role={n.target_path ? "button" : undefined}
+                    tabIndex={n.target_path ? 0 : undefined}
+                    onClick={n.target_path ? () => void handleOpen(n) : undefined}
+                    className={`block w-full border-b border-gray-50 px-4 py-3 text-left last:border-0 ${
                       n.is_read ? "bg-white" : "bg-[#1D6BF3]/5"
-                    }`}
+                    } ${n.target_path ? "cursor-pointer hover:bg-gray-50" : ""}`}
                   >
                     <div className="flex items-start gap-2">
                       {!n.is_read && (
