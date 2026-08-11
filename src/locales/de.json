@@ -315,7 +315,17 @@
     "levelGold": "Gold",
     "levelPlatinum": "Platin",
     "levelAmbassador": "Botschafter",
-    "levelLegend": "Legende"
+    "levelLegend": "Legende",
+    "missionsTitle": "Missionen",
+    "noMissions": "Derzeit keine aktiven Missionen.",
+    "challengesTitle": "Herausforderungen",
+    "noChallenges": "Derzeit keine aktiven Herausforderungen.",
+    "streaksTitle": "Serien",
+    "noStreaks": "Noch keine Serien zum Verfolgen.",
+    "streakDays": "{{count}}-Tage-Serie",
+    "streakLongest": "Längste: {{count}} Tage",
+    "completed": "Abgeschlossen",
+    "progress": "{{count}} / {{total}}"
   },
   "advertising": {
     "title": "Werbung",
@@ -535,6 +545,34 @@
       "analyticsByEvent": "Meistbelohnte Ereignisse",
       "analyticsTopEarners": "Top-Verdiener",
       "analyticsEmpty": "Keine Daten für diesen Zeitraum."
+    },
+    "engagement": {
+      "title": "Missionen, Herausforderungen & Serien",
+      "subtitle": "Missionen, Herausforderungen und Serien definieren, angetrieben durch bestehende Aktivitätsereignisse. Erweitert die universelle Ereignis-Engine, ohne sie zu ersetzen.",
+      "missionsTitle": "Missionen",
+      "challengesTitle": "Herausforderungen",
+      "streaksTitle": "Serien",
+      "configTitle": "Konfiguration",
+      "created": "Erstellt",
+      "noDefinitions": "Noch keine.",
+      "nameEn": "Name (EN)",
+      "nameBs": "Name (BS)",
+      "nameDe": "Name (DE)",
+      "scope": "Geltungsbereich",
+      "scopeGlobal": "Global (alle Anwendungen)",
+      "rewardPoints": "Prämienpunkte",
+      "rewardPointsShort": "{{points}} Pkt.",
+      "missionConditions": "Missionsbedingungen",
+      "challengeConditions": "Herausforderungsbedingungen",
+      "noConditions": "Noch keine Bedingungen.",
+      "eventKey": "Ereignisschlüssel",
+      "target": "Ziel: {{count}}",
+      "milestones": "Meilensteine",
+      "noMilestones": "Noch keine Meilensteine.",
+      "milestoneRow": "{{days}} Tage → {{points}} Pkt.",
+      "thresholdDays": "Schwelle (Tage)",
+      "streakTimezone": "Zeitzone für Serien (IANA)",
+      "configSaved": "Konfiguration gespeichert"
     },
     "trials": {
       "title": "Werbe-Testzeiträume",
@@ -882,7 +920,8 @@
         "capabilities": { "title": "Funktionen", "desc": "Funktionen registrieren und pro Anwendung aktivieren." },
         "dashboardWidgets": { "title": "Dashboard-Widgets", "desc": "Dashboard-Bereiche global oder pro Anwendung aktivieren oder deaktivieren." },
         "rewards": { "title": "Prämien & Treue", "desc": "Aktionsregeln, Stufen, Erfolge, Katalog, Erfüllungstypen, Konfiguration." },
-        "events": { "title": "Universelle Ereignisse", "desc": "Ereignisregister, Anwendungszuordnung und Prämienregeln für von Anwendungen gemeldete Ereignisse." }
+        "events": { "title": "Universelle Ereignisse", "desc": "Ereignisregister, Anwendungszuordnung und Prämienregeln für von Anwendungen gemeldete Ereignisse." },
+        "engagement": { "title": "Missionen, Herausforderungen & Serien", "desc": "Missionen, Herausforderungen und Serien definieren, global oder pro Anwendung." }
       }
     },
     "verification": {

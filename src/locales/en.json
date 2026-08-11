@@ -315,7 +315,17 @@
     "levelGold": "Gold",
     "levelPlatinum": "Platinum",
     "levelAmbassador": "Ambassador",
-    "levelLegend": "Legend"
+    "levelLegend": "Legend",
+    "missionsTitle": "Missions",
+    "noMissions": "No active missions right now.",
+    "challengesTitle": "Challenges",
+    "noChallenges": "No active challenges right now.",
+    "streaksTitle": "Streaks",
+    "noStreaks": "No streaks to track yet.",
+    "streakDays": "{{count}} day streak",
+    "streakLongest": "Longest: {{count}} days",
+    "completed": "Completed",
+    "progress": "{{count}} / {{total}}"
   },
   "advertising": {
     "title": "Advertising",
@@ -535,6 +545,34 @@
       "analyticsByEvent": "Most-rewarded events",
       "analyticsTopEarners": "Top earners",
       "analyticsEmpty": "No data for this period."
+    },
+    "engagement": {
+      "title": "Missions, Challenges & Streaks",
+      "subtitle": "Define missions, challenges, and streaks driven by existing activity events. Extends the Universal Event Engine without replacing it.",
+      "missionsTitle": "Missions",
+      "challengesTitle": "Challenges",
+      "streaksTitle": "Streaks",
+      "configTitle": "Configuration",
+      "created": "Created",
+      "noDefinitions": "None yet.",
+      "nameEn": "Name (EN)",
+      "nameBs": "Name (BS)",
+      "nameDe": "Name (DE)",
+      "scope": "Scope",
+      "scopeGlobal": "Global (all applications)",
+      "rewardPoints": "Reward points",
+      "rewardPointsShort": "{{points}} pts",
+      "missionConditions": "Mission conditions",
+      "challengeConditions": "Challenge conditions",
+      "noConditions": "No conditions yet.",
+      "eventKey": "Event key",
+      "target": "Target: {{count}}",
+      "milestones": "Milestones",
+      "noMilestones": "No milestones yet.",
+      "milestoneRow": "{{days}} days → {{points}} pts",
+      "thresholdDays": "Threshold (days)",
+      "streakTimezone": "Streak timezone (IANA)",
+      "configSaved": "Configuration saved"
     },
     "trials": {
       "title": "Promotional Trials",
@@ -882,7 +920,8 @@
         "capabilities": { "title": "Capabilities", "desc": "Register capabilities and enable them per application." },
         "dashboardWidgets": { "title": "Dashboard Widgets", "desc": "Enable or disable dashboard sections, globally or per application." },
         "rewards": { "title": "Rewards & Loyalty", "desc": "Action rules, levels, achievements, catalog, fulfillment types, config." },
-        "events": { "title": "Universal Events", "desc": "Event registry, per-application mapping, and reward rules for application-reported events." }
+        "events": { "title": "Universal Events", "desc": "Event registry, per-application mapping, and reward rules for application-reported events." },
+        "engagement": { "title": "Missions, Challenges & Streaks", "desc": "Define missions, challenges, and streaks, global or per application." }
       }
     },
     "verification": {

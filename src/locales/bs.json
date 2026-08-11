@@ -315,7 +315,17 @@
     "levelGold": "Zlato",
     "levelPlatinum": "Platina",
     "levelAmbassador": "Ambasador",
-    "levelLegend": "Legenda"
+    "levelLegend": "Legenda",
+    "missionsTitle": "Misije",
+    "noMissions": "Trenutno nema aktivnih misija.",
+    "challengesTitle": "Izazovi",
+    "noChallenges": "Trenutno nema aktivnih izazova.",
+    "streaksTitle": "Nizovi",
+    "noStreaks": "Još nema nizova za praćenje.",
+    "streakDays": "Niz od {{count}} dana",
+    "streakLongest": "Najduže: {{count}} dana",
+    "completed": "Završeno",
+    "progress": "{{count}} / {{total}}"
   },
   "advertising": {
     "title": "Oglašavanje",
@@ -535,6 +545,34 @@
       "analyticsByEvent": "Najnagrađivaniji događaji",
       "analyticsTopEarners": "Najbolji korisnici",
       "analyticsEmpty": "Nema podataka za ovaj period."
+    },
+    "engagement": {
+      "title": "Misije, izazovi i nizovi",
+      "subtitle": "Definirajte misije, izazove i nizove pokretane postojećim aktivnostima. Proširuje Univerzalni motor događaja bez zamjene.",
+      "missionsTitle": "Misije",
+      "challengesTitle": "Izazovi",
+      "streaksTitle": "Nizovi",
+      "configTitle": "Konfiguracija",
+      "created": "Kreirano",
+      "noDefinitions": "Još ništa.",
+      "nameEn": "Naziv (EN)",
+      "nameBs": "Naziv (BS)",
+      "nameDe": "Naziv (DE)",
+      "scope": "Opseg",
+      "scopeGlobal": "Globalno (sve aplikacije)",
+      "rewardPoints": "Bodovi nagrade",
+      "rewardPointsShort": "{{points}} bod.",
+      "missionConditions": "Uslovi misije",
+      "challengeConditions": "Uslovi izazova",
+      "noConditions": "Još nema uslova.",
+      "eventKey": "Ključ događaja",
+      "target": "Cilj: {{count}}",
+      "milestones": "Prekretnice",
+      "noMilestones": "Još nema prekretnica.",
+      "milestoneRow": "{{days}} dana → {{points}} bod.",
+      "thresholdDays": "Prag (dani)",
+      "streakTimezone": "Vremenska zona za nizove (IANA)",
+      "configSaved": "Konfiguracija sačuvana"
     },
     "trials": {
       "title": "Promotivni probni periodi",
@@ -882,7 +920,8 @@
         "capabilities": { "title": "Mogućnosti", "desc": "Registrujte mogućnosti i omogućite ih po aplikaciji." },
         "dashboardWidgets": { "title": "Dashboard widgeti", "desc": "Omogućite ili onemogućite sekcije dashboarda, globalno ili po aplikaciji." },
         "rewards": { "title": "Nagrade i lojalnost", "desc": "Pravila akcija, nivoi, dostignuća, katalog, tipovi ispunjenja, konfiguracija." },
-        "events": { "title": "Univerzalni događaji", "desc": "Registar događaja, mapiranje po aplikaciji i pravila nagrađivanja za događaje koje prijavljuju aplikacije." }
+        "events": { "title": "Univerzalni događaji", "desc": "Registar događaja, mapiranje po aplikaciji i pravila nagrađivanja za događaje koje prijavljuju aplikacije." },
+        "engagement": { "title": "Misije, izazovi i nizovi", "desc": "Definirajte misije, izazove i nizove, globalno ili po aplikaciji." }
       }
     },
     "verification": {

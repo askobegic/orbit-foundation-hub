@@ -19,6 +19,7 @@ import { Route as AdminApplicationsRouteImport } from './routes/admin.applicatio
 import { Route as AdminCapabilitiesRouteImport } from './routes/admin.capabilities'
 import { Route as AdminCommunicationRouteImport } from './routes/admin.communication'
 import { Route as AdminDashboardWidgetsRouteImport } from './routes/admin.dashboard-widgets'
+import { Route as AdminEngagementRouteImport } from './routes/admin.engagement'
 import { Route as AdminEventsRouteImport } from './routes/admin.events'
 import { Route as AdminPaymentsRouteImport } from './routes/admin.payments'
 import { Route as AdminRewardsRouteImport } from './routes/admin.rewards'
@@ -190,6 +191,11 @@ const AdminCommunicationRoute = AdminCommunicationRouteImport.update({
 const AdminDashboardWidgetsRoute = AdminDashboardWidgetsRouteImport.update({
   id: '/dashboard-widgets',
   path: '/dashboard-widgets',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminEngagementRoute = AdminEngagementRouteImport.update({
+  id: '/engagement',
+  path: '/engagement',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminEventsRoute = AdminEventsRouteImport.update({
@@ -869,6 +875,7 @@ export interface FileRoutesByFullPath {
   '/admin/capabilities': typeof AdminCapabilitiesRoute
   '/admin/communication': typeof AdminCommunicationRoute
   '/admin/dashboard-widgets': typeof AdminDashboardWidgetsRoute
+  '/admin/engagement': typeof AdminEngagementRoute
   '/admin/events': typeof AdminEventsRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/rewards': typeof AdminRewardsRoute
@@ -1003,6 +1010,7 @@ export interface FileRoutesByTo {
   '/admin/capabilities': typeof AdminCapabilitiesRoute
   '/admin/communication': typeof AdminCommunicationRoute
   '/admin/dashboard-widgets': typeof AdminDashboardWidgetsRoute
+  '/admin/engagement': typeof AdminEngagementRoute
   '/admin/events': typeof AdminEventsRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/rewards': typeof AdminRewardsRoute
@@ -1138,6 +1146,7 @@ export interface FileRoutesById {
   '/admin/capabilities': typeof AdminCapabilitiesRoute
   '/admin/communication': typeof AdminCommunicationRoute
   '/admin/dashboard-widgets': typeof AdminDashboardWidgetsRoute
+  '/admin/engagement': typeof AdminEngagementRoute
   '/admin/events': typeof AdminEventsRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/rewards': typeof AdminRewardsRoute
@@ -1274,6 +1283,7 @@ export interface FileRouteTypes {
     | '/admin/capabilities'
     | '/admin/communication'
     | '/admin/dashboard-widgets'
+    | '/admin/engagement'
     | '/admin/events'
     | '/admin/payments'
     | '/admin/rewards'
@@ -1408,6 +1418,7 @@ export interface FileRouteTypes {
     | '/admin/capabilities'
     | '/admin/communication'
     | '/admin/dashboard-widgets'
+    | '/admin/engagement'
     | '/admin/events'
     | '/admin/payments'
     | '/admin/rewards'
@@ -1542,6 +1553,7 @@ export interface FileRouteTypes {
     | '/admin/capabilities'
     | '/admin/communication'
     | '/admin/dashboard-widgets'
+    | '/admin/engagement'
     | '/admin/events'
     | '/admin/payments'
     | '/admin/rewards'
@@ -1858,6 +1870,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard-widgets'
       fullPath: '/admin/dashboard-widgets'
       preLoaderRoute: typeof AdminDashboardWidgetsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/engagement': {
+      id: '/admin/engagement'
+      path: '/engagement'
+      fullPath: '/admin/engagement'
+      preLoaderRoute: typeof AdminEngagementRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/events': {
@@ -2723,6 +2742,7 @@ interface AdminRouteChildren {
   AdminCapabilitiesRoute: typeof AdminCapabilitiesRoute
   AdminCommunicationRoute: typeof AdminCommunicationRoute
   AdminDashboardWidgetsRoute: typeof AdminDashboardWidgetsRoute
+  AdminEngagementRoute: typeof AdminEngagementRoute
   AdminEventsRoute: typeof AdminEventsRoute
   AdminPaymentsRoute: typeof AdminPaymentsRoute
   AdminRewardsRoute: typeof AdminRewardsRoute
@@ -2737,6 +2757,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCapabilitiesRoute: AdminCapabilitiesRoute,
   AdminCommunicationRoute: AdminCommunicationRoute,
   AdminDashboardWidgetsRoute: AdminDashboardWidgetsRoute,
+  AdminEngagementRoute: AdminEngagementRoute,
   AdminEventsRoute: AdminEventsRoute,
   AdminPaymentsRoute: AdminPaymentsRoute,
   AdminRewardsRoute: AdminRewardsRoute,

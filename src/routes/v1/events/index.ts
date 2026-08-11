@@ -6,6 +6,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
 import { recordEvent } from "@/lib/events.server";
+import { processEngagement } from "@/lib/engagement.server";
 import { apiData, parseBody, readJsonBody, withRoute } from "@/lib/v1/http.server";
 import { requireUserContext } from "@/lib/v1/context.server";
 
@@ -44,6 +45,20 @@ export const Route = createFileRoute("/v1/events/")({
           dedupeKey: data.dedupeKey ?? null,
           origin: "api",
         });
+
+        // Priority 15 Phase B: Missions/Challenges/Streaks consume the
+        // same qualifying-occurrence signal recordEvent()'s own
+        // cooldown/limit counters use (granted === points > 0). Never
+        // touches recordEvent()/events.server.ts itself, and never throws
+        // -- processEngagement() catches its own errors so a Mission/
+        // Streak bug can never break event recording or this response.
+        if (result.granted) {
+          await processEngagement({
+            appId: ctx.appId,
+            eventKey: data.eventKey,
+            recipientUserId: data.recipientUserId ?? ctx.userId,
+          });
+        }
 
         return apiData(result);
       }),

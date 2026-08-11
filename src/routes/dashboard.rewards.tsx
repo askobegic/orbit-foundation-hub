@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, Gift, Trophy, Star, Users } from "lucide-react";
+import { ArrowLeft, Flame, Gift, Target, Trophy, Star, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
@@ -10,6 +10,7 @@ import { DashboardMobileNav } from "@/components/dashboard/DashboardNav";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useApplication } from "@/context/ApplicationContext";
 import { getRewardsMe, redeemReward } from "@/lib/rewards.functions";
+import { getMyEngagement } from "@/lib/engagement.functions";
 
 export const Route = createFileRoute("/dashboard/rewards")({
   head: () => ({
@@ -24,6 +25,18 @@ export const Route = createFileRoute("/dashboard/rewards")({
     </ProtectedRoute>
   ),
 });
+
+// Admin-authored trilingual content (engagement_definitions/streak_definitions
+// name_bs/en/de) -- picked client-side by current UI language, the same
+// convention notifications already uses for its own trilingual columns.
+function pickLocalized(
+  row: { nameBs: string; nameEn: string; nameDe: string },
+  language: string,
+): string {
+  if (language.startsWith("bs")) return row.nameBs;
+  if (language.startsWith("de")) return row.nameDe;
+  return row.nameEn;
+}
 
 const LEVEL_I18N_KEY: Record<string, string> = {
   member: "rewards.levelMember",
@@ -48,6 +61,12 @@ function RewardsPage() {
   const rewardsQuery = useQuery({
     queryKey: ["rewards", "me", application?.id],
     queryFn: () => getRewardsMeFn({ data: { appId: application?.id } }),
+  });
+
+  const getMyEngagementFn = useServerFn(getMyEngagement);
+  const engagementQuery = useQuery({
+    queryKey: ["engagement", "me", application?.id],
+    queryFn: () => getMyEngagementFn({ data: { appId: application?.id ?? null } }),
   });
 
   async function handleRedeem(catalogKey: string) {
@@ -218,9 +237,121 @@ function RewardsPage() {
                 </ul>
               )}
             </section>
+
+            <section className="mt-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                <Target className="h-4 w-4 text-[#1D6BF3]" />
+                {t("rewards.missionsTitle")}
+              </h2>
+              {(engagementQuery.data?.missions.length ?? 0) === 0 ? (
+                <p className="mt-2 text-sm text-gray-500">{t("rewards.noMissions")}</p>
+              ) : (
+                <ul className="mt-3 space-y-3">
+                  {engagementQuery.data!.missions.map((m) => (
+                    <EngagementRow key={m.id} item={m} language={i18n.language} />
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            <section className="mt-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                <Trophy className="h-4 w-4 text-[#1D6BF3]" />
+                {t("rewards.challengesTitle")}
+              </h2>
+              {(engagementQuery.data?.challenges.length ?? 0) === 0 ? (
+                <p className="mt-2 text-sm text-gray-500">{t("rewards.noChallenges")}</p>
+              ) : (
+                <ul className="mt-3 space-y-3">
+                  {engagementQuery.data!.challenges.map((c) => (
+                    <EngagementRow key={c.id} item={c} language={i18n.language} />
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            <section className="mt-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                <Flame className="h-4 w-4 text-orange-500" />
+                {t("rewards.streaksTitle")}
+              </h2>
+              {(engagementQuery.data?.streaks.length ?? 0) === 0 ? (
+                <p className="mt-2 text-sm text-gray-500">{t("rewards.noStreaks")}</p>
+              ) : (
+                <ul className="mt-3 grid gap-3 sm:grid-cols-2">
+                  {engagementQuery.data!.streaks.map((s) => (
+                    <li key={s.id} className="rounded-xl border border-gray-100 bg-gray-50/60 p-3">
+                      <p className="text-sm font-medium text-gray-800">{pickLocalized(s, i18n.language)}</p>
+                      <p className="mt-1 flex items-center gap-1 text-xl font-semibold text-orange-600">
+                        <Flame className="h-4 w-4" />
+                        {t("rewards.streakDays", { count: s.currentStreak })}
+                      </p>
+                      <p className="mt-0.5 text-xs text-gray-500">
+                        {t("rewards.streakLongest", { count: s.longestStreak })}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
           </>
         ) : null}
       </div>
     </main>
+  );
+}
+
+type EngagementItem = {
+  id: string;
+  nameBs: string;
+  nameEn: string;
+  nameDe: string;
+  descriptionBs: string | null;
+  descriptionEn: string | null;
+  descriptionDe: string | null;
+  rewardPoints: number;
+  completed: boolean;
+  conditions: { eventKey: string; target: number; count: number }[];
+};
+
+function EngagementRow({ item, language }: { item: EngagementItem; language: string }) {
+  const { t } = useTranslation();
+  const description =
+    language.startsWith("bs")
+      ? item.descriptionBs
+      : language.startsWith("de")
+        ? item.descriptionDe
+        : item.descriptionEn;
+  const totalTarget = item.conditions.reduce((sum, c) => sum + c.target, 0) || 1;
+  const totalCount = item.conditions.reduce((sum, c) => sum + c.count, 0);
+  const pct = Math.round((Math.min(totalCount, totalTarget) / totalTarget) * 100);
+
+  return (
+    <li className="rounded-xl border border-gray-100 bg-gray-50/60 p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-gray-800">{pickLocalized(item, language)}</p>
+          {description && <p className="mt-0.5 text-xs text-gray-500">{description}</p>}
+        </div>
+        {item.completed ? (
+          <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+            {t("rewards.completed")}
+          </span>
+        ) : (
+          <span className="shrink-0 text-xs font-medium text-gray-500">
+            {t("rewards.pointsCost", { points: item.rewardPoints })}
+          </span>
+        )}
+      </div>
+      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+        <div
+          className={`h-full rounded-full ${item.completed ? "bg-emerald-500" : "bg-[#1D6BF3]"}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <p className="mt-1 text-[11px] text-gray-400">
+        {t("rewards.progress", { count: Math.min(totalCount, totalTarget), total: totalTarget })}
+      </p>
+    </li>
   );
 }

@@ -12,6 +12,7 @@ import {
   LayoutGrid,
   MegaphoneIcon,
   Sliders,
+  Target,
   TrendingUp,
   UserPlus,
   Users,
@@ -173,6 +174,12 @@ function AdminGate() {
       icon: Zap,
       title: t("admin.hub.cards.events.title"),
       desc: t("admin.hub.cards.events.desc"),
+    },
+    {
+      to: "/admin/engagement",
+      icon: Target,
+      title: t("admin.hub.cards.engagement.title"),
+      desc: t("admin.hub.cards.engagement.desc"),
     },
   ];
   return (

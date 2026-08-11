@@ -1438,6 +1438,415 @@ export type Database = {
           },
         ]
       }
+      engagement_config: {
+        Row: {
+          description: string | null
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          description?: string | null
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          description?: string | null
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      engagement_conditions: {
+        Row: {
+          created_at: string
+          definition_id: string
+          display_order: number
+          event_key: string
+          id: string
+          target: number
+        }
+        Insert: {
+          created_at?: string
+          definition_id: string
+          display_order?: number
+          event_key: string
+          id?: string
+          target: number
+        }
+        Update: {
+          created_at?: string
+          definition_id?: string
+          display_order?: number
+          event_key?: string
+          id?: string
+          target?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "engagement_conditions_definition_id_fkey"
+            columns: ["definition_id"]
+            isOneToOne: false
+            referencedRelation: "engagement_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "engagement_conditions_event_key_fkey"
+            columns: ["event_key"]
+            isOneToOne: false
+            referencedRelation: "event_definitions"
+            referencedColumns: ["event_key"]
+          },
+        ]
+      }
+      engagement_definitions: {
+        Row: {
+          app_id: string | null
+          archived: boolean
+          created_at: string
+          description_bs: string | null
+          description_de: string | null
+          description_en: string | null
+          display_order: number
+          enabled: boolean
+          ends_at: string | null
+          id: string
+          key: string
+          kind: string
+          name_bs: string
+          name_de: string
+          name_en: string
+          reward_grant_type: string | null
+          reward_grant_value: Json
+          reward_lifetime_points: number
+          reward_points: number
+          starts_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          app_id?: string | null
+          archived?: boolean
+          created_at?: string
+          description_bs?: string | null
+          description_de?: string | null
+          description_en?: string | null
+          display_order?: number
+          enabled?: boolean
+          ends_at?: string | null
+          id?: string
+          key: string
+          kind: string
+          name_bs: string
+          name_de: string
+          name_en: string
+          reward_grant_type?: string | null
+          reward_grant_value?: Json
+          reward_lifetime_points?: number
+          reward_points?: number
+          starts_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          app_id?: string | null
+          archived?: boolean
+          created_at?: string
+          description_bs?: string | null
+          description_de?: string | null
+          description_en?: string | null
+          display_order?: number
+          enabled?: boolean
+          ends_at?: string | null
+          id?: string
+          key?: string
+          kind?: string
+          name_bs?: string
+          name_de?: string
+          name_en?: string
+          reward_grant_type?: string | null
+          reward_grant_value?: Json
+          reward_lifetime_points?: number
+          reward_points?: number
+          starts_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "engagement_definitions_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "engagement_definitions_reward_grant_type_fkey"
+            columns: ["reward_grant_type"]
+            isOneToOne: false
+            referencedRelation: "reward_fulfillment_types"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      streak_definitions: {
+        Row: {
+          app_id: string | null
+          archived: boolean
+          created_at: string
+          description_bs: string | null
+          description_de: string | null
+          description_en: string | null
+          display_order: number
+          enabled: boolean
+          event_key: string
+          id: string
+          key: string
+          name_bs: string
+          name_de: string
+          name_en: string
+          updated_at: string
+        }
+        Insert: {
+          app_id?: string | null
+          archived?: boolean
+          created_at?: string
+          description_bs?: string | null
+          description_de?: string | null
+          description_en?: string | null
+          display_order?: number
+          enabled?: boolean
+          event_key: string
+          id?: string
+          key: string
+          name_bs: string
+          name_de: string
+          name_en: string
+          updated_at?: string
+        }
+        Update: {
+          app_id?: string | null
+          archived?: boolean
+          created_at?: string
+          description_bs?: string | null
+          description_de?: string | null
+          description_en?: string | null
+          display_order?: number
+          enabled?: boolean
+          event_key?: string
+          id?: string
+          key?: string
+          name_bs?: string
+          name_de?: string
+          name_en?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "streak_definitions_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "streak_definitions_event_key_fkey"
+            columns: ["event_key"]
+            isOneToOne: false
+            referencedRelation: "event_definitions"
+            referencedColumns: ["event_key"]
+          },
+        ]
+      }
+      streak_milestones: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          reward_grant_type: string | null
+          reward_grant_value: Json
+          reward_lifetime_points: number
+          reward_points: number
+          streak_definition_id: string
+          threshold_days: number
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          reward_grant_type?: string | null
+          reward_grant_value?: Json
+          reward_lifetime_points?: number
+          reward_points?: number
+          streak_definition_id: string
+          threshold_days: number
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          reward_grant_type?: string | null
+          reward_grant_value?: Json
+          reward_lifetime_points?: number
+          reward_points?: number
+          streak_definition_id?: string
+          threshold_days?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "streak_milestones_streak_definition_id_fkey"
+            columns: ["streak_definition_id"]
+            isOneToOne: false
+            referencedRelation: "streak_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_engagement_completions: {
+        Row: {
+          completed_at: string
+          created_at: string
+          definition_id: string
+          grant_result: Json | null
+          id: string
+          reward_ledger_id: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          created_at?: string
+          definition_id: string
+          grant_result?: Json | null
+          id?: string
+          reward_ledger_id?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          created_at?: string
+          definition_id?: string
+          grant_result?: Json | null
+          id?: string
+          reward_ledger_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_engagement_completions_definition_id_fkey"
+            columns: ["definition_id"]
+            isOneToOne: false
+            referencedRelation: "engagement_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_engagement_completions_reward_ledger_id_fkey"
+            columns: ["reward_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "reward_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_engagement_completions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_streak_milestones: {
+        Row: {
+          achieved_at: string
+          grant_result: Json | null
+          id: string
+          milestone_id: string
+          reward_ledger_id: string | null
+          user_id: string
+        }
+        Insert: {
+          achieved_at?: string
+          grant_result?: Json | null
+          id?: string
+          milestone_id: string
+          reward_ledger_id?: string | null
+          user_id: string
+        }
+        Update: {
+          achieved_at?: string
+          grant_result?: Json | null
+          id?: string
+          milestone_id?: string
+          reward_ledger_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_streak_milestones_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "streak_milestones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_streak_milestones_reward_ledger_id_fkey"
+            columns: ["reward_ledger_id"]
+            isOneToOne: false
+            referencedRelation: "reward_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_streak_milestones_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_streaks: {
+        Row: {
+          current_streak: number
+          id: string
+          last_qualifying_date: string | null
+          longest_streak: number
+          streak_definition_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          current_streak?: number
+          id?: string
+          last_qualifying_date?: string | null
+          longest_streak?: number
+          streak_definition_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          current_streak?: number
+          id?: string
+          last_qualifying_date?: string | null
+          longest_streak?: number
+          streak_definition_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_streaks_streak_definition_id_fkey"
+            columns: ["streak_definition_id"]
+            isOneToOne: false
+            referencedRelation: "streak_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_streaks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           body: string
@@ -2906,6 +3315,14 @@ export type Database = {
       }
     }
     Functions: {
+      advance_user_streak: {
+        Args: { p_activity_date: string; p_streak_definition_id: string; p_user_id: string }
+        Returns: {
+          changed: boolean
+          current_streak: number
+          longest_streak: number
+        }[]
+      }
       event_analytics_by_event: {
         Args: { _app_id: string; _since: string }
         Returns: {
