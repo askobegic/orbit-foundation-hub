@@ -141,6 +141,111 @@ export async function checkAchievements(userId: string, action: string): Promise
   }
 }
 
+export type RedeemCatalogRewardResult =
+  | { ok: true; redemptionId: string; fulfilled: boolean }
+  | { ok: false; error: "reward_unavailable" | "insufficient_points" | "insufficient_referrals" };
+
+// Priority 15 Phase C: the one place catalog redemption logic lives.
+// Previously duplicated by hand between rewards.functions.ts's
+// redeemReward (createServerFn) and src/routes/v1/me/rewards/redeem.ts (a
+// /v1 HTTP route, which can't call a createServerFn directly) -- exactly
+// the "two places compute the same answer differently" pattern CLAUDE.md
+// calls a defect, found while fixing the redemption TOCTOU (C9). Both call
+// sites now call this plain function instead, matching the existing
+// *.server.ts (plain, callable from anywhere) / *.functions.ts
+// (createServerFn wrapper) split. Atomic via redeem_reward_atomic()
+// (service_role Postgres function, Phase C migration) -- see
+// PROJECT_AUDIT.md -> PR11-13.
+export async function redeemCatalogReward(params: {
+  userId: string;
+  catalogKey: string;
+  appId?: string | null;
+}): Promise<RedeemCatalogRewardResult> {
+  const supabaseAdmin = await admin();
+
+  const { data: item } = await supabaseAdmin
+    .from("reward_catalog")
+    .select("*")
+    .eq("key", params.catalogKey)
+    .eq("enabled", true)
+    .eq("archived", false)
+    .maybeSingle();
+  if (!item) return { ok: false, error: "reward_unavailable" };
+
+  if (item.requires_capability) {
+    if (!params.appId) return { ok: false, error: "reward_unavailable" };
+    const { getApplicationCapabilities } = await import("@/lib/capabilities.functions");
+    const capabilityKeys = await getApplicationCapabilities({ data: { appId: params.appId } });
+    if (!capabilityKeys.includes(item.requires_capability)) return { ok: false, error: "reward_unavailable" };
+  }
+
+  const { count: verifiedReferrals } = await supabaseAdmin
+    .from("premium_referrals")
+    .select("id", { count: "exact", head: true })
+    .eq("referrer_id", params.userId)
+    .not("verified_at", "is", null);
+
+  const { data: rpcRows, error: rpcError } = await supabaseAdmin.rpc("redeem_reward_atomic", {
+    p_user_id: params.userId,
+    p_catalog_key: item.key,
+    p_points_cost: item.points_cost,
+    p_verified_referrals_required: item.verified_referrals_required,
+    p_verified_referrals: verifiedReferrals ?? 0,
+    p_grant_type: item.grant_type,
+    p_grant_value: item.grant_value as Json,
+  });
+  if (rpcError) {
+    console.error("redeemCatalogReward: redeem_reward_atomic failed", rpcError);
+    return { ok: false, error: "reward_unavailable" };
+  }
+  const result = rpcRows?.[0];
+  if (!result?.ok || !result.redemption_id) {
+    return {
+      ok: false,
+      error: result?.error_code === "insufficient_referrals" ? "insufficient_referrals" : "insufficient_points",
+    };
+  }
+  const redemptionId = result.redemption_id;
+
+  // Actual fulfillment (extending Premium, crediting Advertising Credit)
+  // routes through the same dispatcher Mission/Challenge/Streak
+  // completions use -- not a second fulfillment mechanism.
+  const { fulfillGrant } = await import("@/lib/entitlements.server");
+  const fulfillment = await fulfillGrant({
+    grantType: item.grant_type,
+    grantValue: (item.grant_value ?? {}) as Record<string, unknown>,
+    userId: params.userId,
+    appId: params.appId ?? null,
+    reason: `Reward redeemed: ${item.key}`,
+    grantedBy: null,
+    source: "reward_redemption",
+  });
+  if (fulfillment.status === "fulfilled") {
+    await supabaseAdmin
+      .from("reward_redemptions")
+      .update({
+        grant_result: {
+          status: "fulfilled",
+          grantType: item.grant_type,
+          grantValue: item.grant_value,
+          entitlementId: fulfillment.entitlementId ?? null,
+        },
+      })
+      .eq("id", redemptionId);
+  }
+
+  const { writeAuditLog } = await import("@/lib/admin.server");
+  await writeAuditLog({
+    userId: params.userId,
+    action: "reward.redeem",
+    entityType: "reward_redemption",
+    entityId: redemptionId,
+    newData: { catalogKey: item.key, pointsCost: item.points_cost, fulfilled: fulfillment.status === "fulfilled" },
+  });
+
+  return { ok: true, redemptionId, fulfilled: fulfillment.status === "fulfilled" };
+}
+
 async function getVerificationDays(): Promise<number> {
   const supabaseAdmin = await admin();
   const { data } = await supabaseAdmin

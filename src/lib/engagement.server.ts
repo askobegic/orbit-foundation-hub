@@ -142,11 +142,27 @@ async function completeEngagementDefinition(
   let rewardLedgerId: string | null = null;
   let grantResult: Json | null = null;
 
+  // Priority 15 Phase C: actually fulfills what's implemented (points/
+  // premium_duration/vip/feature_access/advertising_credit) instead of
+  // always recording pending_fulfillment -- see entitlements.server.ts's
+  // fulfillGrant(), the one dispatcher every non-points reward path uses.
   if (definition.reward_grant_type) {
-    grantResult = {
-      status: "pending_fulfillment",
+    const { fulfillGrant } = await import("@/lib/entitlements.server");
+    const grantValue = (definition.reward_grant_value ?? {}) as Record<string, unknown>;
+    const fulfillment = await fulfillGrant({
       grantType: definition.reward_grant_type,
-      grantValue: definition.reward_grant_value as Json,
+      grantValue,
+      userId,
+      appId: definition.app_id,
+      reason: `${definition.kind === "mission" ? "Mission" : "Challenge"} completed: ${definition.key}`,
+      grantedBy: null,
+      source: definition.kind === "mission" ? "mission_completion" : "challenge_completion",
+    });
+    grantResult = {
+      status: fulfillment.status,
+      grantType: definition.reward_grant_type,
+      grantValue: grantValue as Json,
+      entitlementId: fulfillment.entitlementId ?? null,
     };
   }
 
@@ -324,10 +340,22 @@ async function grantStreakMilestone(
   let grantResult: Json | null = null;
 
   if (milestone.reward_grant_type) {
-    grantResult = {
-      status: "pending_fulfillment",
+    const { fulfillGrant } = await import("@/lib/entitlements.server");
+    const grantValue = (milestone.reward_grant_value ?? {}) as Record<string, unknown>;
+    const fulfillment = await fulfillGrant({
       grantType: milestone.reward_grant_type,
-      grantValue: milestone.reward_grant_value as Json,
+      grantValue,
+      userId,
+      appId: streakDef.app_id,
+      reason: `Streak milestone: ${streakDef.key} (${milestone.threshold_days} days)`,
+      grantedBy: null,
+      source: "streak_milestone",
+    });
+    grantResult = {
+      status: fulfillment.status,
+      grantType: milestone.reward_grant_type,
+      grantValue: grantValue as Json,
+      entitlementId: fulfillment.entitlementId ?? null,
     };
   }
 

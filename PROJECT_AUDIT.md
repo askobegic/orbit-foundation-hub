@@ -1239,14 +1239,13 @@ This section aggregates the highest-impact, trust-boundary-crossing issues found
 - **Date:** 2026-08-07
 
 **PR11-13 — `/v1/me/rewards/redeem` has a TOCTOU race allowing over-redemption of Reward Points**
-- **Status:** Open
-- **Files:** `src/routes/v1/me/rewards/redeem.ts`
-- **Description:** Balance is computed in application code (sum of `reward_ledger` minus `reward_redemptions`), checked against `item.points_cost`, then a redemption row is inserted — no DB constraint, row lock, or atomic RPC ties the check to the write.
+- **Status:** Resolved
+- **Files:** `src/routes/v1/me/rewards/redeem.ts`, `src/lib/rewards.functions.ts`, `src/lib/rewards.server.ts`, `supabase/migrations/20260811130000_entitlements_and_reward_hardening.sql`
+- **Description:** Balance is computed in application code (sum of `reward_ledger` minus `reward_redemptions`), checked against `item.points_cost`, then a redemption row is inserted — no DB constraint, row lock, or atomic RPC ties the check to the write. Also found while fixing this: `/v1/me/rewards/redeem.ts` and `redeemReward` (`rewards.functions.ts`) each had their own hand-written copy of this same non-atomic logic.
 - **Risk:** Two concurrent redemption requests can both read the same starting balance and both pass the check, letting a user redeem more points than they actually have.
-- **Recommendation:** Move the balance check + insert into a single atomic Postgres function (row-locked or constraint-enforced), matching the append-only-ledger pattern already used elsewhere in this codebase.
-- **Resolution:** — (not fixed this pass; narrow blast radius — a points-ledger integrity issue, not an auth/data-exposure issue)
-- **Commit:** 353ec37
-- **Date:** 2026-08-07
+- **Resolution:** `redeem_reward_atomic()` (`service_role`-only Postgres function, transaction-scoped per-user advisory lock via `pg_advisory_xact_lock`) performs the balance re-check and the insert as one atomic statement. Both call sites were also consolidated into one shared plain function, `redeemCatalogReward()` (`rewards.server.ts`), eliminating the duplicate logic rather than patching it twice.
+- **Commit:** (Priority 15 Phase C — see `CLAUDE.md` → Priority 15 for the commit hash)
+- **Date:** 2026-08-11
 
 **PR11-14 — Stripe webhook redelivery race can produce duplicate reward points, notifications, and n8n events (not duplicate entitlement or charges)**
 - **Status:** Open
@@ -1307,14 +1306,13 @@ This section aggregates the highest-impact, trust-boundary-crossing issues found
 ### Low
 
 **PR11-20 — No rate limiting across the remaining ~85 `/v1` endpoints (messaging send, referral, export, etc.)**
-- **Status:** Open — deliberately scoped out of this pass
-- **Files:** all `/v1/me/*`/`/v1/conversations/*` mutation endpoints not listed in PR11-10
-- **Description:** Only the 4 highest-risk endpoints (token issuance, both webhooks) were rate-limited. Messaging send, referral-link capture, data export, and reward redemption have no request-volume protection.
+- **Status:** ⚠️ Partially Resolved (2026-08-11, Priority 15 Phase C) — 2 more endpoints covered, ~83 remain open
+- **Files:** `src/routes/v1/events/index.ts`, `src/lib/rewards.functions.ts`, `src/routes/v1/me/rewards/redeem.ts`; all other `/v1/me/*`/`/v1/conversations/*` mutation endpoints not listed in PR11-10 remain unprotected
+- **Description:** Only the 4 highest-risk endpoints (token issuance, both webhooks) were rate-limited. Messaging send, referral-link capture, data export still have no request-volume protection.
 - **Risk:** Spam/abuse potential (messaging spam, referral-link farming), not an entitlement-bypass or data-exposure risk.
-- **Recommendation:** Extend the same `rate-limit.server.ts` helper to these endpoints with appropriately generous per-endpoint thresholds, as a follow-up — comprehensive coverage across dozens of routes with individually-tuned thresholds is a larger scope decision than a security-audit "fix" pass warrants on its own.
-- **Resolution:** —
-- **Commit:** 353ec37
-- **Date:** 2026-08-07
+- **Resolution:** `POST /v1/events` (120/min per application+user) and reward redemption (10/min per user) now call the existing `enforceRateLimit()` (`src/lib/rate-limit.server.ts`) — extended, not duplicated. Messaging send, referral-link capture, and data export remain open; comprehensive coverage across the remaining dozens of routes with individually-tuned thresholds is still a larger scope decision than either this pass or Priority 15 warrants taking on unilaterally.
+- **Commit:** (Priority 15 Phase C — see `CLAUDE.md` → Priority 15 for the commit hash)
+- **Date:** 2026-08-11
 
 **PR11-21 — Minor code-quality items found during the audit**
 - **Status:** Open

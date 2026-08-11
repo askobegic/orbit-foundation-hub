@@ -11,14 +11,21 @@
 // from `subscriptions` alone (the exact "two places compute the same
 // answer differently" pattern CLAUDE.md calls a defect). Unlike the
 // boolean RPC, this exposes the *complete* state -- active, source
-// ('subscription' | 'trial' | null), and expires_at -- since a future API
-// consumer needs to know not just whether someone is Premium but why and
-// until when.
+// ('subscription' | 'trial' | 'entitlement' | null), and expires_at --
+// since a future API consumer needs to know not just whether someone is
+// Premium but why and until when.
+//
+// Priority 15 Phase C: a THIRD source, the generic entitlements layer
+// (src/lib/entitlements.server.ts) -- an active entitlement whose
+// benefit_type is marked grants_premium=true in reward_fulfillment_types
+// (e.g. premium_duration, vip). Extends this one resolver exactly the way
+// promotional_trials was added as a second source; subscriptions and
+// promotional_trials' own logic is untouched.
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { isSubscriptionActiveNow } from "@/lib/subscription";
 
-export type PremiumSource = "subscription" | "trial";
+export type PremiumSource = "subscription" | "trial" | "entitlement";
 
 export type PremiumStatus = {
   active: boolean;
@@ -48,12 +55,24 @@ export async function resolvePremiumStatusBulk(
     .from("promotional_trials")
     .select("user_id, status, expires_at")
     .eq("status", "active");
+  // grants_premium is admin-configurable data (reward_fulfillment_types),
+  // never a hardcoded type-name check -- see the Phase C migration.
+  let entitlementsQuery = supabaseAdmin
+    .from("entitlements")
+    .select("user_id, status, ends_at, reward_fulfillment_types!inner(grants_premium)")
+    .eq("status", "active")
+    .eq("reward_fulfillment_types.grants_premium", true);
   if (userIds) {
     subsQuery = subsQuery.in("user_id", userIds);
     trialsQuery = trialsQuery.in("user_id", userIds);
+    entitlementsQuery = entitlementsQuery.in("user_id", userIds);
   }
 
-  const [{ data: subs }, { data: trials }] = await Promise.all([subsQuery, trialsQuery]);
+  const [{ data: subs }, { data: trials }, { data: entitlements }] = await Promise.all([
+    subsQuery,
+    trialsQuery,
+    entitlementsQuery,
+  ]);
 
   const result = new Map<string, PremiumStatus>();
 
@@ -71,6 +90,15 @@ export async function resolvePremiumStatusBulk(
     // both -- see the header comment.
     if (!result.has(t.user_id)) {
       result.set(t.user_id, { active: true, source: "trial", expiresAt: t.expires_at });
+    }
+  }
+
+  for (const e of entitlements ?? []) {
+    if (e.ends_at && new Date(e.ends_at).getTime() <= Date.now()) continue;
+    // Subscription and trial both outrank a generic entitlement as the
+    // reported source, same "paid/dedicated source wins" precedence.
+    if (!result.has(e.user_id)) {
+      result.set(e.user_id, { active: true, source: "entitlement", expiresAt: e.ends_at });
     }
   }
 

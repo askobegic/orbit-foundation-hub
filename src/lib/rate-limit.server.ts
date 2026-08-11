@@ -7,6 +7,12 @@
 // where the audit found a concrete gap: token issuance (auth/session,
 // auth/refresh) and the two public payment webhooks, not blanket-applied
 // to every /v1 route.
+//
+// Priority 15 Phase C reuses this exact file/interface for its own two
+// rate-limited endpoints (POST /v1/events, reward redemption) rather than
+// introducing a second, Postgres-backed mechanism -- this in-memory
+// limiter is already the deliberate, documented architectural choice for
+// this single-Node-process deployment.
 import { ApiError } from "@/lib/v1/http.server";
 
 type Bucket = { count: number; resetAt: number };

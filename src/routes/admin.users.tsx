@@ -31,6 +31,12 @@ import {
   getMyIsAdmin,
 } from "@/lib/admin.functions";
 import { adminAdjustRewardPoints } from "@/lib/rewards.functions";
+import {
+  adminExtendEntitlement,
+  adminGrantEntitlement,
+  adminListUserEntitlements,
+  adminRevokeEntitlement,
+} from "@/lib/entitlements.functions";
 import type { ApplicationRow } from "@/types/database";
 
 export const Route = createFileRoute("/admin/users")({
@@ -130,6 +136,10 @@ function AdminUsers() {
   const [reason, setReason] = useState("");
   const [adjPoints, setAdjPoints] = useState<number>(0);
   const [adjReason, setAdjReason] = useState("");
+  const [entBenefitType, setEntBenefitType] = useState("premium_duration");
+  const [entAppId, setEntAppId] = useState<string>("");
+  const [entDurationDays, setEntDurationDays] = useState<number>(30);
+  const [entReason, setEntReason] = useState("");
 
   function openModal(row: UserRow) {
     setModal(row);
@@ -140,6 +150,7 @@ function AdminUsers() {
     setSelApp("");
     setAdjPoints(0);
     setAdjReason("");
+    setEntReason("");
   }
 
   const invalidateUsers = () => qc.invalidateQueries({ queryKey: ["admin-users"] });
@@ -192,6 +203,67 @@ function AdminUsers() {
       toast.success(t("admin.users.rewardAdjustmentApplied"));
       setAdjPoints(0);
       setAdjReason("");
+      qc.invalidateQueries({ queryKey: ["admin-audit"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // Priority 15 Phase C: Grant/Extend/Revoke Benefit -- the generic
+  // Entitlements layer, alongside the existing Grant/Revoke Premium and
+  // reward points adjustment above.
+  const listEntitlementsFn = useServerFn(adminListUserEntitlements);
+  const grantEntitlementFn = useServerFn(adminGrantEntitlement);
+  const extendEntitlementFn = useServerFn(adminExtendEntitlement);
+  const revokeEntitlementFn = useServerFn(adminRevokeEntitlement);
+
+  const userEntitlementsQ = useQuery({
+    queryKey: ["admin-user-entitlements", modal?.id],
+    enabled: !!modal,
+    queryFn: () => listEntitlementsFn({ data: { userId: modal!.id } }),
+  });
+
+  const doGrantEntitlement = useMutation({
+    mutationFn: () =>
+      grantEntitlementFn({
+        data: {
+          userId: modal!.id,
+          benefitType: entBenefitType,
+          appId: entAppId || null,
+          durationDays: entDurationDays > 0 ? entDurationDays : null,
+          reason: entReason.trim(),
+        },
+      }),
+    onSuccess: () => {
+      toast.success(t("admin.users.entitlementGranted"));
+      setEntReason("");
+      qc.invalidateQueries({ queryKey: ["admin-user-entitlements", modal?.id] });
+      qc.invalidateQueries({ queryKey: ["admin-audit"] });
+    },
+    onError: (e: Error) =>
+      toast.error(
+        e.message === "already_has_active_entitlement"
+          ? t("admin.users.entitlementAlreadyActive")
+          : e.message,
+      ),
+  });
+
+  const doExtendEntitlement = useMutation({
+    mutationFn: (vars: { id: string; days: number }) =>
+      extendEntitlementFn({ data: { entitlementId: vars.id, additionalDays: vars.days, reason: entReason.trim() || "Extended by admin" } }),
+    onSuccess: () => {
+      toast.success(t("admin.users.entitlementExtended"));
+      qc.invalidateQueries({ queryKey: ["admin-user-entitlements", modal?.id] });
+      qc.invalidateQueries({ queryKey: ["admin-audit"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const doRevokeEntitlement = useMutation({
+    mutationFn: (id: string) =>
+      revokeEntitlementFn({ data: { entitlementId: id, reason: entReason.trim() || "Revoked by admin" } }),
+    onSuccess: () => {
+      toast.success(t("admin.users.entitlementRevoked"));
+      qc.invalidateQueries({ queryKey: ["admin-user-entitlements", modal?.id] });
       qc.invalidateQueries({ queryKey: ["admin-audit"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -688,6 +760,109 @@ function AdminUsers() {
               >
                 <Coins className="h-4 w-4" />
                 {t("admin.users.rewardAdjustmentApply")}
+              </button>
+            </div>
+
+            {/* Entitlements: Grant/Extend/Revoke Benefit (Priority 15 Phase C) */}
+            <div className="mb-4 border-t border-gray-100 pt-4">
+              <p className="mb-2 text-xs font-semibold uppercase text-gray-500">
+                {t("admin.users.entitlementsTitle")}
+              </p>
+              {(userEntitlementsQ.data ?? []).length > 0 && (
+                <ul className="mb-3 space-y-1">
+                  {userEntitlementsQ.data!.map((e) => {
+                    const row = e as unknown as {
+                      id: string;
+                      benefit_type: string;
+                      status: string;
+                      ends_at: string | null;
+                      applications: { name: string } | null;
+                    };
+                    return (
+                      <li
+                        key={row.id}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-gray-100 px-3 py-2 text-sm"
+                      >
+                        <span className="min-w-0 flex-1 truncate">
+                          {row.benefit_type} · {row.applications?.name ?? t("admin.engagement.scopeGlobal")} ·{" "}
+                          {row.status}
+                          {row.ends_at ? ` · ${new Date(row.ends_at).toLocaleDateString()}` : ""}
+                        </span>
+                        {row.status === "active" && (
+                          <div className="flex shrink-0 items-center gap-2">
+                            <button
+                              onClick={() => doExtendEntitlement.mutate({ id: row.id, days: 14 })}
+                              className="rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-100"
+                            >
+                              {t("admin.users.entitlementExtend14")}
+                            </button>
+                            <button
+                              onClick={() => doRevokeEntitlement.mutate(row.id)}
+                              className="rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-100"
+                            >
+                              {t("admin.common.revoke")}
+                            </button>
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <label className="flex flex-col gap-1 text-xs">
+                  {t("admin.users.entitlementBenefitType")}
+                  <select
+                    value={entBenefitType}
+                    onChange={(e) => setEntBenefitType(e.target.value)}
+                    className="rounded-lg border border-gray-200 px-2 py-1 text-sm"
+                  >
+                    <option value="premium_duration">Premium</option>
+                    <option value="vip">VIP</option>
+                    <option value="feature_access">Feature Access</option>
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-xs">
+                  {t("admin.engagement.scope")}
+                  <select
+                    value={entAppId}
+                    onChange={(e) => setEntAppId(e.target.value)}
+                    className="rounded-lg border border-gray-200 px-2 py-1 text-sm"
+                  >
+                    <option value="">{t("admin.engagement.scopeGlobal")}</option>
+                    {(appsQ.data ?? []).map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-xs">
+                  {t("admin.users.entitlementDurationDays")}
+                  <input
+                    type="number"
+                    min={1}
+                    value={entDurationDays}
+                    onChange={(e) => setEntDurationDays(Number(e.target.value) || 0)}
+                    className="rounded-lg border border-gray-200 px-2 py-1 text-sm"
+                  />
+                </label>
+                <label className="col-span-2 flex flex-col gap-1 text-xs">
+                  {t("admin.users.rewardAdjustmentReason")}
+                  <input
+                    value={entReason}
+                    onChange={(e) => setEntReason(e.target.value)}
+                    className="rounded-lg border border-gray-200 px-2 py-1 text-sm"
+                  />
+                </label>
+              </div>
+              <button
+                onClick={() => doGrantEntitlement.mutate()}
+                disabled={!entReason.trim() || doGrantEntitlement.isPending}
+                className="mt-3 inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              >
+                <BadgeCheck className="h-4 w-4" />
+                {t("admin.users.entitlementGrant")}
               </button>
             </div>
 

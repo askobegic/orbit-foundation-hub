@@ -10,7 +10,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Json } from "@/integrations/supabase/types";
 import { assertAdmin, writeAuditLog } from "@/lib/admin.server";
 import { getApplicationCapabilities } from "@/lib/capabilities.functions";
-import { grantRewardAction, promotePendingReferralVerifications } from "@/lib/rewards.server";
+import { enforceRateLimit } from "@/lib/rate-limit.server";
+import { grantRewardAction, promotePendingReferralVerifications, redeemCatalogReward } from "@/lib/rewards.server";
 
 async function computeBalance(userId: string, supabase: Awaited<ReturnType<typeof adminClient>>) {
   const [{ data: ledgerRows }, { data: redemptionRows }] = await Promise.all([
@@ -170,78 +171,27 @@ export const redeemReward = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((raw: unknown) => redeemSchema.parse(raw))
   .handler(async ({ data, context }) => {
-    const { data: item } = await context.supabase
-      .from("reward_catalog")
-      .select("*")
-      .eq("key", data.catalogKey)
-      .eq("enabled", true)
-      .eq("archived", false)
-      .maybeSingle();
-    if (!item) throw new Error("Reward not found or unavailable");
+    // Priority 15 Phase C (C8 / PR11-20): a reward-sensitive endpoint,
+    // rate limited per user -- generous for legitimate use (redemptions
+    // are rare relative to browsing), tight enough to block a scripted
+    // redeem loop. Reuses the existing in-memory limiter (Priority 11
+    // security audit), not a second mechanism.
+    enforceRateLimit(`redeem-reward:${context.userId}`, 10, 60 * 1000);
 
-    // Same dependency-validation gate as the catalog listing in
-    // getRewardsMe -- a capability-gated reward can't be redeemed by
-    // bypassing the UI. Fails closed: with a requires_capability set but
-    // no appId provided, the caller cannot prove eligibility, so the
-    // redemption is rejected rather than allowed by default.
-    if (item.requires_capability) {
-      if (!data.appId) throw new Error("Reward not found or unavailable");
-      const capabilityKeys = await getApplicationCapabilities({ data: { appId: data.appId } });
-      if (!capabilityKeys.includes(item.requires_capability)) {
-        throw new Error("Reward not found or unavailable");
-      }
-    }
-
-    const { rewardPoints } = await computeBalance(context.userId, context.supabase);
-    if (rewardPoints < item.points_cost) throw new Error("Not enough Reward Points");
-
-    const { count: verifiedReferrals } = await context.supabase
-      .from("premium_referrals")
-      .select("id", { count: "exact", head: true })
-      .eq("referrer_id", context.userId)
-      .not("verified_at", "is", null);
-    if ((verifiedReferrals ?? 0) < item.verified_referrals_required) {
-      throw new Error("Not enough Verified Premium Referrals");
-    }
-
-    // Redemption is fully tracked and points are deducted immediately.
-    // Actual fulfillment (extending Premium, crediting Advertising,
-    // creating a Featured slot) is intentionally not automated here -- see
-    // PROJECT_KNOWLEDGE.md -> Rewards & Loyalty for why (which application
-    // a redeemed Premium duration attaches to isn't yet a decided
-    // question, and Advertising/Featured slots don't exist as modules
-    // yet). Recorded as pending_fulfillment for admin follow-up rather
-    // than silently faked as complete.
-    //
-    // service_role, not context.supabase: reward_redemptions only grants
-    // authenticated SELECT (see the Rewards & Loyalty migration) -- every
-    // write goes through server-validated paths like this one, never a
-    // direct client-authenticated insert.
-    const supabaseAdmin = await adminClient();
-    const { data: row, error } = await supabaseAdmin
-      .from("reward_redemptions")
-      .insert({
-        user_id: context.userId,
-        catalog_key: item.key,
-        points_spent: item.points_cost,
-        verified_referrals_at_redemption: verifiedReferrals ?? 0,
-        grant_result: {
-          status: "pending_fulfillment",
-          grantType: item.grant_type,
-          grantValue: item.grant_value,
-        },
-      })
-      .select("*")
-      .single();
-    if (error) throw new Error(error.message);
-
-    await writeAuditLog({
+    // All validation, the atomic balance-check-and-insert (C9 / PR11-13),
+    // and fulfillment dispatch live in redeemCatalogReward()
+    // (rewards.server.ts) -- shared with the /v1/me/rewards/redeem HTTP
+    // route, which previously duplicated this logic by hand.
+    const result = await redeemCatalogReward({
       userId: context.userId,
-      action: "reward.redeem",
-      entityType: "reward_redemption",
-      entityId: row.id,
-      newData: row,
+      catalogKey: data.catalogKey,
+      appId: data.appId ?? null,
     });
+    if (!result.ok) {
+      if (result.error === "insufficient_points") throw new Error("Not enough Reward Points");
+      if (result.error === "insufficient_referrals") throw new Error("Not enough Verified Premium Referrals");
+      throw new Error("Reward not found or unavailable");
+    }
 
     return { ok: true };
   });

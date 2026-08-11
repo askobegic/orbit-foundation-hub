@@ -2547,6 +2547,120 @@ export type Database = {
         }
         Relationships: []
       }
+      entitlement_sources: {
+        Row: {
+          archived: boolean
+          created_at: string
+          description: string | null
+          display_order: number
+          enabled: boolean
+          key: string
+          label: string
+        }
+        Insert: {
+          archived?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          enabled?: boolean
+          key: string
+          label: string
+        }
+        Update: {
+          archived?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          enabled?: boolean
+          key?: string
+          label?: string
+        }
+        Relationships: []
+      }
+      entitlements: {
+        Row: {
+          app_id: string | null
+          benefit_type: string
+          created_at: string
+          ends_at: string | null
+          granted_by: string | null
+          id: string
+          metadata: Json
+          reason: string | null
+          source: string
+          starts_at: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          app_id?: string | null
+          benefit_type: string
+          created_at?: string
+          ends_at?: string | null
+          granted_by?: string | null
+          id?: string
+          metadata?: Json
+          reason?: string | null
+          source: string
+          starts_at?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          app_id?: string | null
+          benefit_type?: string
+          created_at?: string
+          ends_at?: string | null
+          granted_by?: string | null
+          id?: string
+          metadata?: Json
+          reason?: string | null
+          source?: string
+          starts_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entitlements_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entitlements_benefit_type_fkey"
+            columns: ["benefit_type"]
+            isOneToOne: false
+            referencedRelation: "reward_fulfillment_types"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "entitlements_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entitlements_source_fkey"
+            columns: ["source"]
+            isOneToOne: false
+            referencedRelation: "entitlement_sources"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "entitlements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reward_fulfillment_types: {
         Row: {
           archived: boolean
@@ -2554,6 +2668,7 @@ export type Database = {
           description: string | null
           display_order: number
           enabled: boolean
+          grants_premium: boolean
           id: string
           key: string
           label: string
@@ -2565,6 +2680,7 @@ export type Database = {
           description?: string | null
           display_order?: number
           enabled?: boolean
+          grants_premium?: boolean
           id?: string
           key: string
           label: string
@@ -2576,6 +2692,7 @@ export type Database = {
           description?: string | null
           display_order?: number
           enabled?: boolean
+          grants_premium?: boolean
           id?: string
           key?: string
           label?: string
@@ -3321,6 +3438,22 @@ export type Database = {
           changed: boolean
           current_streak: number
           longest_streak: number
+        }[]
+      }
+      redeem_reward_atomic: {
+        Args: {
+          p_catalog_key: string
+          p_grant_type: string
+          p_grant_value: Json
+          p_points_cost: number
+          p_user_id: string
+          p_verified_referrals: number
+          p_verified_referrals_required: number
+        }
+        Returns: {
+          error_code: string | null
+          ok: boolean
+          redemption_id: string | null
         }[]
       }
       event_analytics_by_event: {

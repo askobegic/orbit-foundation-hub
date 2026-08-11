@@ -1,12 +1,19 @@
-// API_CONTRACT.md §13 -- POST /v1/me/rewards/redeem. Replicates
-// redeemReward (rewards.functions.ts) since it's a requireSupabaseAuth-
-// middleware server function; same validation order, same
-// pending_fulfillment recording -- Rewards records, it never fulfills.
+// API_CONTRACT.md §13 -- POST /v1/me/rewards/redeem.
+//
+// Priority 15 Phase C: this route used to duplicate redeemReward's
+// validation/balance-check/insert logic by hand (a /v1 route can't call a
+// createServerFn directly) -- exactly the "two places compute the same
+// answer differently" pattern CLAUDE.md calls a defect, discovered while
+// fixing the redemption TOCTOU (C9 / PR11-13). Both this route and
+// redeemReward (rewards.functions.ts) now call the same plain function,
+// redeemCatalogReward() (rewards.server.ts), which is also where the
+// atomic balance-check-and-insert and fulfillment dispatch live.
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
 import { getApplicationCapabilities } from "@/lib/capabilities.functions";
-import { writeAuditLog } from "@/lib/admin.server";
+import { enforceRateLimit } from "@/lib/rate-limit.server";
+import { redeemCatalogReward } from "@/lib/rewards.server";
 import { ApiError, apiData, parseBody, readJsonBody, withRoute } from "@/lib/v1/http.server";
 import { requireUserContext, resolveAppId } from "@/lib/v1/context.server";
 
@@ -21,83 +28,21 @@ export const Route = createFileRoute("/v1/me/rewards/redeem")({
         const appId = await resolveAppId(request, url, { required: true });
         const data = parseBody(bodySchema, await readJsonBody(request));
 
-        const capabilityKeys = new Set(
-          await getApplicationCapabilities({ data: { appId: appId! } }),
-        );
+        const capabilityKeys = new Set(await getApplicationCapabilities({ data: { appId: appId! } }));
         if (!capabilityKeys.has("rewards")) {
           throw new ApiError("CAPABILITY_DISABLED", "Rewards is not enabled for this application.");
         }
 
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const { data: item } = await supabaseAdmin
-          .from("reward_catalog")
-          .select("*")
-          .eq("key", data.catalogKey)
-          .eq("enabled", true)
-          .eq("archived", false)
-          .maybeSingle();
-        if (!item) {
-          throw new ApiError("VALIDATION_ERROR", "Reward not found or unavailable.", [
-            { field: "catalogKey", issue: "reward_unavailable" },
-          ]);
-        }
-        if (item.requires_capability && !capabilityKeys.has(item.requires_capability)) {
-          throw new ApiError("VALIDATION_ERROR", "Reward not found or unavailable.", [
-            { field: "catalogKey", issue: "reward_unavailable" },
-          ]);
-        }
+        enforceRateLimit(`redeem-reward:${ctx.userId}`, 10, 60 * 1000);
 
-        const [{ data: ledgerRows }, { data: redemptionRows }] = await Promise.all([
-          supabaseAdmin.from("reward_ledger").select("points").eq("user_id", ctx.userId),
-          supabaseAdmin.from("reward_redemptions").select("points_spent").eq("user_id", ctx.userId),
-        ]);
-        const lifetimePoints = (ledgerRows ?? []).reduce((sum, r) => sum + r.points, 0);
-        const redeemedPoints = (redemptionRows ?? []).reduce((sum, r) => sum + r.points_spent, 0);
-        const rewardPoints = lifetimePoints - redeemedPoints;
-        if (rewardPoints < item.points_cost) {
-          throw new ApiError("VALIDATION_ERROR", "Not enough Reward Points.", [
-            { field: "catalogKey", issue: "not_enough_points" },
-          ]);
+        const result = await redeemCatalogReward({ userId: ctx.userId, catalogKey: data.catalogKey, appId });
+        if (!result.ok) {
+          const issue = result.error;
+          throw new ApiError("VALIDATION_ERROR", "Reward not found or unavailable.", [{ field: "catalogKey", issue }]);
         }
-
-        const { count: verifiedReferrals } = await supabaseAdmin
-          .from("premium_referrals")
-          .select("id", { count: "exact", head: true })
-          .eq("referrer_id", ctx.userId)
-          .not("verified_at", "is", null);
-        if ((verifiedReferrals ?? 0) < item.verified_referrals_required) {
-          throw new ApiError("VALIDATION_ERROR", "Not enough Verified Premium Referrals.", [
-            { field: "catalogKey", issue: "not_enough_verified_referrals" },
-          ]);
-        }
-
-        const { data: row, error } = await supabaseAdmin
-          .from("reward_redemptions")
-          .insert({
-            user_id: ctx.userId,
-            catalog_key: item.key,
-            points_spent: item.points_cost,
-            verified_referrals_at_redemption: verifiedReferrals ?? 0,
-            grant_result: {
-              status: "pending_fulfillment",
-              grantType: item.grant_type,
-              grantValue: item.grant_value,
-            },
-          })
-          .select("*")
-          .single();
-        if (error) throw new Error(error.message);
-
-        await writeAuditLog({
-          userId: ctx.userId,
-          action: "reward.redeem",
-          entityType: "reward_redemption",
-          entityId: row.id,
-          newData: row,
-        });
 
         return apiData(
-          { redemptionId: row.id, pointsSpent: row.points_spent, status: "pending_fulfillment" },
+          { redemptionId: result.redemptionId, status: result.fulfilled ? "fulfilled" : "pending_fulfillment" },
           201,
         );
       }),
