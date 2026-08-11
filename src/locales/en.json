@@ -9,6 +9,7 @@
     "settings": "Settings",
     "security": "Security",
     "rewards": "Rewards",
+    "activity": "My Activity",
     "advertising": "Advertising",
     "notifications": "Notifications",
     "messages": "Messages",
@@ -326,6 +327,19 @@
     "streakLongest": "Longest: {{count}} days",
     "completed": "Completed",
     "progress": "{{count}} / {{total}}"
+  },
+  "activity": {
+    "title": "My Activity",
+    "subtitle": "Your cross-app activity, points, streaks, and benefits.",
+    "byApp": "Activity by application",
+    "total": "Total",
+    "noActivity": "No activity yet.",
+    "missions": "Missions",
+    "challenges": "Challenges",
+    "streaks": "Streaks",
+    "activeBenefits": "Active benefits",
+    "noExpiry": "No expiry",
+    "recent": "Recent activity"
   },
   "advertising": {
     "title": "Advertising",

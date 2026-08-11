@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useTranslation } from "react-i18next";
 import {
+  Activity,
   User,
   Settings,
   Shield,
@@ -672,7 +673,18 @@ export function DashboardPage() {
                     { to: "/dashboard/settings", icon: Settings, label: t("nav.settings") },
                     { to: "/dashboard/security", icon: Shield, label: t("nav.security") },
                     ...(rewardsEnabled
-                      ? [{ to: "/dashboard/rewards" as const, icon: Gift, label: t("nav.rewards") }]
+                      ? [
+                          {
+                            to: "/dashboard/rewards" as const,
+                            icon: Gift,
+                            label: t("nav.rewards"),
+                          },
+                          {
+                            to: "/dashboard/activity" as const,
+                            icon: Activity,
+                            label: t("nav.activity"),
+                          },
+                        ]
                       : []),
                     ...(advertisingEnabled
                       ? [

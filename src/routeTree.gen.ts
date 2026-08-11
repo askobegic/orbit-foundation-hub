@@ -29,6 +29,7 @@ import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminVerificationRouteImport } from './routes/admin.verification'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
+import { Route as DashboardActivityRouteImport } from './routes/dashboard.activity'
 import { Route as DashboardAdvertisingRouteImport } from './routes/dashboard.advertising'
 import { Route as DashboardHelpRouteImport } from './routes/dashboard.help'
 import { Route as DashboardMessagesRouteImport } from './routes/dashboard.messages'
@@ -242,6 +243,11 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
 const DashboardIndexRoute = DashboardIndexRouteImport.update({
   id: '/dashboard/',
   path: '/dashboard/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardActivityRoute = DashboardActivityRouteImport.update({
+  id: '/dashboard/activity',
+  path: '/dashboard/activity',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardAdvertisingRoute = DashboardAdvertisingRouteImport.update({
@@ -890,6 +896,7 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AdminUsersRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/dashboard/activity': typeof DashboardActivityRoute
   '/dashboard/advertising': typeof DashboardAdvertisingRoute
   '/dashboard/help': typeof DashboardHelpRoute
   '/dashboard/messages': typeof DashboardMessagesRouteWithChildren
@@ -1026,6 +1033,7 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AdminUsersRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/dashboard/activity': typeof DashboardActivityRoute
   '/dashboard/advertising': typeof DashboardAdvertisingRoute
   '/dashboard/help': typeof DashboardHelpRoute
   '/dashboard/messages': typeof DashboardMessagesRouteWithChildren
@@ -1163,6 +1171,7 @@ export interface FileRoutesById {
   '/admin/users': typeof AdminUsersRoute
   '/admin/verification': typeof AdminVerificationRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/dashboard/activity': typeof DashboardActivityRoute
   '/dashboard/advertising': typeof DashboardAdvertisingRoute
   '/dashboard/help': typeof DashboardHelpRoute
   '/dashboard/messages': typeof DashboardMessagesRouteWithChildren
@@ -1301,6 +1310,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/admin/verification'
     | '/auth/callback'
+    | '/dashboard/activity'
     | '/dashboard/advertising'
     | '/dashboard/help'
     | '/dashboard/messages'
@@ -1437,6 +1447,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/admin/verification'
     | '/auth/callback'
+    | '/dashboard/activity'
     | '/dashboard/advertising'
     | '/dashboard/help'
     | '/dashboard/messages'
@@ -1573,6 +1584,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/admin/verification'
     | '/auth/callback'
+    | '/dashboard/activity'
     | '/dashboard/advertising'
     | '/dashboard/help'
     | '/dashboard/messages'
@@ -1697,6 +1709,7 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   PricingRoute: typeof PricingRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
+  DashboardActivityRoute: typeof DashboardActivityRoute
   DashboardAdvertisingRoute: typeof DashboardAdvertisingRoute
   DashboardHelpRoute: typeof DashboardHelpRoute
   DashboardMessagesRoute: typeof DashboardMessagesRouteWithChildren
@@ -1952,6 +1965,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard/'
       preLoaderRoute: typeof DashboardIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/activity': {
+      id: '/dashboard/activity'
+      path: '/dashboard/activity'
+      fullPath: '/dashboard/activity'
+      preLoaderRoute: typeof DashboardActivityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard/advertising': {
@@ -2819,6 +2839,7 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRoute: OnboardingRoute,
   PricingRoute: PricingRoute,
   AuthCallbackRoute: AuthCallbackRoute,
+  DashboardActivityRoute: DashboardActivityRoute,
   DashboardAdvertisingRoute: DashboardAdvertisingRoute,
   DashboardHelpRoute: DashboardHelpRoute,
   DashboardMessagesRoute: DashboardMessagesRouteWithChildren,

@@ -504,6 +504,10 @@ The enabled widget keys for the calling application, already filtered by the dep
 ### `PUT /v1/admin/applications/{appId}/dashboard-widgets/{key}`
 Same shape as the Capabilities per-application pair in §8.
 
+### Cross-App User Activity Dashboard (Priority 15 Phase E)
+
+A pure aggregation over already-documented data — `reward_ledger`, `reward_levels`, Missions/Challenges (§13), Streaks (§13), Entitlements (§13). **Implementation status:** internal only (`getMyActivityDashboard()`, `src/lib/activity-dashboard.functions.ts`, rendered at `/dashboard/activity`) — not yet a public `/v1` REST route, same status as the other Priority 15 internal-only surfaces documented above. A future `GET /v1/me/activity` would return per-application activity counts + total, lifetime points, current level, Missions/Challenges summary counts, active streaks, active entitlements, and a recent-activity feed — one response shape, not five separate calls — if/when an external consumer needs it.
+
 ---
 
 ## 10. Premium

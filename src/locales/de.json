@@ -9,6 +9,7 @@
     "settings": "Einstellungen",
     "security": "Sicherheit",
     "rewards": "Prämien",
+    "activity": "Meine Aktivität",
     "advertising": "Werbung",
     "notifications": "Benachrichtigungen",
     "messages": "Nachrichten",
@@ -326,6 +327,19 @@
     "streakLongest": "Längste: {{count}} Tage",
     "completed": "Abgeschlossen",
     "progress": "{{count}} / {{total}}"
+  },
+  "activity": {
+    "title": "Meine Aktivität",
+    "subtitle": "Ihre anwendungsübergreifende Aktivität, Punkte, Serien und Vorteile.",
+    "byApp": "Aktivität nach Anwendung",
+    "total": "Gesamt",
+    "noActivity": "Noch keine Aktivität.",
+    "missions": "Missionen",
+    "challenges": "Herausforderungen",
+    "streaks": "Serien",
+    "activeBenefits": "Aktive Vorteile",
+    "noExpiry": "Kein Ablauf",
+    "recent": "Letzte Aktivität"
   },
   "advertising": {
     "title": "Werbung",

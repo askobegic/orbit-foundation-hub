@@ -9,6 +9,7 @@
     "settings": "Postavke",
     "security": "Sigurnost",
     "rewards": "Nagrade",
+    "activity": "Moja aktivnost",
     "advertising": "Oglašavanje",
     "notifications": "Obavještenja",
     "messages": "Poruke",
@@ -326,6 +327,19 @@
     "streakLongest": "Najduže: {{count}} dana",
     "completed": "Završeno",
     "progress": "{{count}} / {{total}}"
+  },
+  "activity": {
+    "title": "Moja aktivnost",
+    "subtitle": "Vaša aktivnost, bodovi, nizovi i beneficije na svim aplikacijama.",
+    "byApp": "Aktivnost po aplikaciji",
+    "total": "Ukupno",
+    "noActivity": "Još nema aktivnosti.",
+    "missions": "Misije",
+    "challenges": "Izazovi",
+    "streaks": "Nizovi",
+    "activeBenefits": "Aktivne beneficije",
+    "noExpiry": "Bez isteka",
+    "recent": "Nedavna aktivnost"
   },
   "advertising": {
     "title": "Oglašavanje",
