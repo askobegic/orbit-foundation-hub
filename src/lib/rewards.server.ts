@@ -142,7 +142,7 @@ export async function checkAchievements(userId: string, action: string): Promise
 }
 
 export type RedeemCatalogRewardResult =
-  | { ok: true; redemptionId: string; fulfilled: boolean }
+  | { ok: true; redemptionId: string; pointsSpent: number; fulfilled: boolean }
   | { ok: false; error: "reward_unavailable" | "insufficient_points" | "insufficient_referrals" };
 
 // Priority 15 Phase C: the one place catalog redemption logic lives.
@@ -176,7 +176,8 @@ export async function redeemCatalogReward(params: {
     if (!params.appId) return { ok: false, error: "reward_unavailable" };
     const { getApplicationCapabilities } = await import("@/lib/capabilities.functions");
     const capabilityKeys = await getApplicationCapabilities({ data: { appId: params.appId } });
-    if (!capabilityKeys.includes(item.requires_capability)) return { ok: false, error: "reward_unavailable" };
+    if (!capabilityKeys.includes(item.requires_capability))
+      return { ok: false, error: "reward_unavailable" };
   }
 
   const { count: verifiedReferrals } = await supabaseAdmin
@@ -202,7 +203,10 @@ export async function redeemCatalogReward(params: {
   if (!result?.ok || !result.redemption_id) {
     return {
       ok: false,
-      error: result?.error_code === "insufficient_referrals" ? "insufficient_referrals" : "insufficient_points",
+      error:
+        result?.error_code === "insufficient_referrals"
+          ? "insufficient_referrals"
+          : "insufficient_points",
     };
   }
   const redemptionId = result.redemption_id;
@@ -240,10 +244,19 @@ export async function redeemCatalogReward(params: {
     action: "reward.redeem",
     entityType: "reward_redemption",
     entityId: redemptionId,
-    newData: { catalogKey: item.key, pointsCost: item.points_cost, fulfilled: fulfillment.status === "fulfilled" },
+    newData: {
+      catalogKey: item.key,
+      pointsCost: item.points_cost,
+      fulfilled: fulfillment.status === "fulfilled",
+    },
   });
 
-  return { ok: true, redemptionId, fulfilled: fulfillment.status === "fulfilled" };
+  return {
+    ok: true,
+    redemptionId,
+    pointsSpent: item.points_cost,
+    fulfilled: fulfillment.status === "fulfilled",
+  };
 }
 
 async function getVerificationDays(): Promise<number> {

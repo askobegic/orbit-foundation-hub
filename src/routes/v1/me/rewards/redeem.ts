@@ -28,21 +28,33 @@ export const Route = createFileRoute("/v1/me/rewards/redeem")({
         const appId = await resolveAppId(request, url, { required: true });
         const data = parseBody(bodySchema, await readJsonBody(request));
 
-        const capabilityKeys = new Set(await getApplicationCapabilities({ data: { appId: appId! } }));
+        const capabilityKeys = new Set(
+          await getApplicationCapabilities({ data: { appId: appId! } }),
+        );
         if (!capabilityKeys.has("rewards")) {
           throw new ApiError("CAPABILITY_DISABLED", "Rewards is not enabled for this application.");
         }
 
         enforceRateLimit(`redeem-reward:${ctx.userId}`, 10, 60 * 1000);
 
-        const result = await redeemCatalogReward({ userId: ctx.userId, catalogKey: data.catalogKey, appId });
+        const result = await redeemCatalogReward({
+          userId: ctx.userId,
+          catalogKey: data.catalogKey,
+          appId,
+        });
         if (!result.ok) {
           const issue = result.error;
-          throw new ApiError("VALIDATION_ERROR", "Reward not found or unavailable.", [{ field: "catalogKey", issue }]);
+          throw new ApiError("VALIDATION_ERROR", "Reward not found or unavailable.", [
+            { field: "catalogKey", issue },
+          ]);
         }
 
         return apiData(
-          { redemptionId: result.redemptionId, status: result.fulfilled ? "fulfilled" : "pending_fulfillment" },
+          {
+            redemptionId: result.redemptionId,
+            pointsSpent: result.pointsSpent,
+            status: result.fulfilled ? "fulfilled" : "pending_fulfillment",
+          },
           201,
         );
       }),
