@@ -10,6 +10,7 @@ import {
   Gift,
   Megaphone,
   MessageSquare,
+  Users,
 } from "lucide-react";
 
 export interface DashboardWidgetFlags {
@@ -26,6 +27,10 @@ export function getDashboardNavItems(t: (key: string) => string, flags: Dashboar
     { to: "/dashboard", icon: Home, label: t("nav.home") },
     { to: "/dashboard/profile", icon: User, label: t("nav.profile") },
     { to: "/dashboard", icon: LayoutGrid, label: t("nav.applications") },
+    // CORE Members System -- one shared directory/search page, reused by
+    // every connected application (see src/routes/members.tsx). Always
+    // reachable, not gated by a widget flag, same tier as Profile/Settings.
+    { to: "/members", icon: Users, label: t("nav.members") },
     { to: "/dashboard/purchases", icon: CreditCard, label: t("nav.purchases") },
     ...(flags.rewardsEnabled
       ? [{ to: "/dashboard/rewards" as const, icon: Gift, label: t("nav.rewards") }]

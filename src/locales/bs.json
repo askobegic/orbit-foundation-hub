@@ -3,6 +3,7 @@
     "home": "Početna",
     "profile": "Moj profil",
     "applications": "Moje aplikacije",
+    "members": "Članovi",
     "purchases": "Kupovine",
     "subscriptions": "Moje pretplate",
     "payments": "Historija uplata",
@@ -616,6 +617,17 @@
       "send": "Pošalji",
       "statusUpdated": "Status ažuriran"
     },
+    "members": {
+      "subtitle": "Konfigurišite prikaz i paginaciju stranice Članovi.",
+      "configTitle": "Prikaz i paginacija",
+      "configSaved": "Postavka sačuvana.",
+      "premiumSectionCount": "Broj kartica u sekciji Premium članovi",
+      "premiumSectionCountHint": "Koliko kartica prikazati u sekciji Premium članovi.",
+      "standardSectionCount": "Broj kartica u sekciji Standardni članovi",
+      "standardSectionCountHint": "Koliko kartica prikazati u sekciji Standardni članovi.",
+      "directoryPageSize": "Rezultata po stranici u direktoriju",
+      "directoryPageSizeHint": "Koliko članova po stranici prikazati u punim rezultatima direktorija/pretrage."
+    },
     "trials": {
       "title": "Promotivni probni periodi",
       "subtitle": "Ne postoji automatski probni period. Registracija uvijek kreira standardni nalog; probni period postoji samo ako je izričito dodijeljen ispod.",
@@ -973,7 +985,8 @@
         "rewards": { "title": "Nagrade i lojalnost", "desc": "Pravila akcija, nivoi, dostignuća, katalog, tipovi ispunjenja, konfiguracija." },
         "events": { "title": "Univerzalni događaji", "desc": "Registar događaja, mapiranje po aplikaciji i pravila nagrađivanja za događaje koje prijavljuju aplikacije." },
         "engagement": { "title": "Misije, izazovi i nizovi", "desc": "Definirajte misije, izazove i nizove, globalno ili po aplikaciji." },
-        "support": { "title": "Podrška", "desc": "Korisnički zahtjevi za podršku i odgovori." }
+        "support": { "title": "Podrška", "desc": "Korisnički zahtjevi za podršku i odgovori." },
+        "members": { "title": "Članovi", "desc": "Konfigurišite broj kartica po sekciji i paginaciju direktorija za stranicu Članovi." }
       }
     },
     "verification": {
@@ -1024,5 +1037,24 @@
       "open": "Otvori",
       "noPayments": "Još nema uplata."
     }
+  },
+  "members": {
+    "title": "Članovi",
+    "subtitle": "Otkrijte ljude iz zajednice",
+    "searchPlaceholder": "Pretraži ime, grad, državu ili zanimanje…",
+    "premiumMembers": "Premium članovi",
+    "standardMembers": "Standardni članovi",
+    "viewAll": "Pogledaj sve",
+    "noResults": "Nema pronađenih članova.",
+    "loading": "Učitavanje članova…",
+    "member": "Član",
+    "premium": "Premium",
+    "resultsCount": "{{count}} pronađenih članova",
+    "statusStandardTitle": "STANDARDNI",
+    "statusStandardDesc": "Osnovno članstvo za registrovane članove.",
+    "statusPremiumTitle": "PREMIUM",
+    "statusPremiumDesc": "Članstvo sa dodatnim pogodnostima",
+    "statusVerifiedTitle": "VERIFIKOVAN",
+    "statusVerifiedDesc": "Identitet člana je verifikovan."
   }
 }

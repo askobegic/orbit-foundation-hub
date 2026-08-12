@@ -17,6 +17,7 @@ import {
   TrendingUp,
   UserPlus,
   Users,
+  UsersRound,
   Wallet,
   Zap,
 } from "lucide-react";
@@ -187,6 +188,12 @@ function AdminGate() {
       icon: HelpCircle,
       title: t("admin.hub.cards.support.title"),
       desc: t("admin.hub.cards.support.desc"),
+    },
+    {
+      to: "/admin/members",
+      icon: UsersRound,
+      title: t("admin.hub.cards.members.title"),
+      desc: t("admin.hub.cards.members.desc"),
     },
   ];
   return (

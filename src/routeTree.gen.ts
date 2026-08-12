@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as MembersRouteImport } from './routes/members'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as AdminAdvertisingRouteImport } from './routes/admin.advertising'
@@ -21,6 +22,7 @@ import { Route as AdminCommunicationRouteImport } from './routes/admin.communica
 import { Route as AdminDashboardWidgetsRouteImport } from './routes/admin.dashboard-widgets'
 import { Route as AdminEngagementRouteImport } from './routes/admin.engagement'
 import { Route as AdminEventsRouteImport } from './routes/admin.events'
+import { Route as AdminMembersRouteImport } from './routes/admin.members'
 import { Route as AdminPaymentsRouteImport } from './routes/admin.payments'
 import { Route as AdminRewardsRouteImport } from './routes/admin.rewards'
 import { Route as AdminSupportRouteImport } from './routes/admin.support'
@@ -160,6 +162,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MembersRoute = MembersRouteImport.update({
+  id: '/members',
+  path: '/members',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
@@ -203,6 +210,11 @@ const AdminEngagementRoute = AdminEngagementRouteImport.update({
 const AdminEventsRoute = AdminEventsRouteImport.update({
   id: '/events',
   path: '/events',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminMembersRoute = AdminMembersRouteImport.update({
+  id: '/members',
+  path: '/members',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminPaymentsRoute = AdminPaymentsRouteImport.update({
@@ -880,6 +892,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
+  '/members': typeof MembersRoute
   '/onboarding': typeof OnboardingRoute
   '/pricing': typeof PricingRoute
   '/admin/advertising': typeof AdminAdvertisingRoute
@@ -889,6 +902,7 @@ export interface FileRoutesByFullPath {
   '/admin/dashboard-widgets': typeof AdminDashboardWidgetsRoute
   '/admin/engagement': typeof AdminEngagementRoute
   '/admin/events': typeof AdminEventsRoute
+  '/admin/members': typeof AdminMembersRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/rewards': typeof AdminRewardsRoute
   '/admin/support': typeof AdminSupportRoute
@@ -1017,6 +1031,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
+  '/members': typeof MembersRoute
   '/onboarding': typeof OnboardingRoute
   '/pricing': typeof PricingRoute
   '/admin/advertising': typeof AdminAdvertisingRoute
@@ -1026,6 +1041,7 @@ export interface FileRoutesByTo {
   '/admin/dashboard-widgets': typeof AdminDashboardWidgetsRoute
   '/admin/engagement': typeof AdminEngagementRoute
   '/admin/events': typeof AdminEventsRoute
+  '/admin/members': typeof AdminMembersRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/rewards': typeof AdminRewardsRoute
   '/admin/support': typeof AdminSupportRoute
@@ -1155,6 +1171,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
+  '/members': typeof MembersRoute
   '/onboarding': typeof OnboardingRoute
   '/pricing': typeof PricingRoute
   '/admin/advertising': typeof AdminAdvertisingRoute
@@ -1164,6 +1181,7 @@ export interface FileRoutesById {
   '/admin/dashboard-widgets': typeof AdminDashboardWidgetsRoute
   '/admin/engagement': typeof AdminEngagementRoute
   '/admin/events': typeof AdminEventsRoute
+  '/admin/members': typeof AdminMembersRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/rewards': typeof AdminRewardsRoute
   '/admin/support': typeof AdminSupportRoute
@@ -1294,6 +1312,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/login'
+    | '/members'
     | '/onboarding'
     | '/pricing'
     | '/admin/advertising'
@@ -1303,6 +1322,7 @@ export interface FileRouteTypes {
     | '/admin/dashboard-widgets'
     | '/admin/engagement'
     | '/admin/events'
+    | '/admin/members'
     | '/admin/payments'
     | '/admin/rewards'
     | '/admin/support'
@@ -1431,6 +1451,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/login'
+    | '/members'
     | '/onboarding'
     | '/pricing'
     | '/admin/advertising'
@@ -1440,6 +1461,7 @@ export interface FileRouteTypes {
     | '/admin/dashboard-widgets'
     | '/admin/engagement'
     | '/admin/events'
+    | '/admin/members'
     | '/admin/payments'
     | '/admin/rewards'
     | '/admin/support'
@@ -1568,6 +1590,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/login'
+    | '/members'
     | '/onboarding'
     | '/pricing'
     | '/admin/advertising'
@@ -1577,6 +1600,7 @@ export interface FileRouteTypes {
     | '/admin/dashboard-widgets'
     | '/admin/engagement'
     | '/admin/events'
+    | '/admin/members'
     | '/admin/payments'
     | '/admin/rewards'
     | '/admin/support'
@@ -1706,6 +1730,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   LoginRoute: typeof LoginRoute
+  MembersRoute: typeof MembersRoute
   OnboardingRoute: typeof OnboardingRoute
   PricingRoute: typeof PricingRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
@@ -1848,6 +1873,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/members': {
+      id: '/members'
+      path: '/members'
+      fullPath: '/members'
+      preLoaderRoute: typeof MembersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/onboarding': {
       id: '/onboarding'
       path: '/onboarding'
@@ -1909,6 +1941,13 @@ declare module '@tanstack/react-router' {
       path: '/events'
       fullPath: '/admin/events'
       preLoaderRoute: typeof AdminEventsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/members': {
+      id: '/admin/members'
+      path: '/members'
+      fullPath: '/admin/members'
+      preLoaderRoute: typeof AdminMembersRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/payments': {
@@ -2783,6 +2822,7 @@ interface AdminRouteChildren {
   AdminDashboardWidgetsRoute: typeof AdminDashboardWidgetsRoute
   AdminEngagementRoute: typeof AdminEngagementRoute
   AdminEventsRoute: typeof AdminEventsRoute
+  AdminMembersRoute: typeof AdminMembersRoute
   AdminPaymentsRoute: typeof AdminPaymentsRoute
   AdminRewardsRoute: typeof AdminRewardsRoute
   AdminSupportRoute: typeof AdminSupportRoute
@@ -2799,6 +2839,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminDashboardWidgetsRoute: AdminDashboardWidgetsRoute,
   AdminEngagementRoute: AdminEngagementRoute,
   AdminEventsRoute: AdminEventsRoute,
+  AdminMembersRoute: AdminMembersRoute,
   AdminPaymentsRoute: AdminPaymentsRoute,
   AdminRewardsRoute: AdminRewardsRoute,
   AdminSupportRoute: AdminSupportRoute,
@@ -2836,6 +2877,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   LoginRoute: LoginRoute,
+  MembersRoute: MembersRoute,
   OnboardingRoute: OnboardingRoute,
   PricingRoute: PricingRoute,
   AuthCallbackRoute: AuthCallbackRoute,

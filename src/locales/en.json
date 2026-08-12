@@ -3,6 +3,7 @@
     "home": "Home",
     "profile": "My Profile",
     "applications": "My Applications",
+    "members": "Members",
     "purchases": "Purchases",
     "subscriptions": "My Subscriptions",
     "payments": "Payment History",
@@ -616,6 +617,17 @@
       "send": "Send",
       "statusUpdated": "Status updated"
     },
+    "members": {
+      "subtitle": "Configure the Members page display and pagination.",
+      "configTitle": "Display & Pagination",
+      "configSaved": "Setting saved.",
+      "premiumSectionCount": "Premium Members section count",
+      "premiumSectionCountHint": "How many cards to show in the Premium Members section.",
+      "standardSectionCount": "Standard Members section count",
+      "standardSectionCountHint": "How many cards to show in the Standard Members section.",
+      "directoryPageSize": "Directory results per page",
+      "directoryPageSizeHint": "How many members per page in the full directory/search results."
+    },
     "trials": {
       "title": "Promotional Trials",
       "subtitle": "There is no automatic Trial. Registration always creates a Standard account; a Trial only ever exists because it was explicitly granted below.",
@@ -973,7 +985,8 @@
         "rewards": { "title": "Rewards & Loyalty", "desc": "Action rules, levels, achievements, catalog, fulfillment types, config." },
         "events": { "title": "Universal Events", "desc": "Event registry, per-application mapping, and reward rules for application-reported events." },
         "engagement": { "title": "Missions, Challenges & Streaks", "desc": "Define missions, challenges, and streaks, global or per application." },
-        "support": { "title": "Support", "desc": "User support tickets and replies." }
+        "support": { "title": "Support", "desc": "User support tickets and replies." },
+        "members": { "title": "Members", "desc": "Configure section counts and directory pagination for the Members page." }
       }
     },
     "verification": {
@@ -1024,5 +1037,24 @@
       "open": "Open",
       "noPayments": "No payments yet."
     }
+  },
+  "members": {
+    "title": "Members",
+    "subtitle": "Discover people across the community",
+    "searchPlaceholder": "Search by name, city, country or profession…",
+    "premiumMembers": "Premium Members",
+    "standardMembers": "Standard Members",
+    "viewAll": "View all",
+    "noResults": "No members found.",
+    "loading": "Loading members…",
+    "member": "Member",
+    "premium": "Premium",
+    "resultsCount": "{{count}} members found",
+    "statusStandardTitle": "STANDARD",
+    "statusStandardDesc": "Basic membership for registered members.",
+    "statusPremiumTitle": "PREMIUM",
+    "statusPremiumDesc": "Membership with additional benefits.",
+    "statusVerifiedTitle": "VERIFIED",
+    "statusVerifiedDesc": "Identity of the member has been verified."
   }
 }

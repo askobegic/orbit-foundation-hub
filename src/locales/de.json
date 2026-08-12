@@ -3,6 +3,7 @@
     "home": "Startseite",
     "profile": "Mein Profil",
     "applications": "Meine Anwendungen",
+    "members": "Mitglieder",
     "purchases": "Käufe",
     "subscriptions": "Meine Abonnements",
     "payments": "Zahlungsverlauf",
@@ -616,6 +617,17 @@
       "send": "Senden",
       "statusUpdated": "Status aktualisiert"
     },
+    "members": {
+      "subtitle": "Anzeige und Paginierung der Mitgliederseite konfigurieren.",
+      "configTitle": "Anzeige & Paginierung",
+      "configSaved": "Einstellung gespeichert.",
+      "premiumSectionCount": "Anzahl Karten im Bereich Premium-Mitglieder",
+      "premiumSectionCountHint": "Wie viele Karten im Bereich Premium-Mitglieder angezeigt werden.",
+      "standardSectionCount": "Anzahl Karten im Bereich Standard-Mitglieder",
+      "standardSectionCountHint": "Wie viele Karten im Bereich Standard-Mitglieder angezeigt werden.",
+      "directoryPageSize": "Ergebnisse pro Seite im Verzeichnis",
+      "directoryPageSizeHint": "Wie viele Mitglieder pro Seite in den vollständigen Verzeichnis-/Suchergebnissen angezeigt werden."
+    },
     "trials": {
       "title": "Werbe-Testzeiträume",
       "subtitle": "Es gibt keinen automatischen Testzeitraum. Die Registrierung erstellt immer ein Standardkonto; ein Testzeitraum existiert nur, wenn er unten ausdrücklich gewährt wurde.",
@@ -973,7 +985,8 @@
         "rewards": { "title": "Prämien & Treue", "desc": "Aktionsregeln, Stufen, Erfolge, Katalog, Erfüllungstypen, Konfiguration." },
         "events": { "title": "Universelle Ereignisse", "desc": "Ereignisregister, Anwendungszuordnung und Prämienregeln für von Anwendungen gemeldete Ereignisse." },
         "engagement": { "title": "Missionen, Herausforderungen & Serien", "desc": "Missionen, Herausforderungen und Serien definieren, global oder pro Anwendung." },
-        "support": { "title": "Support", "desc": "Support-Anfragen und Antworten der Nutzer." }
+        "support": { "title": "Support", "desc": "Support-Anfragen und Antworten der Nutzer." },
+        "members": { "title": "Mitglieder", "desc": "Anzahl der Karten pro Bereich und Verzeichnis-Paginierung für die Mitgliederseite konfigurieren." }
       }
     },
     "verification": {
@@ -1024,5 +1037,24 @@
       "open": "Öffnen",
       "noPayments": "Noch keine Zahlungen."
     }
+  },
+  "members": {
+    "title": "Mitglieder",
+    "subtitle": "Entdecke Menschen aus der Community",
+    "searchPlaceholder": "Suche nach Name, Stadt, Land oder Beruf…",
+    "premiumMembers": "Premium-Mitglieder",
+    "standardMembers": "Standard-Mitglieder",
+    "viewAll": "Alle anzeigen",
+    "noResults": "Keine Mitglieder gefunden.",
+    "loading": "Mitglieder werden geladen…",
+    "member": "Mitglied",
+    "premium": "Premium",
+    "resultsCount": "{{count}} Mitglieder gefunden",
+    "statusStandardTitle": "STANDARD",
+    "statusStandardDesc": "Grundlegende Mitgliedschaft für registrierte Mitglieder.",
+    "statusPremiumTitle": "PREMIUM",
+    "statusPremiumDesc": "Mitgliedschaft mit zusätzlichen Vorteilen.",
+    "statusVerifiedTitle": "VERIFIZIERT",
+    "statusVerifiedDesc": "Die Identität des Mitglieds wurde verifiziert."
   }
 }
