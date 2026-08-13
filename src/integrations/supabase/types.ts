@@ -2550,39 +2550,51 @@ export type Database = {
           archived: boolean
           cooldown_seconds: number
           created_at: string
+          daily_limit: number | null
           display_order: number
           enabled: boolean
           id: string
           label: string
           max_per_user: number | null
+          monthly_limit: number | null
           points: number
+          points_per_euro: number | null
           updated_at: string
+          weekly_limit: number | null
         }
         Insert: {
           action: string
           archived?: boolean
           cooldown_seconds?: number
           created_at?: string
+          daily_limit?: number | null
           display_order?: number
           enabled?: boolean
           id?: string
           label: string
           max_per_user?: number | null
+          monthly_limit?: number | null
           points?: number
+          points_per_euro?: number | null
           updated_at?: string
+          weekly_limit?: number | null
         }
         Update: {
           action?: string
           archived?: boolean
           cooldown_seconds?: number
           created_at?: string
+          daily_limit?: number | null
           display_order?: number
           enabled?: boolean
           id?: string
           label?: string
           max_per_user?: number | null
+          monthly_limit?: number | null
           points?: number
+          points_per_euro?: number | null
           updated_at?: string
+          weekly_limit?: number | null
         }
         Relationships: []
       }
@@ -2906,6 +2918,98 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reward_milestones: {
+        Row: {
+          archived: boolean
+          created_at: string
+          display_order: number
+          enabled: boolean
+          grant_type: string
+          grant_value: Json
+          id: string
+          key: string
+          label: string
+          min_lifetime_points: number
+          min_successful_invites: number
+          updated_at: string
+        }
+        Insert: {
+          archived?: boolean
+          created_at?: string
+          display_order?: number
+          enabled?: boolean
+          grant_type: string
+          grant_value?: Json
+          id?: string
+          key: string
+          label: string
+          min_lifetime_points: number
+          min_successful_invites?: number
+          updated_at?: string
+        }
+        Update: {
+          archived?: boolean
+          created_at?: string
+          display_order?: number
+          enabled?: boolean
+          grant_type?: string
+          grant_value?: Json
+          id?: string
+          key?: string
+          label?: string
+          min_lifetime_points?: number
+          min_successful_invites?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reward_milestones_grant_type_fkey"
+            columns: ["grant_type"]
+            isOneToOne: false
+            referencedRelation: "reward_fulfillment_types"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      user_reward_milestones: {
+        Row: {
+          achieved_at: string
+          grant_result: Json | null
+          id: string
+          milestone_id: string
+          user_id: string
+        }
+        Insert: {
+          achieved_at?: string
+          grant_result?: Json | null
+          id?: string
+          milestone_id: string
+          user_id: string
+        }
+        Update: {
+          achieved_at?: string
+          grant_result?: Json | null
+          id?: string
+          milestone_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_reward_milestones_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "reward_milestones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_reward_milestones_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]

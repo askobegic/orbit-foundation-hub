@@ -78,9 +78,116 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
         if (!ok) return new Response("Invalid signature", { status: 401 });
 
         const event = JSON.parse(body) as {
+          id: string;
           event_type: string;
           resource: Record<string, unknown>;
         };
+
+        // Priority 16: refund handling -- previously absent entirely for
+        // PayPal (Phase A audit finding). PAYMENT.CAPTURE.REFUNDED fires
+        // once per discrete refund transaction (unlike Stripe's
+        // cumulative amount_refunded), with the refund's own amount and a
+        // "up" link back to the original capture -- see
+        // https://developer.paypal.com/docs/api/payments/v2/#captures_refund.
+        if (event.event_type === "PAYMENT.CAPTURE.REFUNDED") {
+          const refundResource = event.resource as {
+            id: string;
+            amount?: { value?: string; currency_code?: string };
+            links?: { rel: string; href: string }[];
+          };
+          const upLink = (refundResource.links ?? []).find((l) => l.rel === "up");
+          const captureId = upLink ? upLink.href.split("/").filter(Boolean).pop() : null;
+          if (!captureId) {
+            console.warn("PayPal webhook: refund with no resolvable capture id", {
+              refund_id: refundResource.id,
+            });
+            return Response.json({ received: true, ignored: "capture_id_not_found" });
+          }
+
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          const { data: payment } = await supabaseAdmin
+            .from("payments")
+            .select("id, user_id, app_id, subscription_id, campaign_id, status")
+            .eq("paypal_payment_id", captureId)
+            .maybeSingle();
+          if (!payment) {
+            console.warn("PayPal webhook: refund for unmatched capture", { captureId });
+            return Response.json({ received: true, ignored: "payment_not_found" });
+          }
+          const paymentRow = payment as {
+            id: string;
+            user_id: string | null;
+            app_id: string | null;
+            subscription_id: string | null;
+            campaign_id: string | null;
+            status: string;
+          };
+
+          // Each PAYMENT.CAPTURE.REFUNDED event reports ONE discrete
+          // refund's own amount (not cumulative like Stripe), so it is
+          // already the correct delta -- idempotency comes entirely from
+          // this refund's own id as the reversal's dedupe_key.
+          if (paymentRow.user_id) {
+            const refundAmountEur = Number(refundResource.amount?.value ?? 0);
+            if (refundAmountEur > 0) {
+              const { reversePaymentPoints } = await import("@/lib/rewards.server");
+              const reversal = await reversePaymentPoints({
+                paymentId: paymentRow.id,
+                userId: paymentRow.user_id,
+                sourceAppId: paymentRow.app_id,
+                refundedAmountEurNow: refundAmountEur,
+                dedupeKey: `refund:paypal:${refundResource.id}`,
+              });
+              if (!reversal.ok) {
+                console.error("PayPal webhook: point reversal failed", {
+                  payment_id: paymentRow.id,
+                  reason: reversal.reason,
+                });
+              }
+            }
+          }
+
+          if (paymentRow.status !== "refunded") {
+            const { error: refundPaymentErr } = await supabaseAdmin
+              .from("payments")
+              .update({ status: "refunded" })
+              .eq("id", paymentRow.id);
+            if (refundPaymentErr) {
+              console.error("PayPal webhook: payments refund update failed", refundPaymentErr);
+            }
+
+            if (paymentRow.subscription_id) {
+              const { error: cancelSubErr } = await supabaseAdmin
+                .from("subscriptions")
+                .update({ status: "cancelled", expires_at: new Date().toISOString() })
+                .eq("id", paymentRow.subscription_id);
+              if (cancelSubErr) {
+                console.error("PayPal webhook: subscription cancel on refund failed", cancelSubErr);
+              }
+            }
+
+            if (paymentRow.campaign_id) {
+              const { error: cancelCampaignErr } = await supabaseAdmin
+                .from("ad_campaigns")
+                .update({ status: "cancelled", updated_at: new Date().toISOString() })
+                .eq("id", paymentRow.campaign_id);
+              if (cancelCampaignErr) {
+                console.error("PayPal webhook: campaign cancel on refund failed", cancelCampaignErr);
+              }
+            }
+
+            await writeAuditLog({
+              userId: paymentRow.user_id,
+              action: "payment.paypal.refunded",
+              entityType: "payment",
+              entityId: paymentRow.id,
+              newData: { capture_id: captureId, refund_id: refundResource.id },
+            });
+          }
+
+          return Response.json({ received: true });
+        }
+
         if (event.event_type !== "PAYMENT.CAPTURE.COMPLETED") {
           return Response.json({ received: true });
         }
@@ -126,16 +233,20 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
             return Response.json({ received: true, ignored: result.reason });
           }
 
-          const { error: campaignPaymentErr } = await supabaseAdmin.from("payments").insert({
-            user_id: campaignRef.user_id,
-            app_id: campaignRef.app_id,
-            campaign_id: campaignRef.campaign_id,
-            paypal_payment_id: resource.id,
-            amount,
-            currency,
-            status: "success",
-            payment_method: "paypal",
-          });
+          const { data: insertedCampaignPayment, error: campaignPaymentErr } = await supabaseAdmin
+            .from("payments")
+            .insert({
+              user_id: campaignRef.user_id,
+              app_id: campaignRef.app_id,
+              campaign_id: campaignRef.campaign_id,
+              paypal_payment_id: resource.id,
+              amount,
+              currency,
+              status: "success",
+              payment_method: "paypal",
+            })
+            .select("id")
+            .single();
           if (campaignPaymentErr) {
             console.error("PayPal webhook: campaign payment insert failed", campaignPaymentErr);
             return Response.json({ received: true, duplicate: true });
@@ -149,14 +260,32 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
             newData: { paypal_id: resource.id, amount, currency, creditApplied: result.creditApplied },
           });
 
+          // Priority 16: proportional financial points (EUR paid x 10).
+          // Server-verified amount only. Non-EUR reported, not guessed.
           const { grantRewardAction } = await import("@/lib/rewards.server");
-          await grantRewardAction({
-            userId: campaignRef.user_id,
-            action: "advertising_purchase",
-            resourceType: "ad_campaign",
-            resourceId: campaignRef.campaign_id,
-            sourceAppId: campaignRef.app_id,
-          });
+          if (currency.toUpperCase() === "EUR" && insertedCampaignPayment) {
+            await grantRewardAction({
+              userId: campaignRef.user_id,
+              action: "advertising_purchase",
+              resourceType: "payment",
+              resourceId: insertedCampaignPayment.id,
+              sourceAppId: campaignRef.app_id,
+              amountEur: amount,
+              dedupeKey: `payment:${insertedCampaignPayment.id}`,
+            });
+          } else if (insertedCampaignPayment) {
+            console.warn("PayPal webhook: non-EUR campaign payment, proportional points not calculated", {
+              payment_id: insertedCampaignPayment.id,
+              currency,
+            });
+            await writeAuditLog({
+              userId: campaignRef.user_id,
+              action: "payment.paypal.non_eur_points_skipped",
+              entityType: "payment",
+              entityId: insertedCampaignPayment.id,
+              newData: { currency, amount },
+            });
+          }
 
           return Response.json({ received: true });
         }
@@ -286,16 +415,20 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
         // same capture, the payments.paypal_payment_id UNIQUE constraint
         // rejects this insert. Stop here rather than proceeding to send a
         // duplicate notification/audit-log/n8n event for the same payment.
-        const { error: paymentErr } = await supabaseAdmin.from("payments").insert({
-          user_id: ref.user_id,
-          app_id: ref.app_id,
-          subscription_id: (sub as { id: string }).id,
-          paypal_payment_id: resource.id,
-          amount,
-          currency,
-          status: "success",
-          payment_method: "paypal",
-        });
+        const { data: insertedPayment, error: paymentErr } = await supabaseAdmin
+          .from("payments")
+          .insert({
+            user_id: ref.user_id,
+            app_id: ref.app_id,
+            subscription_id: (sub as { id: string }).id,
+            paypal_payment_id: resource.id,
+            amount,
+            currency,
+            status: "success",
+            payment_method: "paypal",
+          })
+          .select("id")
+          .single();
         if (paymentErr) {
           console.error("PayPal webhook: payments insert failed", paymentErr);
           return Response.json({ received: true, duplicate: true });
@@ -332,13 +465,31 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
         const { grantRewardAction, recordPremiumReferralIfApplicable } = await import(
           "@/lib/rewards.server"
         );
-        await grantRewardAction({
-          userId: ref.user_id,
-          action: isRenewal ? "premium_renewal" : "premium_purchase",
-          resourceType: "subscription",
-          resourceId: (sub as { id: string }).id,
-          sourceAppId: ref.app_id,
-        });
+        // Priority 16: proportional financial points (EUR paid x 10).
+        // Server-verified amount only. Non-EUR reported, not guessed.
+        if (currency.toUpperCase() === "EUR" && insertedPayment) {
+          await grantRewardAction({
+            userId: ref.user_id,
+            action: isRenewal ? "premium_renewal" : "premium_purchase",
+            resourceType: "payment",
+            resourceId: insertedPayment.id,
+            sourceAppId: ref.app_id,
+            amountEur: amount,
+            dedupeKey: `payment:${insertedPayment.id}`,
+          });
+        } else if (insertedPayment) {
+          console.warn("PayPal webhook: non-EUR payment, proportional points not calculated", {
+            payment_id: insertedPayment.id,
+            currency,
+          });
+          await writeAuditLog({
+            userId: ref.user_id,
+            action: "payment.paypal.non_eur_points_skipped",
+            entityType: "payment",
+            entityId: insertedPayment.id,
+            newData: { currency, amount },
+          });
+        }
         await recordPremiumReferralIfApplicable({
           userId: ref.user_id,
           subscriptionId: (sub as { id: string }).id,

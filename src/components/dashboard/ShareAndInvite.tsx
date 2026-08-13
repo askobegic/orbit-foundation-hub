@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 
 import { useApplication } from "@/context/ApplicationContext";
 import { getShareInviteConfig } from "@/lib/share-invite.functions";
+import { recordReferralSubmission } from "@/lib/rewards.functions";
 
 function InstagramIcon() {
   return (
@@ -53,6 +54,7 @@ export function ShareAndInvite({ username, firstName, lastName }: ShareAndInvite
   const [inviteCopied, setInviteCopied] = useState(false);
 
   const getConfigFn = useServerFn(getShareInviteConfig);
+  const recordReferralSubmissionFn = useServerFn(recordReferralSubmission);
   const configQuery = useQuery({
     queryKey: ["share-invite-config", application?.id],
     enabled: !!application?.id,
@@ -81,11 +83,27 @@ export function ShareAndInvite({ username, firstName, lastName }: ShareAndInvite
     setTimeout(() => setCopied(false), 2000);
   }
 
+  // Priority 16: the smallest secure, server-observable "referral
+  // submission" signal -- fired when the user actually performs the
+  // invite action (copy link or native share below), never a per-render
+  // or per-click-anywhere event. Fire-and-forget: a reward failure (e.g.
+  // the daily cap already reached) must never block the invite action
+  // itself, matching the existing notifyNewUser/linkReferral pattern in
+  // onboarding.tsx.
+  async function submitReferral() {
+    try {
+      await recordReferralSubmissionFn({});
+    } catch (err) {
+      console.warn("[rewards] referral submission failed", err);
+    }
+  }
+
   async function copyInvite() {
     await navigator.clipboard.writeText(inviteText);
     setInviteCopied(true);
     toast.success(t("share.linkCopied"));
     setTimeout(() => setInviteCopied(false), 2000);
+    void submitReferral();
   }
 
   async function nativeShare(title: string, text: string, url: string) {
@@ -271,7 +289,10 @@ export function ShareAndInvite({ username, firstName, lastName }: ShareAndInvite
                 {t("share.copyLink")}
               </button>
               <button
-                onClick={() => nativeShare(t("share.inviteFriend"), inviteText, inviteLink)}
+                onClick={() => {
+                  void nativeShare(t("share.inviteFriend"), inviteText, inviteLink);
+                  void submitReferral();
+                }}
                 className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#1D6BF3] py-2.5 text-sm font-medium text-white hover:bg-[#1558D6]"
               >
                 <Share2 size={14} />

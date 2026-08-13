@@ -11,7 +11,78 @@ import type { Json } from "@/integrations/supabase/types";
 import { assertAdmin, writeAuditLog } from "@/lib/admin.server";
 import { getApplicationCapabilities } from "@/lib/capabilities.functions";
 import { enforceRateLimit } from "@/lib/rate-limit.server";
-import { grantRewardAction, promotePendingReferralVerifications, redeemCatalogReward } from "@/lib/rewards.server";
+import {
+  grantRewardAction,
+  promotePendingReferralVerifications,
+  redeemCatalogReward,
+} from "@/lib/rewards.server";
+
+// ---------- Priority 16: onboarding + referral submission rewards ----------
+
+// Called once from onboarding.tsx's completion handler -- registration and
+// profile completion happen in the same one-time flow in this app today,
+// so both CORE-internal actions are granted together here. Idempotent via
+// grantRewardAction()'s own max_per_user=1 (the primary guard) plus a
+// defensive dedupeKey (in case the client retries before its local
+// profile_complete state updates). If the completing user was themselves
+// directly referred, their referrer is rewarded too (once per invited
+// user, by construction: this can only run once per invited user, since
+// it's called from that user's own one-time onboarding completion) --
+// never a chain: only profiles.referred_by_user_id (one level) is read.
+export const completeOnboardingRewards = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const supabaseAdmin = await adminClient();
+
+    await grantRewardAction({
+      userId: context.userId,
+      action: "registration",
+      dedupeKey: `registration:${context.userId}`,
+    });
+    await grantRewardAction({
+      userId: context.userId,
+      action: "profile_completed",
+      dedupeKey: `profile_completed:${context.userId}`,
+    });
+
+    const { data: me } = await supabaseAdmin
+      .from("profiles")
+      .select("referred_by_user_id")
+      .eq("id", context.userId)
+      .maybeSingle();
+    if (me?.referred_by_user_id) {
+      await grantRewardAction({
+        userId: me.referred_by_user_id,
+        action: "referral_profile_completed",
+        resourceType: "user",
+        resourceId: context.userId,
+        dedupeKey: `referral_profile_completed:${context.userId}`,
+      });
+    }
+
+    return { ok: true };
+  });
+
+// The smallest secure, server-observable "referral submission" signal:
+// called when the user actually performs a share/invite action (copy
+// link or native share) from their own Dashboard Invite panel --
+// ShareAndInvite.tsx, never a per-click UI-only event. Rate-limited via
+// the SAME reward_action_rules mechanism as every other CORE-internal
+// action (cooldown_seconds guards rapid re-submission of one action;
+// daily_limit is the approved "max 3/day" cap) -- not a second rate-limit
+// system. No target/recipient is captured at this step (a native share
+// sheet reports no delivery outcome), so there is nothing here for
+// self-referral to apply to; self-referral is guarded where it actually
+// matters, at linkReferral() below, when a real second party links back.
+export const recordReferralSubmission = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const result = await grantRewardAction({
+      userId: context.userId,
+      action: "referral_submission",
+    });
+    return { ok: result.granted, reason: result.reason };
+  });
 
 async function computeBalance(userId: string, supabase: Awaited<ReturnType<typeof adminClient>>) {
   const [{ data: ledgerRows }, { data: redemptionRows }] = await Promise.all([
@@ -189,7 +260,8 @@ export const redeemReward = createServerFn({ method: "POST" })
     });
     if (!result.ok) {
       if (result.error === "insufficient_points") throw new Error("Not enough Reward Points");
-      if (result.error === "insufficient_referrals") throw new Error("Not enough Verified Premium Referrals");
+      if (result.error === "insufficient_referrals")
+        throw new Error("Not enough Verified Premium Referrals");
       throw new Error("Reward not found or unavailable");
     }
 
@@ -258,6 +330,10 @@ const actionRuleSchema = z.object({
   points: z.number().int().min(0),
   cooldownSeconds: z.number().int().min(0).default(0),
   maxPerUser: z.number().int().min(1).nullable().optional(),
+  dailyLimit: z.number().int().min(1).nullable().optional(),
+  weeklyLimit: z.number().int().min(1).nullable().optional(),
+  monthlyLimit: z.number().int().min(1).nullable().optional(),
+  pointsPerEuro: z.number().min(0).nullable().optional(),
   displayOrder: z.number().int().default(0),
   enabled: z.boolean().default(true),
   archived: z.boolean().default(false),
@@ -287,6 +363,10 @@ export const adminUpsertRewardActionRule = createServerFn({ method: "POST" })
       points: data.points,
       cooldown_seconds: data.cooldownSeconds,
       max_per_user: data.maxPerUser ?? null,
+      daily_limit: data.dailyLimit ?? null,
+      weekly_limit: data.weeklyLimit ?? null,
+      monthly_limit: data.monthlyLimit ?? null,
+      points_per_euro: data.pointsPerEuro ?? null,
       display_order: data.displayOrder,
       enabled: data.enabled,
       archived: data.archived,
@@ -764,4 +844,159 @@ export const adminAdjustRewardPoints = createServerFn({ method: "POST" })
       reason: data.reason,
     });
     return { ok: true, points: data.points, lifetimePoints };
+  });
+
+// Priority 16 Phase D1: read-only per-user Reward Ledger for the Admin
+// User 360 modal -- reuses computeBalance() (the exact same balance
+// formula the user's own Rewards Dashboard already shows, Priority 8.3)
+// instead of a second balance calculation, and reads reward_ledger
+// directly rather than introducing any new table. `reason` isn't a
+// reward_ledger column -- for manual_admin rows (the only origin that
+// ever carries a human-authored reason) it lives on the matching
+// audit_logs row (adminAdjustRewardPoints writes it there), so it's
+// joined in here by entity_id rather than duplicated onto the ledger.
+export const adminListUserRewardLedger = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => z.object({ userId: z.string().uuid() }).parse(raw))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const supabaseAdmin = await adminClient();
+
+    const [balance, { data: ledgerRows, error }, { data: apps }] = await Promise.all([
+      computeBalance(data.userId, supabaseAdmin),
+      supabaseAdmin
+        .from("reward_ledger")
+        .select(
+          "id, action, points, lifetime_points, resource_type, resource_id, source_app_id, origin, actor_user_id, metadata, created_at",
+        )
+        .eq("user_id", data.userId)
+        .order("created_at", { ascending: false })
+        .limit(200),
+      supabaseAdmin.from("applications").select("id, name"),
+    ]);
+    if (error) throw new Error(error.message);
+
+    const manualIds = (ledgerRows ?? [])
+      .filter((r) => r.origin === "manual_admin")
+      .map((r) => r.id);
+    let reasonByLedgerId = new Map<string, string | null>();
+    if (manualIds.length > 0) {
+      const { data: auditRows } = await supabaseAdmin
+        .from("audit_logs")
+        .select("entity_id, reason")
+        .eq("entity_type", "reward_ledger")
+        .in("entity_id", manualIds);
+      reasonByLedgerId = new Map(
+        (auditRows ?? []).map((a) => [a.entity_id as string, a.reason as string | null]),
+      );
+    }
+
+    const appNameById = new Map((apps ?? []).map((a) => [a.id, a.name]));
+
+    return {
+      lifetimePoints: balance.lifetimePoints,
+      rewardPoints: balance.rewardPoints,
+      entries: (ledgerRows ?? []).map((r) => ({
+        id: r.id,
+        action: r.action,
+        points: r.points,
+        lifetimePoints: r.lifetime_points,
+        resourceType: r.resource_type,
+        resourceId: r.resource_id,
+        appName: r.source_app_id ? (appNameById.get(r.source_app_id) ?? "?") : null,
+        origin: r.origin,
+        actorUserId: r.actor_user_id,
+        reason: reasonByLedgerId.get(r.id) ?? null,
+        createdAt: r.created_at,
+      })),
+    };
+  });
+
+// ---------- Admin: Premium Milestones (Priority 16) ----------
+// Same registry CRUD shape as reward_levels/reward_catalog above.
+
+const milestoneSchema = z.object({
+  id: z.string().uuid().optional(),
+  key: z
+    .string()
+    .trim()
+    .min(1)
+    .max(60)
+    .regex(/^[a-z][a-z0-9_]*$/),
+  label: z.string().trim().min(1).max(200),
+  minLifetimePoints: z.number().int().min(0),
+  minSuccessfulInvites: z.number().int().min(0).default(0),
+  grantType: z
+    .string()
+    .trim()
+    .min(1)
+    .max(60)
+    .regex(/^[a-z][a-z0-9_]*$/),
+  grantValue: z.record(z.string(), z.unknown()).default({}),
+  displayOrder: z.number().int().default(0),
+  enabled: z.boolean().default(true),
+  archived: z.boolean().default(false),
+  reason: z.string().trim().max(500).optional(),
+});
+
+export const adminUpsertRewardMilestone = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => milestoneSchema.parse(raw))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const supabaseAdmin = await adminClient();
+
+    let previous: unknown = null;
+    if (data.id) {
+      const { data: existing } = await supabaseAdmin
+        .from("reward_milestones")
+        .select("*")
+        .eq("id", data.id)
+        .maybeSingle();
+      previous = existing;
+    }
+
+    const payload = {
+      key: data.key,
+      label: data.label,
+      min_lifetime_points: data.minLifetimePoints,
+      min_successful_invites: data.minSuccessfulInvites,
+      grant_type: data.grantType,
+      grant_value: data.grantValue as Json,
+      display_order: data.displayOrder,
+      enabled: data.enabled,
+      archived: data.archived,
+    };
+    const { data: row, error } = data.id
+      ? await supabaseAdmin
+          .from("reward_milestones")
+          .update(payload)
+          .eq("id", data.id)
+          .select("*")
+          .single()
+      : await supabaseAdmin.from("reward_milestones").insert(payload).select("*").single();
+    if (error) throw new Error(error.message);
+
+    await writeAuditLog({
+      userId: context.userId,
+      action: data.id ? "reward_milestone.update" : "reward_milestone.create",
+      entityType: "reward_milestone",
+      entityId: row.id,
+      oldData: previous,
+      newData: row,
+      reason: data.reason ?? null,
+    });
+    return row;
+  });
+
+export const adminListRewardMilestones = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { data, error } = await context.supabase
+      .from("reward_milestones")
+      .select("*")
+      .order("display_order", { ascending: true });
+    if (error) throw new Error(error.message);
+    return data ?? [];
   });

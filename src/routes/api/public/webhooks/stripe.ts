@@ -67,7 +67,10 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
         // dispute is won. Left for a later phase that introduces a proper
         // disputed state.
         if (event.type === "charge.refunded") {
-          const object = event.data.object as { payment_intent: string | { id: string } | null };
+          const object = event.data.object as {
+            payment_intent: string | { id: string } | null;
+            amount_refunded?: number;
+          };
           const paymentIntentId =
             typeof object.payment_intent === "string"
               ? object.payment_intent
@@ -80,7 +83,7 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
 
           const { data: payment } = await supabaseAdmin
             .from("payments")
-            .select("id, user_id, subscription_id, campaign_id, status")
+            .select("id, user_id, app_id, subscription_id, campaign_id, status")
             .eq("stripe_payment_intent_id", paymentIntentId)
             .maybeSingle();
           if (!payment) {
@@ -93,55 +96,99 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
           const paymentRow = payment as {
             id: string;
             user_id: string | null;
+            app_id: string | null;
             subscription_id: string | null;
             campaign_id: string | null;
             status: string;
           };
-          if (paymentRow.status === "refunded") {
-            return Response.json({ received: true, duplicate: true });
-          }
 
-          const { error: refundPaymentErr } = await supabaseAdmin
-            .from("payments")
-            .update({ status: "refunded" })
-            .eq("id", paymentRow.id);
-          if (refundPaymentErr) {
-            console.error("Stripe webhook: payments refund update failed", refundPaymentErr);
-          }
-
-          if (paymentRow.subscription_id) {
-            const { error: cancelSubErr } = await supabaseAdmin
-              .from("subscriptions")
-              .update({ status: "cancelled", expires_at: new Date().toISOString() })
-              .eq("id", paymentRow.subscription_id);
-            if (cancelSubErr) {
-              console.error("Stripe webhook: subscription cancel on refund failed", cancelSubErr);
+          // Priority 16: point reversal runs regardless of whether this
+          // payment was already marked 'refunded' by an earlier partial
+          // refund -- Stripe's charge.refunded fires again for each
+          // additional partial refund on the same charge, and
+          // amount_refunded is cumulative. Idempotency here comes from
+          // this specific event's own id as the reversal ledger row's
+          // dedupe_key (a redelivery of the SAME event is rejected by the
+          // unique index), not from the payments.status check below,
+          // which only guards the status/cancellation side effects
+          // against repeating on a genuine duplicate delivery.
+          if (paymentRow.user_id) {
+            const cumulativeRefundedEur = (object.amount_refunded ?? 0) / 100;
+            if (cumulativeRefundedEur > 0) {
+              const { data: priorReversals } = await supabaseAdmin
+                .from("reward_ledger")
+                .select("metadata")
+                .eq("resource_type", "payment")
+                .eq("resource_id", paymentRow.id)
+                .eq("origin", "refund_reversal");
+              const priorReversedEur = (priorReversals ?? []).reduce((sum, r) => {
+                const m = r.metadata as { refundedAmountEurNow?: number } | null;
+                return sum + (m?.refundedAmountEurNow ?? 0);
+              }, 0);
+              const deltaEur = Math.max(0, cumulativeRefundedEur - priorReversedEur);
+              if (deltaEur > 0) {
+                const { reversePaymentPoints } = await import("@/lib/rewards.server");
+                const reversal = await reversePaymentPoints({
+                  paymentId: paymentRow.id,
+                  userId: paymentRow.user_id,
+                  sourceAppId: paymentRow.app_id,
+                  refundedAmountEurNow: deltaEur,
+                  dedupeKey: `refund:stripe:${event.id}`,
+                });
+                if (!reversal.ok) {
+                  console.error("Stripe webhook: point reversal failed", {
+                    payment_id: paymentRow.id,
+                    reason: reversal.reason,
+                  });
+                }
+              }
             }
           }
 
-          if (paymentRow.campaign_id) {
-            const { error: cancelCampaignErr } = await supabaseAdmin
-              .from("ad_campaigns")
-              .update({ status: "cancelled", updated_at: new Date().toISOString() })
-              .eq("id", paymentRow.campaign_id);
-            if (cancelCampaignErr) {
-              console.error("Stripe webhook: campaign cancel on refund failed", cancelCampaignErr);
+          if (paymentRow.status !== "refunded") {
+            const { error: refundPaymentErr } = await supabaseAdmin
+              .from("payments")
+              .update({ status: "refunded" })
+              .eq("id", paymentRow.id);
+            if (refundPaymentErr) {
+              console.error("Stripe webhook: payments refund update failed", refundPaymentErr);
             }
+
+            if (paymentRow.subscription_id) {
+              const { error: cancelSubErr } = await supabaseAdmin
+                .from("subscriptions")
+                .update({ status: "cancelled", expires_at: new Date().toISOString() })
+                .eq("id", paymentRow.subscription_id);
+              if (cancelSubErr) {
+                console.error("Stripe webhook: subscription cancel on refund failed", cancelSubErr);
+              }
+            }
+
+            if (paymentRow.campaign_id) {
+              const { error: cancelCampaignErr } = await supabaseAdmin
+                .from("ad_campaigns")
+                .update({ status: "cancelled", updated_at: new Date().toISOString() })
+                .eq("id", paymentRow.campaign_id);
+              if (cancelCampaignErr) {
+                console.error("Stripe webhook: campaign cancel on refund failed", cancelCampaignErr);
+              }
+            }
+
+            // Global Premium Visibility & Contact System: Premium status
+            // is derived solely from hasAnyActivePremium() (live, from
+            // `subscriptions`) -- profiles.user_type is no longer written
+            // or read as a Premium signal anywhere, so there is nothing
+            // left to revert here once the subscription above is
+            // cancelled.
+
+            await writeAuditLog({
+              userId: paymentRow.user_id,
+              action: "payment.stripe.refunded",
+              entityType: "payment",
+              entityId: paymentRow.id,
+              newData: { payment_intent: paymentIntentId },
+            });
           }
-
-          // Global Premium Visibility & Contact System: Premium status is
-          // derived solely from hasAnyActivePremium() (live, from
-          // `subscriptions`) -- profiles.user_type is no longer written or
-          // read as a Premium signal anywhere, so there is nothing left to
-          // revert here once the subscription above is cancelled.
-
-          await writeAuditLog({
-            userId: paymentRow.user_id,
-            action: "payment.stripe.refunded",
-            entityType: "payment",
-            entityId: paymentRow.id,
-            newData: { payment_intent: paymentIntentId },
-          });
 
           return Response.json({ received: true });
         }
@@ -200,21 +247,25 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
             return Response.json({ received: true, ignored: result.reason });
           }
 
-          const { error: insertPaymentErr } = await supabaseAdmin.from("payments").insert({
-            user_id: campaignRef.user_id,
-            app_id: campaignRef.app_id,
-            campaign_id: campaignRef.campaign_id,
-            stripe_payment_id: session.id,
-            stripe_payment_intent_id:
-              typeof session.payment_intent === "string"
-                ? session.payment_intent
-                : (session.payment_intent?.id ?? null),
-            amount,
-            currency,
-            status: "success",
-            payment_method: "stripe",
-            invoice_url: session.invoice ? String(session.invoice) : null,
-          });
+          const { data: insertedCampaignPayment, error: insertPaymentErr } = await supabaseAdmin
+            .from("payments")
+            .insert({
+              user_id: campaignRef.user_id,
+              app_id: campaignRef.app_id,
+              campaign_id: campaignRef.campaign_id,
+              stripe_payment_id: session.id,
+              stripe_payment_intent_id:
+                typeof session.payment_intent === "string"
+                  ? session.payment_intent
+                  : (session.payment_intent?.id ?? null),
+              amount,
+              currency,
+              status: "success",
+              payment_method: "stripe",
+              invoice_url: session.invoice ? String(session.invoice) : null,
+            })
+            .select("id")
+            .single();
           if (insertPaymentErr) {
             console.error("Stripe webhook: campaign payment insert failed", insertPaymentErr);
           }
@@ -227,14 +278,35 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
             newData: { session_id: session.id, amount, currency, creditApplied: result.creditApplied },
           });
 
+          // Priority 16: proportional financial points (EUR paid x 10),
+          // replacing the previous flat advertising_purchase reward.
+          // Server-verified amount only (session.amount_total, never a
+          // client-supplied value). Non-EUR is deliberately not guessed
+          // at -- reported via audit log instead of silently converted.
           const { grantRewardAction } = await import("@/lib/rewards.server");
-          await grantRewardAction({
-            userId: campaignRef.user_id,
-            action: "advertising_purchase",
-            resourceType: "ad_campaign",
-            resourceId: campaignRef.campaign_id,
-            sourceAppId: campaignRef.app_id,
-          });
+          if (currency === "EUR" && insertedCampaignPayment) {
+            await grantRewardAction({
+              userId: campaignRef.user_id,
+              action: "advertising_purchase",
+              resourceType: "payment",
+              resourceId: insertedCampaignPayment.id,
+              sourceAppId: campaignRef.app_id,
+              amountEur: amount,
+              dedupeKey: `payment:${insertedCampaignPayment.id}`,
+            });
+          } else if (insertedCampaignPayment) {
+            console.warn("Stripe webhook: non-EUR campaign payment, proportional points not calculated", {
+              payment_id: insertedCampaignPayment.id,
+              currency,
+            });
+            await writeAuditLog({
+              userId: campaignRef.user_id,
+              action: "payment.stripe.non_eur_points_skipped",
+              entityType: "payment",
+              entityId: insertedCampaignPayment.id,
+              newData: { currency, amount },
+            });
+          }
 
           return Response.json({ received: true });
         }
@@ -364,21 +436,25 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
           return new Response("DB error", { status: 500 });
         }
 
-        const { error: insertPaymentErr } = await supabaseAdmin.from("payments").insert({
-          user_id: ref.user_id,
-          app_id: ref.app_id,
-          subscription_id: (sub as { id: string }).id,
-          stripe_payment_id: session.id,
-          stripe_payment_intent_id:
-            typeof session.payment_intent === "string"
-              ? session.payment_intent
-              : (session.payment_intent?.id ?? null),
-          amount,
-          currency,
-          status: "success",
-          payment_method: "stripe",
-          invoice_url: session.invoice ? String(session.invoice) : null,
-        });
+        const { data: insertedPayment, error: insertPaymentErr } = await supabaseAdmin
+          .from("payments")
+          .insert({
+            user_id: ref.user_id,
+            app_id: ref.app_id,
+            subscription_id: (sub as { id: string }).id,
+            stripe_payment_id: session.id,
+            stripe_payment_intent_id:
+              typeof session.payment_intent === "string"
+                ? session.payment_intent
+                : (session.payment_intent?.id ?? null),
+            amount,
+            currency,
+            status: "success",
+            payment_method: "stripe",
+            invoice_url: session.invoice ? String(session.invoice) : null,
+          })
+          .select("id")
+          .single();
         if (insertPaymentErr) {
           console.error("Stripe webhook: payments insert failed", insertPaymentErr);
         }
@@ -414,13 +490,33 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
         const { grantRewardAction, recordPremiumReferralIfApplicable } = await import(
           "@/lib/rewards.server"
         );
-        await grantRewardAction({
-          userId: ref.user_id,
-          action: isRenewal ? "premium_renewal" : "premium_purchase",
-          resourceType: "subscription",
-          resourceId: (sub as { id: string }).id,
-          sourceAppId: ref.app_id,
-        });
+        // Priority 16: proportional financial points (EUR paid x 10),
+        // replacing the previous flat premium_purchase/premium_renewal
+        // reward. Server-verified amount only. Non-EUR is reported, not
+        // guessed at.
+        if (currency === "EUR" && insertedPayment) {
+          await grantRewardAction({
+            userId: ref.user_id,
+            action: isRenewal ? "premium_renewal" : "premium_purchase",
+            resourceType: "payment",
+            resourceId: insertedPayment.id,
+            sourceAppId: ref.app_id,
+            amountEur: amount,
+            dedupeKey: `payment:${insertedPayment.id}`,
+          });
+        } else if (insertedPayment) {
+          console.warn("Stripe webhook: non-EUR payment, proportional points not calculated", {
+            payment_id: insertedPayment.id,
+            currency,
+          });
+          await writeAuditLog({
+            userId: ref.user_id,
+            action: "payment.stripe.non_eur_points_skipped",
+            entityType: "payment",
+            entityId: insertedPayment.id,
+            newData: { currency, amount },
+          });
+        }
         await recordPremiumReferralIfApplicable({
           userId: ref.user_id,
           subscriptionId: (sub as { id: string }).id,

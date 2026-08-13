@@ -432,8 +432,13 @@ export async function recordEvent(input: RecordEventParams): Promise<RecordEvent
   }
 
   if (points > 0) {
-    const { checkAchievements } = await import("@/lib/rewards.server");
+    const { checkAchievements, evaluatePremiumMilestones } = await import("@/lib/rewards.server");
     await checkAchievements(input.recipientUserId, input.eventKey);
+    // Priority 16: Premium Milestones are dual-metric (lifetime points +
+    // successful invites) and evaluated wherever points are granted --
+    // the event engine is the other of CORE's two point-granting paths,
+    // so it needs this exact same hook checkAchievements() already has.
+    await evaluatePremiumMilestones(input.recipientUserId);
   }
 
   return { granted: points > 0, points, lifetimePoints, reason };

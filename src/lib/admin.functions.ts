@@ -8,7 +8,7 @@ import {
   addMonthsIso,
   deleteUserAccountCascade,
 } from "@/lib/admin.server";
-import { resolvePremiumStatusBulk } from "@/lib/premium.server";
+import { resolvePremiumStatus, resolvePremiumStatusBulk } from "@/lib/premium.server";
 
 export type VerificationRow = {
   id: string;
@@ -272,6 +272,43 @@ export const adminListUsers = createServerFn({ method: "POST" })
     return { rows: rowsWithPremium, total: count ?? 0, page: data.page, pageSize: data.pageSize };
   });
 
+// Priority 16 Phase D1: resolved Premium status (active/source/expiry) for
+// the Admin User 360 modal -- calls the one existing shared resolver
+// (src/lib/premium.server.ts, Priority 8.7 R-1/R-3) instead of a second
+// "is this user Premium" calculation. Distinguishes paid subscription vs
+// Promotional Trial vs Entitlement (admin/reward-granted) by construction,
+// since that's exactly what the resolver already returns.
+export const adminGetUserPremiumStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => z.object({ user_id: z.string().uuid() }).parse(raw))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    return resolvePremiumStatus(supabaseAdmin, data.user_id);
+  });
+
+// Priority 16 Phase D1: per-user application memberships for the Admin
+// User 360 modal. user_app_settings is already the CORE-level identity <->
+// application relationship (populated during onboarding, Priority 6) --
+// this reads it, it doesn't introduce a new one. Deliberately returns only
+// identity-level fields (name/slug/domain, joined_at, visibility/
+// contactability) -- never application-specific business data, which stays
+// out of CORE per the architecture boundary.
+export const adminListUserApplications = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => z.object({ user_id: z.string().uuid() }).parse(raw))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin
+      .from("user_app_settings")
+      .select("app_id, is_visible, is_contactable, joined_at, applications(name, slug, domain)")
+      .eq("user_id", data.user_id)
+      .order("joined_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
 // ---------- User actions: edit, suspend/reactivate, delete ----------
 // Deliberately excludes first_name/last_name/avatar_url -- those are under
 // Identity Lock (see PROJECT_KNOWLEDGE.md -> Profiles); editing them is a
@@ -357,18 +394,38 @@ export const adminDeleteUser = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// Priority 16 Phase D2: optional server-side targetUserId filter, for the
+// Admin User 360 modal's Audit History tab -- the caller never fetches the
+// unfiltered log and filters client-side. audit_logs.user_id is the
+// ACTOR (the admin who performed the action), not the target, and
+// entity_id is only the target for profile-scoped actions (user.update/
+// suspend/verify) -- every other action (premium.grant, entitlement.*,
+// reward_ledger.manual_adjustment) records the target inside
+// new_data.targetUserId instead. Filtering ORs across both, matching
+// how writeAuditLog() actually records each action today, rather than
+// requiring a schema change to normalize it into one column.
+const auditLogsSchema = z.object({
+  targetUserId: z.string().uuid().optional(),
+  limit: z.number().int().min(1).max(200).default(50),
+});
+
 export const adminListAuditLogs = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((raw: unknown) => auditLogsSchema.parse(raw ?? {}))
+  .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin
+    let q = supabaseAdmin
       .from("audit_logs")
       .select("*")
       .order("created_at", { ascending: false })
-      .limit(50);
+      .limit(data.limit);
+    if (data.targetUserId) {
+      q = q.or(`entity_id.eq.${data.targetUserId},new_data->>targetUserId.eq.${data.targetUserId}`);
+    }
+    const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
-    return data ?? [];
+    return rows ?? [];
   });
 
 // ---------- Is admin (client convenience) ----------
@@ -554,6 +611,17 @@ export const adminSetVerified = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Priority 16: only a genuine false->true transition is a real
+    // approval -- an admin re-confirming an already-verified user (or
+    // rejecting one) must never grant the reward again.
+    const { data: before } = await supabaseAdmin
+      .from("profiles")
+      .select("is_verified")
+      .eq("id", data.user_id)
+      .maybeSingle();
+    const isNewApproval = data.verified && !before?.is_verified;
+
     const { error } = await supabaseAdmin
       .from("profiles")
       .update({ is_verified: data.verified })
@@ -566,6 +634,16 @@ export const adminSetVerified = createServerFn({ method: "POST" })
       entityId: data.user_id,
       newData: { is_verified: data.verified },
     });
+
+    if (isNewApproval) {
+      const { grantRewardAction } = await import("@/lib/rewards.server");
+      await grantRewardAction({
+        userId: data.user_id,
+        action: "verification",
+        dedupeKey: `verification:${data.user_id}`,
+      });
+    }
+
     return { ok: true };
   });
 

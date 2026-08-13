@@ -33,10 +33,10 @@ A separate, non-severity tag, **Architecture Deviation**, marks findings where t
 | Authentication | 1 | 3 | 4 | 2 |
 | Dashboard | 0 | 1 | 6 | 4 |
 | Admin Panel | 1 | 0 | 8 | 5 |
-| Database | 2 | 0 | 1 | 5 |
+| Database | 2 | 0 | 3 | 5 |
 | Routing | 0 | 1 | 0 | 3 |
 | Components | 0 | 1 | 4 | 2 |
-| Security (cross-cutting + payments) | 4 | 2 | 5 | 4 |
+| Security (cross-cutting + payments) | 4 | 2 | 6 | 4 |
 | Performance | 0 | 0 | 2 | 5 |
 | Billing / Subscription Lifecycle | 0 | 1 | 0 | 0 |
 | Messaging | 0 | 0 | 1 | 2 |
@@ -574,6 +574,26 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 - **Commit:** —
 - **Date:** 2026-07-26
 
+**DB-10 — `public.app_role`/`public.has_role()`/`private.has_role()` never actually existed in production despite migration history showing them as applied (recurrence of the SE-16/SE-17/DB-6 pattern)**
+- **Status:** ✅ Resolved (2026-08-13)
+- **Files:** `supabase/migrations/20260813110000_restore_missing_app_role_and_has_role.sql` (new)
+- **Description:** Discovered during Priority 16 migration-integrity remediation, and independently corroborated by a prior, undocumented 2026-07-29 discovery of the exact same root cause (see `20260729130500_admin_application_assets_policy.sql`'s own header comment): an early bulk `migration repair --status applied` operation incorrectly marked `20260724132534` and `20260725070421` as applied without them actually running. `public.app_role`, `public.has_role()`, and `private.has_role()` have therefore never existed live — confirmed twice, independently, via direct `pg_proc`/`pg_type` queries (2026-07-29 and 2026-08-13). Two later migrations (`20260811130000`, `20260811140000`) were briefly edited in place to work around this by inlining the admin check directly (`EXISTS (SELECT 1 FROM user_roles ...)`) rather than fixing the root cause — itself a violation of this repo's "never edit an applied migration" rule, since corrected (see **DB-11**, migration-integrity process finding).
+- **Risk:** Any current or future migration written against the documented architecture (`PROJECT_KNOWLEDGE.md`'s `private.has_role(..., 'admin')` convention) silently fails or has to be worked around individually, as already happened at least three times (2026-07-29, twice on 2026-08-12).
+- **Recommendation:** Recreate the missing objects once, matching the original architecture, rather than continuing to inline the check per-table.
+- **Resolution:** New migration recreates `public.app_role` (exception-safe `CREATE TYPE`) and `private.has_role()` (identical signature, security posture, and grants to the original `20260725070421` definition) — but deliberately does **not** recreate `public.has_role()`, since `20260725070421` itself superseded and dropped it in favor of `private.has_role()`; recreating it would reintroduce architecture the platform already retired. One necessary adaptation from the literal original: `user_roles.role` is live-confirmed stored as plain `text`, not the `app_role` enum the original function body assumed (per `20260729130500`'s own finding) — the comparison now casts both sides to `text` (`role::text = _role::text`) so the function actually works against the real column, while its signature/security model stay unchanged so every existing `private.has_role(auth.uid(), 'admin'::public.app_role)` call site continues to work without modification. Deliberately scoped narrowly: does **not** restore the ~9 admin RLS policies (`applications`, `audit_logs`, `notifications`, `payments`, `subscription_plans`, `subscriptions`, `user_roles`, `profiles`, `storage.objects`) that `20260725070421` also defines — see **SE-19** for that separately-tracked gap.
+- **Commit:** —
+- **Date:** Logged 2026-08-13 (recurrence of a 2026-07-29 discovery that was never itself logged), resolved 2026-08-13
+
+**DB-11 — Three already-applied migrations were briefly edited in place instead of superseded by new migrations**
+- **Status:** ✅ Resolved (2026-08-13)
+- **Files:** `supabase/migrations/20260811130000_entitlements_and_reward_hardening.sql`, `supabase/migrations/20260811140000_communication_and_support.sql`, `supabase/migrations/20260812110000_members_config_standard_status.sql`
+- **Description:** During in-progress, uncommitted Priority 16 work, these three already-applied migrations were edited in place to reflect corrections discovered live in production (the DB-10 has_role gap, and separately a `members_config` key drift — see resolution). This is a direct violation of this repo's Migration Rules ("never edit a migration that has already been applied/committed").
+- **Risk:** A fresh database replaying migration history and production (which doesn't re-run already-applied files) would diverge in what each file's content implies happened, and any future `supabase migration repair`/checksum validation would see local content disagree with what was recorded as applied.
+- **Recommendation:** Restore all three to their exact committed content; represent the actual corrections as new, standalone migrations instead.
+- **Resolution:** All three files restored byte-for-byte to their committed content (`ab92989`, `f9b7d51`, `bafbe76` respectively — verified via `git diff` showing zero difference). The has_role correction now lives in its own migration (**DB-10**'s resolution); the `members_config` correction now lives in its own migration (`20260813100000_members_config_standard_section_cleanup.sql`, idempotent, reconciling the same production drift the in-place edit had described — see `PROJECT_KNOWLEDGE.md` → Members for the final `members_config` shape).
+- **Commit:** —
+- **Date:** Logged and resolved 2026-08-13
+
 ### Low
 
 **DB-4 — `is_user_premium()` is not scoped per application, despite a per-app subscription/pricing model**
@@ -936,6 +956,16 @@ This section aggregates the highest-impact, trust-boundary-crossing issues found
 - **Resolution:** Added `payments_paypal_payment_id_key UNIQUE (paypal_payment_id)` (migration `20260727090000_...sql`) — NULLs are unaffected by design (every Stripe payment row has `paypal_payment_id = NULL`), so this only constrains actual PayPal capture IDs against each other. Paired with the required minimal code adjustment: the `payments` insert in `paypal.ts` now checks its own error and short-circuits (`duplicate: true`) if the constraint rejects it, instead of silently continuing on to flip `profiles.user_type`, send a notification, write an audit log entry, and fire n8n events for a payment that was never actually recorded a second time. **Known limitation, disclosed rather than silently assumed away:** Postgres doesn't support `NOT VALID` for `UNIQUE` constraints (only `CHECK`/`FOREIGN KEY`), so this migration scans the existing table and will fail to apply if any duplicate non-null `paypal_payment_id` already exists in production — this could not be verified against the live database from this environment.
 - **Commit:** —
 - **Date:** Logged 2026-07-27, resolved 2026-07-27
+
+**SE-19 — ~9 admin RLS policies from `20260725070421` never actually exist in production, since that migration never ran (see DB-10) — currently mitigated only by service-role bypass, not fixed**
+- **Status:** Open — explicitly NOT bundled into the DB-10/DB-11 migration-integrity repair; requires its own security review before implementation
+- **Files:** `supabase/migrations/20260725070421_432f3b63-9cdc-48d8-8393-c21afa2d58fd.sql` (the migration that defines, but never applied, these policies)
+- **Description:** `20260725070421` defines admin-gated RLS policies for `applications`, `audit_logs`, `notifications`, `payments` (×2), `subscription_plans`, `subscriptions` (×2), `user_roles`, `profiles` ("Admins view all profiles" — the exact policy `PROJECT_KNOWLEDGE.md` cites as canonical), and `storage.objects` (app-logos bucket). Since the migration never actually applied (DB-10), none of these ~11 policy statements across 9 tables/objects exist live. First identified in `20260729130300_restore_missing_public_profile_views.sql`'s own header comment on 2026-07-29 ("flagged separately, not addressed here") but never turned into a tracked finding until now.
+- **Risk:** Defense-in-depth gap, not a currently-exploitable one: every admin write path in this codebase already goes through `assertAdmin()` + `supabaseAdmin` (service role, which bypasses RLS entirely), so no observed admin-panel breakage results. But it means these 9 tables currently have no admin-specific RLS protection at all for any hypothetical direct-authenticated-session access path, contrary to documented architecture ("RLS is the enforcement boundary, not an afterthought" — `CLAUDE.md`).
+- **Recommendation:** A dedicated pass recreating these 9 policies via `private.has_role()` (now restored by DB-10), reviewed specifically for whether any of the 9 tables has a *non-admin-panel* authenticated-client read/write path that RLS is the only thing currently protecting.
+- **Resolution:** —
+- **Commit:** —
+- **Date:** First observed 2026-07-29 (undocumented until now), logged 2026-08-13
 
 ### Low
 

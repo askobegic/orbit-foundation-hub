@@ -15,7 +15,7 @@ import type { UserLanguage } from "@/types/database";
 import { useServerFn } from "@tanstack/react-start";
 import { notifyNewUserRegistered } from "@/lib/notifications.functions";
 import { consumeReferral } from "@/lib/referral";
-import { linkReferral } from "@/lib/rewards.functions";
+import { completeOnboardingRewards, linkReferral } from "@/lib/rewards.functions";
 
 export const Route = createFileRoute("/onboarding")({
   component: OnboardingPage,
@@ -28,6 +28,7 @@ function OnboardingPage() {
   const navigate = useNavigate();
   const notifyNewUser = useServerFn(notifyNewUserRegistered);
   const linkReferralFn = useServerFn(linkReferral);
+  const completeOnboardingRewardsFn = useServerFn(completeOnboardingRewards);
 
   const [step, setStep] = useState<1 | 2>(1);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -137,6 +138,15 @@ function OnboardingPage() {
         await notifyNewUser({});
       } catch (err) {
         console.warn("[n8n] notify new user failed", err);
+      }
+      try {
+        // Priority 16: registration + profile-completed CORE points (and
+        // the referrer's "invited user completed profile" reward, if
+        // applicable) -- both happen in this one onboarding step in this
+        // app today.
+        await completeOnboardingRewardsFn({});
+      } catch (err) {
+        console.warn("[rewards] onboarding rewards failed", err);
       }
       const referrerUsername = consumeReferral();
       if (referrerUsername) {

@@ -8,6 +8,7 @@ import {
   BadgeCheck,
   Coins,
   Crown,
+  MessageSquare,
   Pencil,
   Search,
   Trash2,
@@ -21,8 +22,10 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { supabase } from "@/integrations/supabase/client";
 import {
   adminDeleteUser,
+  adminGetUserPremiumStatus,
   adminGrantPremium,
   adminListAuditLogs,
+  adminListUserApplications,
   adminListUsers,
   adminRevokePremium,
   adminSetUserActive,
@@ -30,7 +33,8 @@ import {
   adminUpdateUser,
   getMyIsAdmin,
 } from "@/lib/admin.functions";
-import { adminAdjustRewardPoints } from "@/lib/rewards.functions";
+import { adminAdjustRewardPoints, adminListUserRewardLedger } from "@/lib/rewards.functions";
+import { adminGetUserActivity } from "@/lib/activity-dashboard.functions";
 import {
   adminExtendEntitlement,
   adminGrantEntitlement,
@@ -116,7 +120,7 @@ function AdminUsers() {
   const total = usersQ.data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  const auditQ = useQuery({ queryKey: ["admin-audit"], queryFn: () => auditFn() });
+  const auditQ = useQuery({ queryKey: ["admin-audit"], queryFn: () => auditFn({ data: {} }) });
 
   const appsQ = useQuery({
     queryKey: ["admin-apps-simple"],
@@ -127,6 +131,17 @@ function AdminUsers() {
   });
 
   const [modal, setModal] = useState<null | UserRow>(null);
+  const [tab, setTab] = useState<
+    | "profile"
+    | "account"
+    | "premium"
+    | "points"
+    | "benefits"
+    | "applications"
+    | "activity"
+    | "audit"
+    | "message"
+  >("profile");
   const [editing, setEditing] = useState(false);
   const [editCity, setEditCity] = useState("");
   const [editCountry, setEditCountry] = useState("");
@@ -143,6 +158,7 @@ function AdminUsers() {
 
   function openModal(row: UserRow) {
     setModal(row);
+    setTab("profile");
     setEditing(false);
     setEditCity(row.city ?? "");
     setEditCountry(row.country ?? "");
@@ -222,6 +238,49 @@ function AdminUsers() {
     queryFn: () => listEntitlementsFn({ data: { userId: modal!.id } }),
   });
 
+  // Priority 16 Phase D1: User 360 completion -- Reward Ledger, Premium
+  // source/expiry, and Application Memberships. All three reuse existing
+  // resolvers/tables (computeBalance(), resolvePremiumStatus(),
+  // user_app_settings) -- see adminListUserRewardLedger/
+  // adminGetUserPremiumStatus/adminListUserApplications.
+  const ledgerFn = useServerFn(adminListUserRewardLedger);
+  const premiumStatusFn = useServerFn(adminGetUserPremiumStatus);
+  const userAppsFn = useServerFn(adminListUserApplications);
+
+  const userLedgerQ = useQuery({
+    queryKey: ["admin-user-ledger", modal?.id],
+    enabled: !!modal && tab === "points",
+    queryFn: () => ledgerFn({ data: { userId: modal!.id } }),
+  });
+  const userPremiumStatusQ = useQuery({
+    queryKey: ["admin-user-premium-status", modal?.id],
+    enabled: !!modal && tab === "premium",
+    queryFn: () => premiumStatusFn({ data: { user_id: modal!.id } }),
+  });
+  const userAppsQ = useQuery({
+    queryKey: ["admin-user-apps", modal?.id],
+    enabled: !!modal && tab === "applications",
+    queryFn: () => userAppsFn({ data: { user_id: modal!.id } }),
+  });
+
+  // Priority 16 Phase D2: Activity (cross-app aggregation, reused from the
+  // user's own dashboard) and Audit History (server-side targetUserId
+  // filter on the existing audit_logs table) -- both lazy, only fetched
+  // once their tab is actually opened.
+  const userActivityFn = useServerFn(adminGetUserActivity);
+  const userAuditFn = useServerFn(adminListAuditLogs);
+
+  const userActivityQ = useQuery({
+    queryKey: ["admin-user-activity", modal?.id],
+    enabled: !!modal && tab === "activity",
+    queryFn: () => userActivityFn({ data: { userId: modal!.id } }),
+  });
+  const userAuditQ = useQuery({
+    queryKey: ["admin-user-audit", modal?.id],
+    enabled: !!modal && tab === "audit",
+    queryFn: () => userAuditFn({ data: { targetUserId: modal!.id, limit: 100 } }),
+  });
+
   const doGrantEntitlement = useMutation({
     mutationFn: () =>
       grantEntitlementFn({
@@ -249,7 +308,13 @@ function AdminUsers() {
 
   const doExtendEntitlement = useMutation({
     mutationFn: (vars: { id: string; days: number }) =>
-      extendEntitlementFn({ data: { entitlementId: vars.id, additionalDays: vars.days, reason: entReason.trim() || "Extended by admin" } }),
+      extendEntitlementFn({
+        data: {
+          entitlementId: vars.id,
+          additionalDays: vars.days,
+          reason: entReason.trim() || "Extended by admin",
+        },
+      }),
     onSuccess: () => {
       toast.success(t("admin.users.entitlementExtended"));
       qc.invalidateQueries({ queryKey: ["admin-user-entitlements", modal?.id] });
@@ -260,7 +325,9 @@ function AdminUsers() {
 
   const doRevokeEntitlement = useMutation({
     mutationFn: (id: string) =>
-      revokeEntitlementFn({ data: { entitlementId: id, reason: entReason.trim() || "Revoked by admin" } }),
+      revokeEntitlementFn({
+        data: { entitlementId: id, reason: entReason.trim() || "Revoked by admin" },
+      }),
     onSuccess: () => {
       toast.success(t("admin.users.entitlementRevoked"));
       qc.invalidateQueries({ queryKey: ["admin-user-entitlements", modal?.id] });
@@ -553,7 +620,7 @@ function AdminUsers() {
 
       {modal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-lg">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-lg">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-semibold">
                 {t("admin.users.manageModalTitle", { email: modal.email })}
@@ -567,361 +634,728 @@ function AdminUsers() {
               </button>
             </div>
 
-            {/* User details */}
-            <div className="mb-4 rounded-xl border border-gray-100 p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase text-gray-500">
-                  {t("admin.users.userDetailsTitle")}
-                </p>
+            {/* Priority 16 Phase D1: tabbed User 360 -- same modal, same
+                design language, just organized so Ledger/Applications (new)
+                and Premium/Points/Benefits (existing) don't all have to be
+                one long scroll. */}
+            <div className="mb-4 flex flex-wrap gap-1 border-b border-gray-100 pb-2">
+              {(
+                [
+                  ["profile", t("admin.users.tabProfile")],
+                  ["account", t("admin.users.tabAccount")],
+                  ["premium", t("admin.users.tabPremium")],
+                  ["points", t("admin.users.tabPoints")],
+                  ["benefits", t("admin.users.tabBenefits")],
+                  ["applications", t("admin.users.tabApplications")],
+                  ["activity", t("admin.users.tabActivity")],
+                  ["audit", t("admin.users.tabAudit")],
+                  ["message", t("admin.users.tabMessage")],
+                ] as const
+              ).map(([key, label]) => (
                 <button
-                  onClick={() => setEditing((v) => !v)}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-[#1D6BF3] hover:underline"
+                  key={key}
+                  onClick={() => setTab(key)}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
+                    tab === key ? "bg-[#1D6BF3] text-white" : "text-gray-600 hover:bg-gray-100"
+                  }`}
                 >
-                  <Pencil className="h-3 w-3" /> {editing ? t("common.cancel") : t("common.edit")}
+                  {label}
                 </button>
-              </div>
+              ))}
+            </div>
 
-              {!editing ? (
-                <div className="grid grid-cols-1 gap-x-4 gap-y-1 text-sm sm:grid-cols-2">
-                  <Field
-                    label={t("admin.users.fieldName")}
-                    value={[modal.first_name, modal.last_name].filter(Boolean).join(" ") || "—"}
-                  />
-                  <Field label={t("admin.users.colEmail")} value={modal.email ?? "—"} />
-                  <Field
-                    label={t("admin.users.fieldUserType")}
-                    value={
-                      modal.is_premium
-                        ? t("admin.users.typePremium")
-                        : t("admin.users.typeStandard")
-                    }
-                  />
-                  <Field
-                    label={t("admin.users.fieldVerified")}
-                    value={modal.is_verified ? t("admin.users.yes") : t("admin.users.no")}
-                  />
-                  <Field label={t("admin.users.fieldCountry")} value={modal.country ?? "—"} />
-                  <Field label={t("admin.users.colCity")} value={modal.city ?? "—"} />
-                  <Field
-                    label={t("admin.users.fieldRegistered")}
-                    value={modal.created_at ? new Date(modal.created_at).toLocaleDateString() : "—"}
-                  />
-                  <Field
-                    label={t("admin.users.fieldLastUpdate")}
-                    value={modal.updated_at ? new Date(modal.updated_at).toLocaleDateString() : "—"}
-                  />
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <Field label={t("admin.users.colEmail")} value={modal.email ?? "—"} />
-                  <EditField
-                    label={t("admin.users.fieldUsername")}
-                    value={editUsername}
-                    onChange={setEditUsername}
-                  />
-                  <EditField
-                    label={t("admin.users.colCity")}
-                    value={editCity}
-                    onChange={setEditCity}
-                  />
-                  <EditField
-                    label={t("admin.users.fieldCountry")}
-                    value={editCountry}
-                    onChange={setEditCountry}
-                  />
-                  <p className="col-span-2 text-[11px] text-gray-400">
-                    {t("admin.users.identityLockedNote")}
+            {/* Profile */}
+            {tab === "profile" && (
+              <div className="rounded-xl border border-gray-100 p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase text-gray-500">
+                    {t("admin.users.userDetailsTitle")}
                   </p>
                   <button
-                    onClick={() => doUpdate.mutate()}
-                    disabled={doUpdate.isPending}
-                    className="col-span-2 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#1858cf] disabled:opacity-60"
+                    onClick={() => setEditing((v) => !v)}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-[#1D6BF3] hover:underline"
                   >
-                    {doUpdate.isPending ? t("common.saving") : t("admin.users.saveChanges")}
+                    <Pencil className="h-3 w-3" /> {editing ? t("common.cancel") : t("common.edit")}
                   </button>
                 </div>
-              )}
-            </div>
 
-            {/* Account actions */}
-            <div className="mb-4 flex flex-wrap gap-2 border-b border-gray-100 pb-4">
-              {modal.is_active === false ? (
+                {!editing ? (
+                  <div className="grid grid-cols-1 gap-x-4 gap-y-1 text-sm sm:grid-cols-2">
+                    <Field
+                      label={t("admin.users.fieldName")}
+                      value={[modal.first_name, modal.last_name].filter(Boolean).join(" ") || "—"}
+                    />
+                    <Field label={t("admin.users.colEmail")} value={modal.email ?? "—"} />
+                    <Field
+                      label={t("admin.users.fieldUserType")}
+                      value={
+                        modal.is_premium
+                          ? t("admin.users.typePremium")
+                          : t("admin.users.typeStandard")
+                      }
+                    />
+                    <Field
+                      label={t("admin.users.fieldVerified")}
+                      value={modal.is_verified ? t("admin.users.yes") : t("admin.users.no")}
+                    />
+                    <Field label={t("admin.users.fieldCountry")} value={modal.country ?? "—"} />
+                    <Field label={t("admin.users.colCity")} value={modal.city ?? "—"} />
+                    <Field
+                      label={t("admin.users.fieldRegistered")}
+                      value={
+                        modal.created_at ? new Date(modal.created_at).toLocaleDateString() : "—"
+                      }
+                    />
+                    <Field
+                      label={t("admin.users.fieldLastUpdate")}
+                      value={
+                        modal.updated_at ? new Date(modal.updated_at).toLocaleDateString() : "—"
+                      }
+                    />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <Field label={t("admin.users.colEmail")} value={modal.email ?? "—"} />
+                    <EditField
+                      label={t("admin.users.fieldUsername")}
+                      value={editUsername}
+                      onChange={setEditUsername}
+                    />
+                    <EditField
+                      label={t("admin.users.colCity")}
+                      value={editCity}
+                      onChange={setEditCity}
+                    />
+                    <EditField
+                      label={t("admin.users.fieldCountry")}
+                      value={editCountry}
+                      onChange={setEditCountry}
+                    />
+                    <p className="col-span-2 text-[11px] text-gray-400">
+                      {t("admin.users.identityLockedNote")}
+                    </p>
+                    <button
+                      onClick={() => doUpdate.mutate()}
+                      disabled={doUpdate.isPending}
+                      className="col-span-2 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#1858cf] disabled:opacity-60"
+                    >
+                      {doUpdate.isPending ? t("common.saving") : t("admin.users.saveChanges")}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Account */}
+            {tab === "account" && (
+              <div className="flex flex-wrap gap-2">
+                {modal.is_active === false ? (
+                  <button
+                    onClick={() => doSetActive.mutate(true)}
+                    disabled={doSetActive.isPending}
+                    className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-60"
+                  >
+                    <UserCheck className="h-3.5 w-3.5" /> {t("admin.users.reactivate")}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => doSetActive.mutate(false)}
+                    disabled={doSetActive.isPending}
+                    className="inline-flex items-center gap-1 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-60"
+                  >
+                    <UserX className="h-3.5 w-3.5" /> {t("admin.users.suspend")}
+                  </button>
+                )}
+                {modal.is_verified ? (
+                  <button
+                    onClick={() => doVerify.mutate(false)}
+                    disabled={doVerify.isPending}
+                    className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                  >
+                    <X className="h-3.5 w-3.5" /> {t("admin.users.revokeVerification")}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => doVerify.mutate(true)}
+                    disabled={doVerify.isPending}
+                    className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#1858cf] disabled:opacity-60"
+                  >
+                    <BadgeCheck className="h-3.5 w-3.5" /> {t("admin.users.approveVerification")}
+                  </button>
+                )}
                 <button
-                  onClick={() => doSetActive.mutate(true)}
-                  disabled={doSetActive.isPending}
-                  className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-60"
+                  onClick={handleDelete}
+                  disabled={doDelete.isPending}
+                  className="ml-auto inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 disabled:opacity-60"
                 >
-                  <UserCheck className="h-3.5 w-3.5" /> {t("admin.users.reactivate")}
+                  <Trash2 className="h-3.5 w-3.5" /> {t("admin.users.deleteUser")}
                 </button>
-              ) : (
-                <button
-                  onClick={() => doSetActive.mutate(false)}
-                  disabled={doSetActive.isPending}
-                  className="inline-flex items-center gap-1 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-60"
-                >
-                  <UserX className="h-3.5 w-3.5" /> {t("admin.users.suspend")}
-                </button>
-              )}
-              {modal.is_verified ? (
-                <button
-                  onClick={() => doVerify.mutate(false)}
-                  disabled={doVerify.isPending}
-                  className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
-                >
-                  <X className="h-3.5 w-3.5" /> {t("admin.users.revokeVerification")}
-                </button>
-              ) : (
-                <button
-                  onClick={() => doVerify.mutate(true)}
-                  disabled={doVerify.isPending}
-                  className="inline-flex items-center gap-1 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#1858cf] disabled:opacity-60"
-                >
-                  <BadgeCheck className="h-3.5 w-3.5" /> {t("admin.users.approveVerification")}
-                </button>
-              )}
-              <button
-                onClick={handleDelete}
-                disabled={doDelete.isPending}
-                className="ml-auto inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 disabled:opacity-60"
-              >
-                <Trash2 className="h-3.5 w-3.5" /> {t("admin.users.deleteUser")}
-              </button>
-            </div>
+              </div>
+            )}
 
             {/* Premium */}
-            <div className="mb-4 space-y-2">
-              <p className="text-xs font-semibold uppercase text-gray-500">
-                {t("admin.users.activeSubscriptionsTitle")}
-              </p>
-              {(userSubsQ.data ?? []).length === 0 ? (
-                <p className="text-sm text-gray-500">{t("admin.common.none")}</p>
-              ) : (
-                <ul className="space-y-1">
-                  {(userSubsQ.data ?? []).map((s) => {
-                    const r = s as {
-                      id: string;
-                      status: string;
-                      expires_at: string;
-                      applications: { name: string } | null;
-                    };
-                    return (
-                      <li
-                        key={r.id}
-                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-gray-100 px-3 py-2 text-sm"
-                      >
-                        <span className="min-w-0 flex-1 truncate">
-                          {r.applications?.name ?? "?"} · {r.status} ·{" "}
-                          {new Date(r.expires_at).toLocaleDateString()}
-                        </span>
-                        {r.status === "active" && (
-                          <button
-                            onClick={() => doRevoke.mutate(r.id)}
-                            className="shrink-0 rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-100"
+            {tab === "premium" && (
+              <div className="space-y-4">
+                <div>
+                  <p className="mb-2 text-xs font-semibold uppercase text-gray-500">
+                    {t("admin.users.premiumStatusTitle")}
+                  </p>
+                  {userPremiumStatusQ.isLoading ? (
+                    <p className="text-sm text-gray-500">{t("common.loading")}</p>
+                  ) : userPremiumStatusQ.data?.active ? (
+                    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-100 px-3 py-2 text-sm">
+                      <span className="rounded-full bg-gradient-to-r from-[#F59E0B] to-[#EF4444] px-2 py-0.5 text-[10px] font-semibold text-white">
+                        {userPremiumStatusQ.data.source === "subscription"
+                          ? t("admin.users.premiumSourcePaid")
+                          : userPremiumStatusQ.data.source === "trial"
+                            ? t("admin.users.premiumSourceTrial")
+                            : t("admin.users.premiumSourceEntitlement")}
+                      </span>
+                      <span className="text-gray-500">
+                        {userPremiumStatusQ.data.expiresAt
+                          ? t("admin.users.premiumExpiresOn", {
+                              date: new Date(
+                                userPremiumStatusQ.data.expiresAt,
+                              ).toLocaleDateString(),
+                            })
+                          : t("admin.users.premiumNeverExpires")}
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">{t("admin.users.premiumInactive")}</p>
+                  )}
+                </div>
+
+                <div>
+                  <p className="mb-2 text-xs font-semibold uppercase text-gray-500">
+                    {t("admin.users.activeSubscriptionsTitle")}
+                  </p>
+                  {(userSubsQ.data ?? []).length === 0 ? (
+                    <p className="text-sm text-gray-500">{t("admin.common.none")}</p>
+                  ) : (
+                    <ul className="space-y-1">
+                      {(userSubsQ.data ?? []).map((s) => {
+                        const r = s as {
+                          id: string;
+                          status: string;
+                          expires_at: string;
+                          applications: { name: string } | null;
+                        };
+                        return (
+                          <li
+                            key={r.id}
+                            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-gray-100 px-3 py-2 text-sm"
                           >
-                            {t("admin.common.revoke")}
-                          </button>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
+                            <span className="min-w-0 flex-1 truncate">
+                              {r.applications?.name ?? "?"} · {r.status} ·{" "}
+                              {new Date(r.expires_at).toLocaleDateString()}
+                            </span>
+                            {r.status === "active" && (
+                              <button
+                                onClick={() => doRevoke.mutate(r.id)}
+                                className="shrink-0 rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-100"
+                              >
+                                {t("admin.common.revoke")}
+                              </button>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
 
-            {/* Reward points adjustment (Priority 12 Phase 4) */}
-            <div className="mb-4 border-t border-gray-100 pt-4">
-              <p className="mb-2 text-xs font-semibold uppercase text-gray-500">
-                {t("admin.users.rewardAdjustmentTitle")}
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <label className="flex flex-col gap-1 text-xs">
-                  {t("admin.users.rewardAdjustmentPoints")}
-                  <input
-                    type="number"
-                    value={adjPoints}
-                    onChange={(e) => setAdjPoints(Number(e.target.value))}
-                    className="rounded-lg border border-gray-200 px-2 py-1 text-sm"
-                  />
-                </label>
-                <label className="col-span-2 flex flex-col gap-1 text-xs">
-                  {t("admin.users.rewardAdjustmentReason")}
-                  <input
-                    value={adjReason}
-                    onChange={(e) => setAdjReason(e.target.value)}
-                    className="rounded-lg border border-gray-200 px-2 py-1 text-sm"
-                    placeholder={t("admin.users.rewardAdjustmentReasonPlaceholder")}
-                  />
-                </label>
-              </div>
-              <button
-                onClick={() => doAdjustPoints.mutate()}
-                disabled={adjPoints === 0 || !adjReason.trim() || doAdjustPoints.isPending}
-                className="mt-3 inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-              >
-                <Coins className="h-4 w-4" />
-                {t("admin.users.rewardAdjustmentApply")}
-              </button>
-            </div>
-
-            {/* Entitlements: Grant/Extend/Revoke Benefit (Priority 15 Phase C) */}
-            <div className="mb-4 border-t border-gray-100 pt-4">
-              <p className="mb-2 text-xs font-semibold uppercase text-gray-500">
-                {t("admin.users.entitlementsTitle")}
-              </p>
-              {(userEntitlementsQ.data ?? []).length > 0 && (
-                <ul className="mb-3 space-y-1">
-                  {userEntitlementsQ.data!.map((e) => {
-                    const row = e as unknown as {
-                      id: string;
-                      benefit_type: string;
-                      status: string;
-                      ends_at: string | null;
-                      applications: { name: string } | null;
-                    };
-                    return (
-                      <li
-                        key={row.id}
-                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-gray-100 px-3 py-2 text-sm"
+                <div className="border-t border-gray-100 pt-4">
+                  <p className="mb-2 text-xs font-semibold uppercase text-gray-500">
+                    {t("admin.users.grantPremiumTitle")}
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="flex flex-col gap-1 text-xs">
+                      {t("admin.users.app")}
+                      <select
+                        value={selApp}
+                        onChange={(e) => setSelApp(e.target.value)}
+                        className="rounded-lg border border-gray-200 px-2 py-1 text-sm"
                       >
-                        <span className="min-w-0 flex-1 truncate">
-                          {row.benefit_type} · {row.applications?.name ?? t("admin.engagement.scopeGlobal")} ·{" "}
-                          {row.status}
-                          {row.ends_at ? ` · ${new Date(row.ends_at).toLocaleDateString()}` : ""}
-                        </span>
-                        {row.status === "active" && (
-                          <div className="flex shrink-0 items-center gap-2">
-                            <button
-                              onClick={() => doExtendEntitlement.mutate({ id: row.id, days: 14 })}
-                              className="rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-100"
+                        {(appsQ.data ?? []).map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="flex flex-col gap-1 text-xs">
+                      {t("admin.users.months")}
+                      <input
+                        type="number"
+                        min={1}
+                        max={60}
+                        value={months}
+                        onChange={(e) => setMonths(Number(e.target.value))}
+                        className="rounded-lg border border-gray-200 px-2 py-1 text-sm"
+                      />
+                    </label>
+                    <label className="col-span-2 flex flex-col gap-1 text-xs">
+                      {t("admin.common.reason")}
+                      <input
+                        value={reason}
+                        onChange={(e) => setReason(e.target.value)}
+                        className="rounded-lg border border-gray-200 px-2 py-1 text-sm"
+                        placeholder={t("admin.users.reasonOptionalNote")}
+                      />
+                    </label>
+                  </div>
+                  <button
+                    onClick={() => doGrant.mutate()}
+                    disabled={!selApp || doGrant.isPending}
+                    className="mt-3 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-[#F59E0B] to-[#EF4444] px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                  >
+                    <Crown className="h-4 w-4" />
+                    {t("admin.users.grantPremium")}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Points / Ledger */}
+            {tab === "points" && (
+              <div className="space-y-4">
+                <div>
+                  <p className="mb-2 text-xs font-semibold uppercase text-gray-500">
+                    {t("admin.users.pointsBalanceTitle")}
+                  </p>
+                  {userLedgerQ.isLoading ? (
+                    <p className="text-sm text-gray-500">{t("common.loading")}</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-4 rounded-lg border border-gray-100 px-3 py-2 text-sm">
+                      <span>
+                        {t("admin.users.rewardPointsBalance")}:{" "}
+                        <strong>{userLedgerQ.data?.rewardPoints ?? 0}</strong>
+                      </span>
+                      <span>
+                        {t("admin.users.lifetimePointsBalance")}:{" "}
+                        <strong>{userLedgerQ.data?.lifetimePoints ?? 0}</strong>
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <p className="mb-2 text-xs font-semibold uppercase text-gray-500">
+                    {t("admin.users.ledgerTitle")}
+                  </p>
+                  {(userLedgerQ.data?.entries ?? []).length === 0 ? (
+                    <p className="text-sm text-gray-500">{t("admin.common.none")}</p>
+                  ) : (
+                    <ul className="max-h-64 space-y-1 overflow-y-auto">
+                      {userLedgerQ.data!.entries.map((e) => (
+                        <li
+                          key={e.id}
+                          className="rounded-lg border border-gray-100 px-3 py-2 text-sm"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="font-medium">{e.action}</span>
+                            <span
+                              className={
+                                e.points < 0
+                                  ? "font-semibold text-red-600"
+                                  : "font-semibold text-green-600"
+                              }
                             >
-                              {t("admin.users.entitlementExtend14")}
-                            </button>
-                            <button
-                              onClick={() => doRevokeEntitlement.mutate(row.id)}
-                              className="rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-100"
-                            >
-                              {t("admin.common.revoke")}
-                            </button>
+                              {e.points > 0 ? `+${e.points}` : e.points}
+                            </span>
                           </div>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-              <div className="grid grid-cols-2 gap-3">
-                <label className="flex flex-col gap-1 text-xs">
-                  {t("admin.users.entitlementBenefitType")}
-                  <select
-                    value={entBenefitType}
-                    onChange={(e) => setEntBenefitType(e.target.value)}
-                    className="rounded-lg border border-gray-200 px-2 py-1 text-sm"
-                  >
-                    <option value="premium_duration">Premium</option>
-                    <option value="vip">VIP</option>
-                    <option value="feature_access">Feature Access</option>
-                  </select>
-                </label>
-                <label className="flex flex-col gap-1 text-xs">
-                  {t("admin.engagement.scope")}
-                  <select
-                    value={entAppId}
-                    onChange={(e) => setEntAppId(e.target.value)}
-                    className="rounded-lg border border-gray-200 px-2 py-1 text-sm"
-                  >
-                    <option value="">{t("admin.engagement.scopeGlobal")}</option>
-                    {(appsQ.data ?? []).map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="flex flex-col gap-1 text-xs">
-                  {t("admin.users.entitlementDurationDays")}
-                  <input
-                    type="number"
-                    min={1}
-                    value={entDurationDays}
-                    onChange={(e) => setEntDurationDays(Number(e.target.value) || 0)}
-                    className="rounded-lg border border-gray-200 px-2 py-1 text-sm"
-                  />
-                </label>
-                <label className="col-span-2 flex flex-col gap-1 text-xs">
-                  {t("admin.users.rewardAdjustmentReason")}
-                  <input
-                    value={entReason}
-                    onChange={(e) => setEntReason(e.target.value)}
-                    className="rounded-lg border border-gray-200 px-2 py-1 text-sm"
-                  />
-                </label>
-              </div>
-              <button
-                onClick={() => doGrantEntitlement.mutate()}
-                disabled={!entReason.trim() || doGrantEntitlement.isPending}
-                className="mt-3 inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-              >
-                <BadgeCheck className="h-4 w-4" />
-                {t("admin.users.entitlementGrant")}
-              </button>
-            </div>
+                          <div className="mt-0.5 text-xs text-gray-500">
+                            {new Date(e.createdAt).toLocaleString()} · {e.origin}
+                            {e.appName ? ` · ${e.appName}` : ""}
+                            {e.resourceType ? ` · ${e.resourceType}` : ""}
+                          </div>
+                          {e.reason && (
+                            <div className="mt-0.5 text-xs italic text-gray-500">
+                              {t("admin.common.reason")}: {e.reason}
+                            </div>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
 
-            <div className="mb-3 border-t border-gray-100 pt-4">
-              <p className="mb-2 text-xs font-semibold uppercase text-gray-500">
-                {t("admin.users.grantPremiumTitle")}
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <label className="flex flex-col gap-1 text-xs">
-                  {t("admin.users.app")}
-                  <select
-                    value={selApp}
-                    onChange={(e) => setSelApp(e.target.value)}
-                    className="rounded-lg border border-gray-200 px-2 py-1 text-sm"
+                <div className="border-t border-gray-100 pt-4">
+                  <p className="mb-2 text-xs font-semibold uppercase text-gray-500">
+                    {t("admin.users.rewardAdjustmentTitle")}
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="flex flex-col gap-1 text-xs">
+                      {t("admin.users.rewardAdjustmentPoints")}
+                      <input
+                        type="number"
+                        value={adjPoints}
+                        onChange={(e) => setAdjPoints(Number(e.target.value))}
+                        className="rounded-lg border border-gray-200 px-2 py-1 text-sm"
+                      />
+                    </label>
+                    <label className="col-span-2 flex flex-col gap-1 text-xs">
+                      {t("admin.users.rewardAdjustmentReason")}
+                      <input
+                        value={adjReason}
+                        onChange={(e) => setAdjReason(e.target.value)}
+                        className="rounded-lg border border-gray-200 px-2 py-1 text-sm"
+                        placeholder={t("admin.users.rewardAdjustmentReasonPlaceholder")}
+                      />
+                    </label>
+                  </div>
+                  <button
+                    onClick={() => doAdjustPoints.mutate()}
+                    disabled={adjPoints === 0 || !adjReason.trim() || doAdjustPoints.isPending}
+                    className="mt-3 inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50"
                   >
-                    {(appsQ.data ?? []).map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="flex flex-col gap-1 text-xs">
-                  {t("admin.users.months")}
-                  <input
-                    type="number"
-                    min={1}
-                    max={60}
-                    value={months}
-                    onChange={(e) => setMonths(Number(e.target.value))}
-                    className="rounded-lg border border-gray-200 px-2 py-1 text-sm"
-                  />
-                </label>
-                <label className="col-span-2 flex flex-col gap-1 text-xs">
-                  {t("admin.common.reason")}
-                  <input
-                    value={reason}
-                    onChange={(e) => setReason(e.target.value)}
-                    className="rounded-lg border border-gray-200 px-2 py-1 text-sm"
-                    placeholder={t("admin.users.reasonOptionalNote")}
-                  />
-                </label>
+                    <Coins className="h-4 w-4" />
+                    {t("admin.users.rewardAdjustmentApply")}
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
-            <div className="flex justify-end gap-2">
+            {/* Benefits / Entitlements */}
+            {tab === "benefits" && (
+              <div>
+                {(userEntitlementsQ.data ?? []).length > 0 && (
+                  <ul className="mb-3 space-y-1">
+                    {userEntitlementsQ.data!.map((e) => {
+                      const row = e as unknown as {
+                        id: string;
+                        benefit_type: string;
+                        status: string;
+                        ends_at: string | null;
+                        applications: { name: string } | null;
+                      };
+                      return (
+                        <li
+                          key={row.id}
+                          className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-gray-100 px-3 py-2 text-sm"
+                        >
+                          <span className="min-w-0 flex-1 truncate">
+                            {row.benefit_type} ·{" "}
+                            {row.applications?.name ?? t("admin.engagement.scopeGlobal")} ·{" "}
+                            {row.status}
+                            {row.ends_at ? ` · ${new Date(row.ends_at).toLocaleDateString()}` : ""}
+                          </span>
+                          {row.status === "active" && (
+                            <div className="flex shrink-0 items-center gap-2">
+                              <button
+                                onClick={() => doExtendEntitlement.mutate({ id: row.id, days: 14 })}
+                                className="rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-100"
+                              >
+                                {t("admin.users.entitlementExtend14")}
+                              </button>
+                              <button
+                                onClick={() => doRevokeEntitlement.mutate(row.id)}
+                                className="rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-100"
+                              >
+                                {t("admin.common.revoke")}
+                              </button>
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="flex flex-col gap-1 text-xs">
+                    {t("admin.users.entitlementBenefitType")}
+                    <select
+                      value={entBenefitType}
+                      onChange={(e) => setEntBenefitType(e.target.value)}
+                      className="rounded-lg border border-gray-200 px-2 py-1 text-sm"
+                    >
+                      <option value="premium_duration">Premium</option>
+                      <option value="vip">VIP</option>
+                      <option value="feature_access">Feature Access</option>
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs">
+                    {t("admin.engagement.scope")}
+                    <select
+                      value={entAppId}
+                      onChange={(e) => setEntAppId(e.target.value)}
+                      className="rounded-lg border border-gray-200 px-2 py-1 text-sm"
+                    >
+                      <option value="">{t("admin.engagement.scopeGlobal")}</option>
+                      {(appsQ.data ?? []).map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs">
+                    {t("admin.users.entitlementDurationDays")}
+                    <input
+                      type="number"
+                      min={1}
+                      value={entDurationDays}
+                      onChange={(e) => setEntDurationDays(Number(e.target.value) || 0)}
+                      className="rounded-lg border border-gray-200 px-2 py-1 text-sm"
+                    />
+                  </label>
+                  <label className="col-span-2 flex flex-col gap-1 text-xs">
+                    {t("admin.users.rewardAdjustmentReason")}
+                    <input
+                      value={entReason}
+                      onChange={(e) => setEntReason(e.target.value)}
+                      className="rounded-lg border border-gray-200 px-2 py-1 text-sm"
+                    />
+                  </label>
+                </div>
+                <button
+                  onClick={() => doGrantEntitlement.mutate()}
+                  disabled={!entReason.trim() || doGrantEntitlement.isPending}
+                  className="mt-3 inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                >
+                  <BadgeCheck className="h-4 w-4" />
+                  {t("admin.users.entitlementGrant")}
+                </button>
+              </div>
+            )}
+
+            {/* Applications */}
+            {tab === "applications" && (
+              <div>
+                {userAppsQ.isLoading ? (
+                  <p className="text-sm text-gray-500">{t("common.loading")}</p>
+                ) : (userAppsQ.data ?? []).length === 0 ? (
+                  <p className="text-sm text-gray-500">{t("admin.common.none")}</p>
+                ) : (
+                  <ul className="space-y-1">
+                    {userAppsQ.data!.map((row) => {
+                      const r = row as unknown as {
+                        app_id: string;
+                        is_visible: boolean;
+                        is_contactable: boolean;
+                        joined_at: string;
+                        applications: { name: string; slug: string; domain: string | null } | null;
+                      };
+                      return (
+                        <li
+                          key={r.app_id}
+                          className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-gray-100 px-3 py-2 text-sm"
+                        >
+                          <span className="min-w-0 flex-1 truncate">
+                            <span className="font-medium">{r.applications?.name ?? "?"}</span>{" "}
+                            <span className="text-gray-400">
+                              ({r.applications?.domain ?? r.applications?.slug ?? "?"})
+                            </span>{" "}
+                            ·{" "}
+                            {t("admin.users.joinedOn", {
+                              date: new Date(r.joined_at).toLocaleDateString(),
+                            })}
+                          </span>
+                          <span className="flex shrink-0 gap-1">
+                            {r.is_visible && (
+                              <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
+                                {t("admin.users.visible")}
+                              </span>
+                            )}
+                            {r.is_contactable && (
+                              <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
+                                {t("admin.users.contactable")}
+                              </span>
+                            )}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            )}
+
+            {/* Activity (Priority 16 Phase D2) */}
+            {tab === "activity" && (
+              <div className="space-y-4">
+                {userActivityQ.isLoading ? (
+                  <p className="text-sm text-gray-500">{t("common.loading")}</p>
+                ) : (
+                  <>
+                    <div className="flex flex-wrap gap-4 rounded-lg border border-gray-100 px-3 py-2 text-sm">
+                      <span>
+                        {t("admin.users.lifetimePointsBalance")}:{" "}
+                        <strong>{userActivityQ.data?.lifetimePoints ?? 0}</strong>
+                      </span>
+                      <span>
+                        {t("admin.users.activityLevel")}:{" "}
+                        <strong>{userActivityQ.data?.level?.label ?? "—"}</strong>
+                      </span>
+                      <span>
+                        {t("admin.users.activityMissions")}:{" "}
+                        <strong>
+                          {userActivityQ.data?.missions.completed ?? 0}/
+                          {userActivityQ.data?.missions.active ?? 0}
+                        </strong>
+                      </span>
+                      <span>
+                        {t("admin.users.activityChallenges")}:{" "}
+                        <strong>
+                          {userActivityQ.data?.challenges.completed ?? 0}/
+                          {userActivityQ.data?.challenges.active ?? 0}
+                        </strong>
+                      </span>
+                    </div>
+
+                    {(userActivityQ.data?.streaks ?? []).length > 0 && (
+                      <div>
+                        <p className="mb-1 text-xs font-semibold uppercase text-gray-500">
+                          {t("admin.users.activityStreaks")}
+                        </p>
+                        <ul className="space-y-1">
+                          {userActivityQ.data!.streaks.map((s) => (
+                            <li key={s.key} className="text-sm text-gray-600">
+                              {s.nameEn || s.key}: {s.currentStreak} (
+                              {t("admin.users.activityLongest")} {s.longestStreak})
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {(userActivityQ.data?.activeEntitlements ?? []).length > 0 && (
+                      <div>
+                        <p className="mb-1 text-xs font-semibold uppercase text-gray-500">
+                          {t("admin.users.entitlementsTitle")}
+                        </p>
+                        <ul className="space-y-1">
+                          {userActivityQ.data!.activeEntitlements.map((e, i) => (
+                            <li key={i} className="text-sm text-gray-600">
+                              {e.benefitType} · {e.appName ?? t("admin.engagement.scopeGlobal")}
+                              {e.endsAt ? ` · ${new Date(e.endsAt).toLocaleDateString()}` : ""}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    <div>
+                      <p className="mb-1 text-xs font-semibold uppercase text-gray-500">
+                        {t("admin.users.activityRecent")}
+                      </p>
+                      {(userActivityQ.data?.recentActivity ?? []).length === 0 ? (
+                        <p className="text-sm text-gray-500">{t("admin.common.none")}</p>
+                      ) : (
+                        <ul className="max-h-64 space-y-1 overflow-y-auto">
+                          {userActivityQ.data!.recentActivity.map((a, i) => (
+                            <li
+                              key={i}
+                              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-gray-100 px-3 py-2 text-sm"
+                            >
+                              <span className="min-w-0 flex-1 truncate">
+                                {a.action} · {a.appName}
+                                {a.resourceType ? ` · ${a.resourceType}` : ""} · {a.origin}
+                              </span>
+                              <span className="shrink-0 text-xs text-gray-400">
+                                {new Date(a.createdAt).toLocaleString()}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      <p className="mt-2 text-[11px] text-gray-400">
+                        {t("admin.users.activityLimitationNote")}
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Audit History (Priority 16 Phase D2) */}
+            {tab === "audit" && (
+              <div>
+                {userAuditQ.isLoading ? (
+                  <p className="text-sm text-gray-500">{t("common.loading")}</p>
+                ) : (userAuditQ.data ?? []).length === 0 ? (
+                  <p className="text-sm text-gray-500">{t("admin.common.none")}</p>
+                ) : (
+                  <ul className="max-h-80 space-y-1 overflow-y-auto">
+                    {(userAuditQ.data ?? []).map((row) => {
+                      const r = row as {
+                        id: string;
+                        created_at: string;
+                        action: string;
+                        entity_type: string;
+                        entity_id: string | null;
+                        user_id: string | null;
+                        reason: string | null;
+                        old_data: unknown;
+                        new_data: unknown;
+                      };
+                      return (
+                        <li
+                          key={r.id}
+                          className="rounded-lg border border-gray-100 px-3 py-2 text-sm"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="font-medium">{r.action}</span>
+                            <span className="text-xs text-gray-400">
+                              {new Date(r.created_at).toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="mt-0.5 text-xs text-gray-500">
+                            {r.entity_type}
+                            {r.entity_id ? ` · ${r.entity_id.slice(0, 8)}` : ""} ·{" "}
+                            {t("admin.users.auditActor")}: {r.user_id?.slice(0, 8) ?? "—"}
+                          </div>
+                          {r.reason && (
+                            <div className="mt-0.5 text-xs italic text-gray-500">
+                              {t("admin.common.reason")}: {r.reason}
+                            </div>
+                          )}
+                          {(r.old_data != null || r.new_data != null) && (
+                            <div className="mt-0.5 truncate text-[11px] text-gray-400">
+                              {r.old_data != null && (
+                                <span>
+                                  {t("admin.users.auditOldValue")}:{" "}
+                                  {JSON.stringify(r.old_data).slice(0, 120)}{" "}
+                                </span>
+                              )}
+                              {r.new_data != null && (
+                                <span>
+                                  {t("admin.users.auditNewValue")}:{" "}
+                                  {JSON.stringify(r.new_data).slice(0, 120)}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            )}
+
+            {/* Message */}
+            {tab === "message" && (
+              <div className="space-y-3">
+                <p className="text-sm text-gray-500">{t("admin.users.messageHint")}</p>
+                <Link
+                  to="/admin/communication"
+                  search={{ userId: modal.id }}
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#1D6BF3] px-4 py-1.5 text-sm font-medium text-white hover:bg-[#1858cf]"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  {t("admin.users.messageThisUser")}
+                </Link>
+              </div>
+            )}
+
+            <div className="mt-4 flex justify-end border-t border-gray-100 pt-4">
               <button
                 onClick={() => setModal(null)}
                 className="rounded-lg px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
               >
                 {t("common.close")}
-              </button>
-              <button
-                onClick={() => doGrant.mutate()}
-                disabled={!selApp || doGrant.isPending}
-                className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-[#F59E0B] to-[#EF4444] px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-              >
-                <Crown className="h-4 w-4" />
-                {t("admin.users.grantPremium")}
               </button>
             </div>
           </div>

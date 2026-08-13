@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useTranslation } from "react-i18next";
@@ -20,6 +20,12 @@ export const Route = createFileRoute("/admin/communication")({
       { property: "og:description", content: "Send notifications to users." },
     ],
   }),
+  // Priority 16 Phase D1: an optional deep-link from the Admin User 360
+  // modal's "Message" action -- pre-fills the single-user flow below
+  // instead of requiring the admin to copy/paste a UUID by hand.
+  validateSearch: (s: Record<string, unknown>) => ({
+    userId: typeof s.userId === "string" ? s.userId : undefined,
+  }),
   component: () => (
     <ProtectedRoute>
       <CommunicationPage />
@@ -29,9 +35,10 @@ export const Route = createFileRoute("/admin/communication")({
 
 function CommunicationPage() {
   const { t } = useTranslation();
+  const search = useSearch({ from: "/admin/communication" });
   const send = useServerFn(adminSendNotification);
-  const [target, setTarget] = useState<"all" | "premium" | "user">("all");
-  const [userId, setUserId] = useState("");
+  const [target, setTarget] = useState<"all" | "premium" | "user">(search.userId ? "user" : "all");
+  const [userId, setUserId] = useState(search.userId ?? "");
   const [appId, setAppId] = useState<string>("");
   const [type, setType] = useState<"info" | "success" | "warning" | "error">("info");
   const [category, setCategory] = useState<

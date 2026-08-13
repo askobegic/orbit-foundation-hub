@@ -21,6 +21,26 @@ async function admin() {
   return supabaseAdmin;
 }
 
+// Priority 16: mirrors events.server.ts's countSince() exactly -- the two
+// reward engines stay deliberately parallel (Phase A audit finding), not
+// merged, so this is a small, intentional duplication rather than a
+// shared import across them.
+async function countActionSince(
+  supabaseAdmin: Awaited<ReturnType<typeof admin>>,
+  userId: string,
+  action: string,
+  since: Date,
+): Promise<number> {
+  const { count } = await supabaseAdmin
+    .from("reward_ledger")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("action", action)
+    .gt("points", 0)
+    .gte("created_at", since.toISOString());
+  return count ?? 0;
+}
+
 export async function grantRewardAction(params: {
   userId: string;
   action: string;
@@ -34,9 +54,14 @@ export async function grantRewardAction(params: {
   // passes these explicitly.
   actorUserId?: string | null; // defaults to userId (actor === recipient, today's implicit behavior)
   lifetimePoints?: number; // defaults to the resolved `points` value
-  origin?: "core" | "application" | "api" | "n8n" | "manual_admin" | "system"; // defaults to "core"
+  origin?: "core" | "application" | "api" | "n8n" | "manual_admin" | "system" | "refund_reversal"; // defaults to "core"
   metadata?: Record<string, unknown>; // defaults to {}
   dedupeKey?: string | null;
+  // Priority 16: server-verified EUR amount, required only for a rule
+  // configured with points_per_euro (a proportional rule). Ignored by
+  // flat-rate rules. Callers must resolve this from a webhook-verified
+  // payment amount only -- never a client-supplied value.
+  amountEur?: number;
 }): Promise<{ granted: boolean; points: number; reason?: string }> {
   const supabaseAdmin = await admin();
 
@@ -76,11 +101,56 @@ export async function grantRewardAction(params: {
         : 0;
       if (Date.now() < cooledDownAt) {
         reason = "cooldown_active";
+      }
+    }
+
+    // Priority 16: daily/weekly/monthly caps -- mirrors event_rules'
+    // exact semantics (Priority 12), now also available to CORE-internal
+    // actions. Only checked once the checks above pass, matching
+    // recordEvent()'s own ordering.
+    if (!reason && rule.daily_limit !== null) {
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      if (
+        (await countActionSince(supabaseAdmin, params.userId, params.action, since)) >=
+        rule.daily_limit
+      ) {
+        reason = "daily_limit_reached";
+      }
+    }
+    if (!reason && rule.weekly_limit !== null) {
+      const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      if (
+        (await countActionSince(supabaseAdmin, params.userId, params.action, since)) >=
+        rule.weekly_limit
+      ) {
+        reason = "weekly_limit_reached";
+      }
+    }
+    if (!reason && rule.monthly_limit !== null) {
+      const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      if (
+        (await countActionSince(supabaseAdmin, params.userId, params.action, since)) >=
+        rule.monthly_limit
+      ) {
+        reason = "monthly_limit_reached";
+      }
+    }
+
+    if (!reason) {
+      // Priority 16: a proportional rule (points_per_euro set) computes
+      // its points from the server-verified paid amount instead of the
+      // flat `points` column. A proportional rule called without an
+      // amount is a caller bug, not a silent 0 -- it's reported as its
+      // own distinct reason rather than granting nothing unexplained.
+      if (rule.points_per_euro !== null) {
+        if (params.amountEur === undefined || params.amountEur === null) {
+          reason = "amount_required";
+        } else {
+          points = Math.floor(params.amountEur * Number(rule.points_per_euro));
+        }
       } else {
         points = rule.points;
       }
-    } else {
-      points = rule.points;
     }
   }
 
@@ -98,12 +168,19 @@ export async function grantRewardAction(params: {
     dedupe_key: params.dedupeKey ?? null,
   });
   if (insertError) {
+    // A dedupe_key collision means this exact grant was already recorded
+    // -- the expected outcome of a retried/redelivered call, not a real
+    // error (same precedent as events.server.ts's recordEvent()).
+    if (insertError.code === "23505") {
+      return { granted: false, points: 0, reason: "duplicate" };
+    }
     console.error("grantRewardAction: ledger insert failed", insertError);
     return { granted: false, points: 0, reason: "insert_failed" };
   }
 
   if (points > 0) {
     await checkAchievements(params.userId, params.action);
+    await evaluatePremiumMilestones(params.userId);
   }
 
   return { granted: points > 0, points, reason };
@@ -138,6 +215,107 @@ export async function checkAchievements(userId: string, action: string): Promise
         { onConflict: "user_id,achievement_key", ignoreDuplicates: true },
       );
     if (error) console.error("checkAchievements: upsert failed", a.key, error);
+  }
+}
+
+// Priority 16: Premium Milestones -- lazily evaluated wherever points are
+// granted (this function, and events.server.ts's recordEvent(), call it
+// right alongside checkAchievements(), the exact same "check thresholds
+// after any point grant" pattern). Dual-metric: lifetime points (never
+// decreases, same figure reward_levels already tiers on) AND successful
+// invites (registered + completed profile, computed live from
+// profiles.referred_by_user_id + profile_complete -- no stored counter,
+// consistent with this codebase's existing preference). A milestone is
+// granted at most once per user via UNIQUE(user_id, milestone_id) +
+// upsert-ignoreDuplicates, the same idempotency pattern
+// user_achievements/user_streak_milestones already use. Fulfillment
+// reuses fulfillGrant() -- the same dispatcher Missions/Challenges/
+// Streaks/catalog redemption already share -- never a separate Premium
+// grant path.
+export async function evaluatePremiumMilestones(userId: string): Promise<void> {
+  const supabaseAdmin = await admin();
+
+  const [{ data: ledgerRows }, { count: successfulInvites }, { data: milestones }] =
+    await Promise.all([
+      supabaseAdmin.from("reward_ledger").select("lifetime_points").eq("user_id", userId),
+      supabaseAdmin
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("referred_by_user_id", userId)
+        .eq("profile_complete", true),
+      supabaseAdmin
+        .from("reward_milestones")
+        .select("*")
+        .eq("enabled", true)
+        .eq("archived", false)
+        .order("min_lifetime_points", { ascending: true }),
+    ]);
+  if (!milestones || milestones.length === 0) return;
+
+  const lifetimePoints = (ledgerRows ?? []).reduce((sum, r) => sum + r.lifetime_points, 0);
+  const invites = successfulInvites ?? 0;
+
+  for (const milestone of milestones) {
+    if (
+      lifetimePoints < milestone.min_lifetime_points ||
+      invites < milestone.min_successful_invites
+    ) {
+      continue;
+    }
+
+    const { data: inserted, error } = await supabaseAdmin
+      .from("user_reward_milestones")
+      .upsert(
+        { user_id: userId, milestone_id: milestone.id },
+        { onConflict: "user_id,milestone_id", ignoreDuplicates: true },
+      )
+      .select("id")
+      .maybeSingle();
+    if (error) {
+      console.error("evaluatePremiumMilestones: completion insert failed", milestone.key, error);
+      continue;
+    }
+    if (!inserted) continue; // already granted
+
+    const { fulfillGrant } = await import("@/lib/entitlements.server");
+    const grantValue = (milestone.grant_value ?? {}) as Record<string, unknown>;
+    const fulfillment = await fulfillGrant({
+      grantType: milestone.grant_type,
+      grantValue,
+      userId,
+      appId: null,
+      reason: `Premium milestone reached: ${milestone.key}`,
+      grantedBy: null,
+      source: "premium_milestone",
+    });
+
+    await supabaseAdmin
+      .from("user_reward_milestones")
+      .update({
+        grant_result: {
+          status: fulfillment.status,
+          grantType: milestone.grant_type,
+          grantValue: grantValue as Json,
+          entitlementId: fulfillment.entitlementId ?? null,
+        },
+      })
+      .eq("user_id", userId)
+      .eq("milestone_id", milestone.id);
+
+    const { error: notifyErr } = await supabaseAdmin.from("notifications").insert({
+      user_id: userId,
+      type: "success",
+      category: "premium",
+      target_path: "/dashboard/rewards",
+      title_bs: "Premium prekretnica dostignuta!",
+      title_en: "Premium milestone reached!",
+      title_de: "Premium-Meilenstein erreicht!",
+      message_bs: milestone.label,
+      message_en: milestone.label,
+      message_de: milestone.label,
+    });
+    if (notifyErr)
+      console.error("evaluatePremiumMilestones: notification insert failed", notifyErr);
   }
 }
 
@@ -344,4 +522,122 @@ export async function promotePendingReferralVerifications(referrerId: string): P
       resourceId: referral.referred_user_id,
     });
   }
+}
+
+// Priority 16: automatic refund/reversal (Phase A audit gap PR16-1 --
+// refunded purchases previously kept every point). Called only from the
+// Stripe/PayPal refund webhook handlers, never client- or admin-invoked
+// -- deliberately NOT the manual-admin-adjustment path (origin=
+// 'manual_admin' requires a human-authored `reason`; this is a
+// non-discretionary automatic system reaction, kept distinguishable via
+// its own origin, 'refund_reversal').
+//
+// Financial grants are looked up by resource_type='payment' +
+// resource_id=paymentId (both webhooks now set this on the original
+// grant, replacing the previous subscription/campaign id) rather than by
+// dedupe_key, since a payment can have more than one financial grant
+// row across its lifetime otherwise there'd be nothing to sum.
+//
+// Idempotent per caller-supplied dedupeKey (the Stripe/PayPal event's own
+// id) -- a redelivered webhook produces the exact same dedupe_key and is
+// rejected by the same unique index every other dedupe_key use relies on.
+// Reversal is capped at whatever remains ungranted so far (originalPoints
+// minus already-reversed), so a sequence of partial refunds can never
+// reverse more than was originally granted, and a redelivered/duplicate
+// event that still slips past the dedupe check computes a zero delta and
+// is a safe no-op.
+export async function reversePaymentPoints(params: {
+  paymentId: string;
+  userId: string;
+  sourceAppId: string | null;
+  // The amount to reverse right now (already resolved by the caller from
+  // provider-specific webhook data -- Stripe's cumulative amount_refunded
+  // vs PayPal's discrete per-refund amount need different delta logic
+  // upstream; this function only ever applies a final, resolved amount).
+  refundedAmountEurNow: number;
+  dedupeKey: string;
+}): Promise<{ ok: boolean; reversedPoints: number; reason?: string }> {
+  const supabaseAdmin = await admin();
+
+  const { data: grantRows, error: grantErr } = await supabaseAdmin
+    .from("reward_ledger")
+    .select("points")
+    .eq("resource_type", "payment")
+    .eq("resource_id", params.paymentId)
+    .neq("origin", "refund_reversal")
+    .gt("points", 0);
+  if (grantErr) {
+    console.error("reversePaymentPoints: original grant lookup failed", grantErr);
+    return { ok: false, reversedPoints: 0, reason: "lookup_failed" };
+  }
+  const originalPoints = (grantRows ?? []).reduce((sum, r) => sum + r.points, 0);
+  if (originalPoints <= 0) {
+    return { ok: true, reversedPoints: 0, reason: "no_original_grant" };
+  }
+
+  const { data: paymentRow } = await supabaseAdmin
+    .from("payments")
+    .select("amount, currency")
+    .eq("id", params.paymentId)
+    .maybeSingle();
+  if (
+    !paymentRow ||
+    (paymentRow.currency ?? "").toUpperCase() !== "EUR" ||
+    !(paymentRow.amount > 0)
+  ) {
+    return { ok: true, reversedPoints: 0, reason: "not_eur_or_zero_amount" };
+  }
+  const effectiveRate = originalPoints / paymentRow.amount;
+
+  const { data: reversalRows, error: reversalErr } = await supabaseAdmin
+    .from("reward_ledger")
+    .select("points")
+    .eq("resource_type", "payment")
+    .eq("resource_id", params.paymentId)
+    .eq("origin", "refund_reversal");
+  if (reversalErr) {
+    console.error("reversePaymentPoints: prior reversal lookup failed", reversalErr);
+    return { ok: false, reversedPoints: 0, reason: "lookup_failed" };
+  }
+  const alreadyReversed = Math.abs((reversalRows ?? []).reduce((sum, r) => sum + r.points, 0));
+  const remaining = originalPoints - alreadyReversed;
+  if (remaining <= 0) {
+    return { ok: true, reversedPoints: 0, reason: "fully_reversed_already" };
+  }
+
+  const pointsToReverseNow = Math.min(
+    remaining,
+    Math.floor(params.refundedAmountEurNow * effectiveRate),
+  );
+  if (pointsToReverseNow <= 0) {
+    return { ok: true, reversedPoints: 0, reason: "nothing_new_to_reverse" };
+  }
+
+  const { error: insertErr } = await supabaseAdmin.from("reward_ledger").insert({
+    user_id: params.userId,
+    action: "refund_reversal",
+    points: -pointsToReverseNow,
+    lifetime_points: -pointsToReverseNow,
+    resource_type: "payment",
+    resource_id: params.paymentId,
+    source_app_id: params.sourceAppId,
+    actor_user_id: params.userId,
+    origin: "refund_reversal",
+    metadata: {
+      originalPoints,
+      alreadyReversedBefore: alreadyReversed,
+      refundedAmountEurNow: params.refundedAmountEurNow,
+      effectiveRate,
+    } as Json,
+    dedupe_key: params.dedupeKey,
+  });
+  if (insertErr) {
+    if (insertErr.code === "23505") {
+      return { ok: true, reversedPoints: 0, reason: "duplicate" };
+    }
+    console.error("reversePaymentPoints: reversal insert failed", insertErr);
+    return { ok: false, reversedPoints: 0, reason: "insert_failed" };
+  }
+
+  return { ok: true, reversedPoints: pointsToReverseNow };
 }
