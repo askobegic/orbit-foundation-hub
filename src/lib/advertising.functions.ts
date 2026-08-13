@@ -45,7 +45,7 @@ export const getAdPlacementsForApp = createServerFn({ method: "POST" })
     const capabilities = await getApplicationCapabilities({ data: { appId: data.appId } });
     if (!capabilities.includes("advertising")) return [];
 
-    const { supabase } = await import("@/integrations/supabase/client");
+    const supabase = await adminClient();
     const { data: placements } = await supabase
       .from("ad_placements")
       .select("*")
