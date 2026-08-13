@@ -146,6 +146,11 @@
     "welcome": "Dobrodošao",
     "subtitle": "Ovo je tvoj kontrolni centar.",
     "myProfile": "Moj profil",
+    "stats": {
+      "points": "Poeni",
+      "activity": "Aktivnost",
+      "noLevel": "—"
+    },
     "myApps": "Moje aplikacije",
     "activeSubscription": "Aktivna pretplata",
     "paymentHistory": "Historija uplata",
@@ -494,6 +499,9 @@
       "disabled": "Onemogućeno",
       "archive": "Arhiviraj",
       "unarchive": "Vrati iz arhive",
+      "create": "Kreiraj",
+      "enable": "Omogući",
+      "disable": "Onemogući",
       "add": "Dodaj",
       "select": "Odaberi...",
       "key": "Ključ",
@@ -1034,7 +1042,8 @@
         "events": { "title": "Univerzalni događaji", "desc": "Registar događaja, mapiranje po aplikaciji i pravila nagrađivanja za događaje koje prijavljuju aplikacije." },
         "engagement": { "title": "Misije, izazovi i nizovi", "desc": "Definirajte misije, izazove i nizove, globalno ili po aplikaciji." },
         "support": { "title": "Podrška", "desc": "Korisnički zahtjevi za podršku i odgovori." },
-        "members": { "title": "Članovi", "desc": "Konfigurišite broj kartica po sekciji i paginaciju direktorija za stranicu Članovi." }
+        "members": { "title": "Članovi", "desc": "Konfigurišite broj kartica po sekciji i paginaciju direktorija za stranicu Članovi." },
+        "offersCoupons": { "title": "Ponude i kuponi", "desc": "Globalne ponude, individualne ponude, javni kuponi, bonus poeni." }
       }
     },
     "verification": {
@@ -1084,6 +1093,42 @@
       "invoice": "Faktura",
       "open": "Otvori",
       "noPayments": "Još nema uplata."
+    },
+    "offersCoupons": {
+      "title": "Ponude i kuponi",
+      "subtitle": "Globalne ponude, individualne ponude, javni kuponi i bonus poeni.",
+      "globalOffersTitle": "Globalne ponude",
+      "individualOffersTitle": "Individualne ponude",
+      "individualOffersHint": "Ponudu vidi samo ciljani korisnik.",
+      "publicCouponsTitle": "Javni kuponi",
+      "rewardBoostsTitle": "Bonus poeni",
+      "titleBs": "Naslov (BS)",
+      "titleEn": "Naslov (EN)",
+      "titleDe": "Naslov (DE)",
+      "segment": "Segment",
+      "targetUserId": "ID ciljanog korisnika",
+      "targetUserIdPlaceholder": "UUID profila",
+      "productType": "Vrsta proizvoda",
+      "productSubscriptionPlan": "Pretplatnički plan",
+      "productAdPlacementPrice": "Cijena oglasnog mjesta",
+      "productId": "ID proizvoda",
+      "productIdPlaceholder": "UUID iz subscription_plans / ad_placement_prices",
+      "discountType": "Vrsta popusta",
+      "discountPercent": "Procenat",
+      "discountFixedPrice": "Fiksna cijena",
+      "discountPercentValue": "Popust %",
+      "fixedPriceValue": "Fiksna cijena (€)",
+      "startsAt": "Počinje",
+      "endsAt": "Završava",
+      "code": "Kod kupona",
+      "maxTotalUses": "Maks. ukupno iskorištavanja",
+      "maxUsesPerUser": "Maks. po korisniku",
+      "unlimited": "Neograničeno",
+      "redemptions": "Iskorištavanja",
+      "multiplier": "Množitelj",
+      "offerCreated": "Ponuda kreirana",
+      "couponCreated": "Kupon kreiran",
+      "boostCreated": "Bonus poeni kreirani"
     }
   },
   "members": {
@@ -1104,5 +1149,28 @@
     "statusPremiumDesc": "Članstvo sa dodatnim pogodnostima",
     "statusVerifiedTitle": "VERIFIKOVAN",
     "statusVerifiedDesc": "Identitet člana je verifikovan."
+  },
+  "offers": {
+    "title": "🎁 SPECIJALNO ZA VAS",
+    "subtitle": "Iskoristite svoje posebne pogodnosti",
+    "useOffer": "Iskoristi ponudu",
+    "viewAll": "Pregledaj sve ponude",
+    "validUntil": "Važi za {{month}} {{year}}.",
+    "coupon": {
+      "notFound": "Ovaj kupon nije pronađen.",
+      "useCoupon": "Iskoristi kupon",
+      "registerHint": "Potreban vam je Core nalog da iskoristite ovaj kupon.",
+      "redeemFailed": "Nije moguće pokrenuti plaćanje za ovaj kupon. Pokušajte ponovo.",
+      "noPaymentLink": "Za ovaj proizvod još nije konfigurisan način plaćanja.",
+      "invalid": {
+        "expired": "Ovaj kupon je istekao.",
+        "not_started": "Ovaj kupon još nije aktivan.",
+        "max_uses_reached": "Ovaj kupon je dostigao maksimalan broj iskorištavanja."
+      }
+    }
+  },
+  "advertisingSlot": {
+    "title": "VAŠA REKLAMA NA OVOM MJESTU!",
+    "cta": "Pogledajte ponudu"
   }
 }

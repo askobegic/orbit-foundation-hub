@@ -2,7 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { addMonthsIso, writeAuditLog } from "@/lib/admin.server";
 import { activateCampaignFromPurchase } from "@/lib/advertising.server";
-import { verifyCampaignReference, verifyPaymentReference } from "@/lib/payment-reference.server";
+import {
+  verifyCampaignReference,
+  verifyCouponReference,
+  verifyPaymentReference,
+} from "@/lib/payment-reference.server";
 import { clientIp, isRateLimited } from "@/lib/rate-limit.server";
 
 // Verifies the HMAC signature created by createPaymentReference
@@ -290,7 +294,11 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
           return Response.json({ received: true });
         }
 
-        const ref = parseCustom(resource.custom_id);
+        // Priority 17: Public Coupons -- see the matching branch in the
+        // Stripe webhook for the full rationale. Subscription-activation
+        // logic below is completely unchanged either way.
+        const couponRef = verifyCouponReference(resource.custom_id);
+        const ref = couponRef ?? parseCustom(resource.custom_id);
         if (!ref.user_id || !ref.app_id) {
           console.warn("PayPal webhook: missing, malformed, or unsigned custom_id", {
             capture_id: resource.id,
@@ -432,6 +440,40 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
         if (paymentErr) {
           console.error("PayPal webhook: payments insert failed", paymentErr);
           return Response.json({ received: true, duplicate: true });
+        }
+
+        // Priority 17: Public Coupons -- see the matching, more fully
+        // commented branch in the Stripe webhook for the full rationale.
+        if (couponRef && insertedPayment) {
+          const { data: couponRow } = await supabaseAdmin
+            .from("public_coupons")
+            .select("max_total_uses, max_uses_per_user")
+            .eq("id", couponRef.coupon_id)
+            .maybeSingle();
+          const limits = couponRow as { max_total_uses: number | null; max_uses_per_user: number } | null;
+          const { data: redemption } = await supabaseAdmin.rpc("redeem_coupon_atomic", {
+            p_coupon_id: couponRef.coupon_id,
+            p_user_id: couponRef.user_id,
+            p_max_total_uses: limits?.max_total_uses ?? null,
+            p_max_uses_per_user: limits?.max_uses_per_user ?? 1,
+            p_final_price: amount,
+            p_currency: currency,
+            p_payment_id: insertedPayment.id,
+          });
+          const result = (redemption as { ok: boolean; error_code: string | null }[] | null)?.[0];
+          if (!result?.ok) {
+            console.warn("PayPal webhook: coupon redemption not recorded", {
+              coupon_id: couponRef.coupon_id,
+              reason: result?.error_code,
+            });
+            await writeAuditLog({
+              userId: couponRef.user_id,
+              action: "public_coupon.redemption_skipped_after_payment",
+              entityType: "payment",
+              entityId: insertedPayment.id,
+              newData: { coupon_id: couponRef.coupon_id, reason: result?.error_code },
+            });
+          }
         }
 
         // Global Premium Visibility & Contact System: Premium status is

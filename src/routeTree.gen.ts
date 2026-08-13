@@ -23,6 +23,7 @@ import { Route as AdminDashboardWidgetsRouteImport } from './routes/admin.dashbo
 import { Route as AdminEngagementRouteImport } from './routes/admin.engagement'
 import { Route as AdminEventsRouteImport } from './routes/admin.events'
 import { Route as AdminMembersRouteImport } from './routes/admin.members'
+import { Route as AdminOffersCouponsRouteImport } from './routes/admin.offers-coupons'
 import { Route as AdminPaymentsRouteImport } from './routes/admin.payments'
 import { Route as AdminRewardsRouteImport } from './routes/admin.rewards'
 import { Route as AdminSupportRouteImport } from './routes/admin.support'
@@ -41,6 +42,7 @@ import { Route as DashboardPurchasesRouteImport } from './routes/dashboard.purch
 import { Route as DashboardRewardsRouteImport } from './routes/dashboard.rewards'
 import { Route as DashboardSecurityRouteImport } from './routes/dashboard.security'
 import { Route as DashboardSettingsRouteImport } from './routes/dashboard.settings'
+import { Route as OfferCodeRouteImport } from './routes/offer.$code'
 import { Route as PaymentSuccessRouteImport } from './routes/payment.success'
 import { Route as ProfileUsernameRouteImport } from './routes/profile.$username'
 import { Route as UUsernameRouteImport } from './routes/u.$username'
@@ -217,6 +219,11 @@ const AdminMembersRoute = AdminMembersRouteImport.update({
   path: '/members',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminOffersCouponsRoute = AdminOffersCouponsRouteImport.update({
+  id: '/offers-coupons',
+  path: '/offers-coupons',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminPaymentsRoute = AdminPaymentsRouteImport.update({
   id: '/payments',
   path: '/payments',
@@ -305,6 +312,11 @@ const DashboardSecurityRoute = DashboardSecurityRouteImport.update({
 const DashboardSettingsRoute = DashboardSettingsRouteImport.update({
   id: '/dashboard/settings',
   path: '/dashboard/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OfferCodeRoute = OfferCodeRouteImport.update({
+  id: '/offer/$code',
+  path: '/offer/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PaymentSuccessRoute = PaymentSuccessRouteImport.update({
@@ -903,6 +915,7 @@ export interface FileRoutesByFullPath {
   '/admin/engagement': typeof AdminEngagementRoute
   '/admin/events': typeof AdminEventsRoute
   '/admin/members': typeof AdminMembersRoute
+  '/admin/offers-coupons': typeof AdminOffersCouponsRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/rewards': typeof AdminRewardsRoute
   '/admin/support': typeof AdminSupportRoute
@@ -920,6 +933,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/rewards': typeof DashboardRewardsRoute
   '/dashboard/security': typeof DashboardSecurityRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
+  '/offer/$code': typeof OfferCodeRoute
   '/payment/success': typeof PaymentSuccessRoute
   '/profile/$username': typeof ProfileUsernameRoute
   '/u/$username': typeof UUsernameRouteWithChildren
@@ -1042,6 +1056,7 @@ export interface FileRoutesByTo {
   '/admin/engagement': typeof AdminEngagementRoute
   '/admin/events': typeof AdminEventsRoute
   '/admin/members': typeof AdminMembersRoute
+  '/admin/offers-coupons': typeof AdminOffersCouponsRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/rewards': typeof AdminRewardsRoute
   '/admin/support': typeof AdminSupportRoute
@@ -1059,6 +1074,7 @@ export interface FileRoutesByTo {
   '/dashboard/rewards': typeof DashboardRewardsRoute
   '/dashboard/security': typeof DashboardSecurityRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
+  '/offer/$code': typeof OfferCodeRoute
   '/payment/success': typeof PaymentSuccessRoute
   '/profile/$username': typeof ProfileUsernameRoute
   '/u/$username': typeof UUsernameRouteWithChildren
@@ -1182,6 +1198,7 @@ export interface FileRoutesById {
   '/admin/engagement': typeof AdminEngagementRoute
   '/admin/events': typeof AdminEventsRoute
   '/admin/members': typeof AdminMembersRoute
+  '/admin/offers-coupons': typeof AdminOffersCouponsRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/rewards': typeof AdminRewardsRoute
   '/admin/support': typeof AdminSupportRoute
@@ -1199,6 +1216,7 @@ export interface FileRoutesById {
   '/dashboard/rewards': typeof DashboardRewardsRoute
   '/dashboard/security': typeof DashboardSecurityRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
+  '/offer/$code': typeof OfferCodeRoute
   '/payment/success': typeof PaymentSuccessRoute
   '/profile/$username': typeof ProfileUsernameRoute
   '/u/$username': typeof UUsernameRouteWithChildren
@@ -1323,6 +1341,7 @@ export interface FileRouteTypes {
     | '/admin/engagement'
     | '/admin/events'
     | '/admin/members'
+    | '/admin/offers-coupons'
     | '/admin/payments'
     | '/admin/rewards'
     | '/admin/support'
@@ -1340,6 +1359,7 @@ export interface FileRouteTypes {
     | '/dashboard/rewards'
     | '/dashboard/security'
     | '/dashboard/settings'
+    | '/offer/$code'
     | '/payment/success'
     | '/profile/$username'
     | '/u/$username'
@@ -1462,6 +1482,7 @@ export interface FileRouteTypes {
     | '/admin/engagement'
     | '/admin/events'
     | '/admin/members'
+    | '/admin/offers-coupons'
     | '/admin/payments'
     | '/admin/rewards'
     | '/admin/support'
@@ -1479,6 +1500,7 @@ export interface FileRouteTypes {
     | '/dashboard/rewards'
     | '/dashboard/security'
     | '/dashboard/settings'
+    | '/offer/$code'
     | '/payment/success'
     | '/profile/$username'
     | '/u/$username'
@@ -1601,6 +1623,7 @@ export interface FileRouteTypes {
     | '/admin/engagement'
     | '/admin/events'
     | '/admin/members'
+    | '/admin/offers-coupons'
     | '/admin/payments'
     | '/admin/rewards'
     | '/admin/support'
@@ -1618,6 +1641,7 @@ export interface FileRouteTypes {
     | '/dashboard/rewards'
     | '/dashboard/security'
     | '/dashboard/settings'
+    | '/offer/$code'
     | '/payment/success'
     | '/profile/$username'
     | '/u/$username'
@@ -1744,6 +1768,7 @@ export interface RootRouteChildren {
   DashboardRewardsRoute: typeof DashboardRewardsRoute
   DashboardSecurityRoute: typeof DashboardSecurityRoute
   DashboardSettingsRoute: typeof DashboardSettingsRoute
+  OfferCodeRoute: typeof OfferCodeRoute
   PaymentSuccessRoute: typeof PaymentSuccessRoute
   ProfileUsernameRoute: typeof ProfileUsernameRoute
   UUsernameRoute: typeof UUsernameRouteWithChildren
@@ -1950,6 +1975,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminMembersRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/offers-coupons': {
+      id: '/admin/offers-coupons'
+      path: '/offers-coupons'
+      fullPath: '/admin/offers-coupons'
+      preLoaderRoute: typeof AdminOffersCouponsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/payments': {
       id: '/admin/payments'
       path: '/payments'
@@ -2074,6 +2106,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard/settings'
       fullPath: '/dashboard/settings'
       preLoaderRoute: typeof DashboardSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/offer/$code': {
+      id: '/offer/$code'
+      path: '/offer/$code'
+      fullPath: '/offer/$code'
+      preLoaderRoute: typeof OfferCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/payment/success': {
@@ -2823,6 +2862,7 @@ interface AdminRouteChildren {
   AdminEngagementRoute: typeof AdminEngagementRoute
   AdminEventsRoute: typeof AdminEventsRoute
   AdminMembersRoute: typeof AdminMembersRoute
+  AdminOffersCouponsRoute: typeof AdminOffersCouponsRoute
   AdminPaymentsRoute: typeof AdminPaymentsRoute
   AdminRewardsRoute: typeof AdminRewardsRoute
   AdminSupportRoute: typeof AdminSupportRoute
@@ -2840,6 +2880,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminEngagementRoute: AdminEngagementRoute,
   AdminEventsRoute: AdminEventsRoute,
   AdminMembersRoute: AdminMembersRoute,
+  AdminOffersCouponsRoute: AdminOffersCouponsRoute,
   AdminPaymentsRoute: AdminPaymentsRoute,
   AdminRewardsRoute: AdminRewardsRoute,
   AdminSupportRoute: AdminSupportRoute,
@@ -2891,6 +2932,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRewardsRoute: DashboardRewardsRoute,
   DashboardSecurityRoute: DashboardSecurityRoute,
   DashboardSettingsRoute: DashboardSettingsRoute,
+  OfferCodeRoute: OfferCodeRoute,
   PaymentSuccessRoute: PaymentSuccessRoute,
   ProfileUsernameRoute: ProfileUsernameRoute,
   UUsernameRoute: UUsernameRouteWithChildren,

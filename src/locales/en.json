@@ -148,6 +148,11 @@
     "myProfile": "My Profile",
     "myApps": "My Applications",
     "activeSubscription": "Active Subscription",
+    "stats": {
+      "points": "Points",
+      "activity": "Activity",
+      "noLevel": "—"
+    },
     "paymentHistory": "Payment History",
     "quickLinks": "Quick Links",
     "upgrade": "Upgrade",
@@ -494,6 +499,9 @@
       "disabled": "Disabled",
       "archive": "Archive",
       "unarchive": "Unarchive",
+      "create": "Create",
+      "enable": "Enable",
+      "disable": "Disable",
       "add": "Add",
       "select": "Select...",
       "key": "Key",
@@ -1034,7 +1042,8 @@
         "events": { "title": "Universal Events", "desc": "Event registry, per-application mapping, and reward rules for application-reported events." },
         "engagement": { "title": "Missions, Challenges & Streaks", "desc": "Define missions, challenges, and streaks, global or per application." },
         "support": { "title": "Support", "desc": "User support tickets and replies." },
-        "members": { "title": "Members", "desc": "Configure section counts and directory pagination for the Members page." }
+        "members": { "title": "Members", "desc": "Configure section counts and directory pagination for the Members page." },
+        "offersCoupons": { "title": "Offers & Coupons", "desc": "Global Offers, Individual Offers, Public Coupons, Reward Boosts." }
       }
     },
     "verification": {
@@ -1084,6 +1093,42 @@
       "invoice": "Invoice",
       "open": "Open",
       "noPayments": "No payments yet."
+    },
+    "offersCoupons": {
+      "title": "Offers & Coupons",
+      "subtitle": "Global Offers, Individual Offers, Public Coupons, and Reward Boosts.",
+      "globalOffersTitle": "Global Offers",
+      "individualOffersTitle": "Individual Offers",
+      "individualOffersHint": "Only the targeted user sees this offer.",
+      "publicCouponsTitle": "Public Coupons",
+      "rewardBoostsTitle": "Reward Boosts",
+      "titleBs": "Title (BS)",
+      "titleEn": "Title (EN)",
+      "titleDe": "Title (DE)",
+      "segment": "Segment",
+      "targetUserId": "Target user ID",
+      "targetUserIdPlaceholder": "Profile UUID",
+      "productType": "Product type",
+      "productSubscriptionPlan": "Subscription plan",
+      "productAdPlacementPrice": "Advertising placement price",
+      "productId": "Product ID",
+      "productIdPlaceholder": "subscription_plans / ad_placement_prices UUID",
+      "discountType": "Discount type",
+      "discountPercent": "Percentage",
+      "discountFixedPrice": "Fixed price",
+      "discountPercentValue": "Discount %",
+      "fixedPriceValue": "Fixed price (€)",
+      "startsAt": "Starts at",
+      "endsAt": "Ends at",
+      "code": "Coupon code",
+      "maxTotalUses": "Max total uses",
+      "maxUsesPerUser": "Max uses per user",
+      "unlimited": "Unlimited",
+      "redemptions": "Redemptions",
+      "multiplier": "Multiplier",
+      "offerCreated": "Offer created",
+      "couponCreated": "Coupon created",
+      "boostCreated": "Reward boost created"
     }
   },
   "members": {
@@ -1104,5 +1149,28 @@
     "statusPremiumDesc": "Membership with additional benefits.",
     "statusVerifiedTitle": "VERIFIED",
     "statusVerifiedDesc": "Identity of the member has been verified."
+  },
+  "offers": {
+    "title": "🎁 SPECIAL FOR YOU",
+    "subtitle": "Take advantage of your special benefits",
+    "useOffer": "Use offer",
+    "viewAll": "View all offers",
+    "validUntil": "Valid until {{month}} {{year}}.",
+    "coupon": {
+      "notFound": "This coupon could not be found.",
+      "useCoupon": "Use coupon",
+      "registerHint": "You'll need a Core account to redeem this coupon.",
+      "redeemFailed": "Could not start checkout for this coupon. Please try again.",
+      "noPaymentLink": "No payment method is configured for this product yet.",
+      "invalid": {
+        "expired": "This coupon has expired.",
+        "not_started": "This coupon is not active yet.",
+        "max_uses_reached": "This coupon has reached its maximum number of uses."
+      }
+    }
+  },
+  "advertisingSlot": {
+    "title": "YOUR AD IN THIS SPOT!",
+    "cta": "See the offer"
   }
 }

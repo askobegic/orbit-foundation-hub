@@ -118,6 +118,7 @@ export type ResolvedPlacementPrice = {
   pricingStrategy: string;
   stripePaymentLink: string | null;
   paypalPaymentLink: string | null;
+  impressionsIncluded: number | null;
 };
 
 // Global (app_id IS NULL) or per-application price rows -- when both a
@@ -155,6 +156,7 @@ export async function resolvePlacementPrices(
     pricingStrategy: row.pricing_strategy,
     stripePaymentLink: row.stripe_payment_link,
     paypalPaymentLink: row.paypal_payment_link,
+    impressionsIncluded: row.impressions_included ?? null,
   }));
 }
 
@@ -179,6 +181,7 @@ export async function resolvePlacementPriceById(
     pricingStrategy: data.pricing_strategy,
     stripePaymentLink: data.stripe_payment_link,
     paypalPaymentLink: data.paypal_payment_link,
+    impressionsIncluded: data.impressions_included ?? null,
   };
 }
 
@@ -254,6 +257,12 @@ export async function activateCampaignFromPurchase(params: {
       starts_at: startsAt.toISOString(),
       expires_at: expiresAt.toISOString(),
       updated_at: new Date().toISOString(),
+      // Priority 17: snapshot the purchased impression quantity at
+      // activation time, NULL for every ordinary duration-based price
+      // (unchanged behavior) -- impressions_delivered starts at its
+      // column default (0) and is only ever incremented afterward via
+      // record_ad_impression().
+      impressions_purchased: price.impressionsIncluded,
     })
     .eq("id", campaign.id)
     .eq("status", "draft"); // idempotency guard against a concurrent redelivery
@@ -485,6 +494,71 @@ export async function getActivePlacementCreative(
   candidates.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   const { campaignId, title, imageUrl, linkUrl } = candidates[0];
   return { campaignId, title, imageUrl, linkUrl };
+}
+
+// ---------- Priority 17: Dashboard Advertising -- "dashboard_cards" ----------
+// A new placement, not a new engine: this is the multi-result sibling of
+// getActivePlacementCreative above (which only ever returns one creative)
+// -- Dashboard Cards shows up to 5 simultaneously. Equal delivery (spec
+// section 25): advertisers who purchased the SAME impression quantity get
+// equal rotation, enforced by always surfacing whichever eligible
+// campaigns are furthest BEHIND their fair share (lowest delivered/
+// purchased ratio) first -- never weighted by company size, Premium
+// status, or any manual preference. A duration-based campaign that
+// somehow targets this placement (impressions_purchased IS NULL) has no
+// impression quantity to be fair about, so it sorts last, after every
+// impression-based campaign, ordered only by recency among itself.
+export type DashboardCardCreative = PlacementCreative;
+
+export async function getDashboardCardCampaigns(
+  appId: string,
+  limit = 5,
+): Promise<DashboardCardCreative[]> {
+  const supabaseAdmin = await admin();
+  const { data } = await supabaseAdmin
+    .from("ad_campaigns")
+    .select("id, title, image_url, link_url, created_at, impressions_purchased, impressions_delivered")
+    .eq("app_id", appId)
+    .eq("placement_key", "dashboard_cards")
+    .eq("status", "active")
+    .gt("expires_at", new Date().toISOString());
+
+  const allRows = (data ?? []) as Array<{
+    id: string;
+    title: string;
+    image_url: string | null;
+    link_url: string | null;
+    created_at: string;
+    impressions_purchased: number | null;
+    impressions_delivered: number;
+  }>;
+  // Pre-production audit correction: PostgREST's filter builder has no
+  // column-to-column comparison operator (lt/gt only compare a column
+  // against a literal), so this eligibility check -- exclude a campaign
+  // that has already delivered its full purchased quota -- has to happen
+  // here rather than in the query itself. record_ad_impression() is the
+  // actual, atomic enforcement point (see that migration's own comment);
+  // this filter's job is only to stop showing/rotating a campaign that
+  // can no longer accept more impressions, so a purchased slot isn't
+  // wasted on a creative that would silently fail to record anyway.
+  const rows = allRows.filter(
+    (r) => r.impressions_purchased === null || r.impressions_delivered < r.impressions_purchased,
+  );
+  if (rows.length === 0) return [];
+
+  rows.sort((a, b) => {
+    const ratioA = a.impressions_purchased ? a.impressions_delivered / a.impressions_purchased : Infinity;
+    const ratioB = b.impressions_purchased ? b.impressions_delivered / b.impressions_purchased : Infinity;
+    if (ratioA !== ratioB) return ratioA - ratioB;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+
+  return rows.slice(0, limit).map((r) => ({
+    campaignId: r.id,
+    title: r.title,
+    imageUrl: r.image_url,
+    linkUrl: r.link_url,
+  }));
 }
 
 // ---------- Priority 13, Phase D: campaign target selection ----------

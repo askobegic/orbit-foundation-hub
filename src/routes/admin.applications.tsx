@@ -16,6 +16,7 @@ import {
   adminCreateApplication,
   adminSetApplicationVisibility,
   adminUpdateAppSettings,
+  adminUploadBrandingAsset,
 } from "@/lib/admin.functions";
 import { adminUpsertShareInviteTemplate, getShareInviteConfig } from "@/lib/share-invite.functions";
 import type { ApplicationRow, ApplicationVisibility, ProductType, SubscriptionPlanRow } from "@/types/database";
@@ -570,6 +571,7 @@ function AppSettings({
   const [defaultLanguage, setDefaultLanguage] = useState<"" | "bs" | "en" | "de">(app.default_language ?? "");
   const [visibility, setVisibilityLocal] = useState<ApplicationVisibility>(app.visibility);
   const [uploading, setUploading] = useState<null | "logo" | "favicon" | "cover">(null);
+  const uploadBrandingFn = useServerFn(adminUploadBrandingAsset);
   const logoRef = useRef<HTMLInputElement>(null);
   const favRef = useRef<HTMLInputElement>(null);
   const coverRef = useRef<HTMLInputElement>(null);
@@ -618,32 +620,23 @@ function AppSettings({
       return;
     }
     if (
-      ![
-        "image/png",
-        "image/svg+xml",
-        "image/jpeg",
-        "image/webp",
-        "image/x-icon",
-        "image/vnd.microsoft.icon",
-      ].includes(file.type)
+      !["image/png", "image/jpeg", "image/webp", "image/x-icon", "image/vnd.microsoft.icon"].includes(
+        file.type,
+      )
     ) {
       toast.error(t("admin.applications.unsupportedFormat"));
       return;
     }
     setUploading(kind);
     try {
-      const ext = file.name.split(".").pop() || "png";
-      const path = `applications/${app.slug}/${kind}.${ext}`;
-      const { error } = await supabase.storage
-        .from("core")
-        .upload(path, file, { upsert: true, contentType: file.type });
-      if (error) throw error;
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("core").getPublicUrl(path);
-      if (kind === "logo") setLogoUrl(publicUrl);
-      else if (kind === "favicon") setFaviconUrl(publicUrl);
-      else setCoverImageUrl(publicUrl);
+      const form = new FormData();
+      form.append("file", file);
+      form.append("purpose", kind);
+      form.append("appId", app.id);
+      const result = await uploadBrandingFn({ data: form });
+      if (kind === "logo") setLogoUrl(result.url);
+      else if (kind === "favicon") setFaviconUrl(result.url);
+      else setCoverImageUrl(result.url);
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -737,7 +730,7 @@ function AppSettings({
             <input
               ref={logoRef}
               type="file"
-              accept="image/png,image/svg+xml,image/jpeg,image/webp"
+              accept="image/png,image/jpeg,image/webp"
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0];
@@ -769,7 +762,7 @@ function AppSettings({
             <input
               ref={favRef}
               type="file"
-              accept="image/png,image/svg+xml,image/x-icon,image/vnd.microsoft.icon"
+              accept="image/png,image/x-icon,image/vnd.microsoft.icon"
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0];

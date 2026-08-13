@@ -13,6 +13,7 @@ import {
   LayoutGrid,
   MegaphoneIcon,
   Sliders,
+  Tag,
   Target,
   TrendingUp,
   UserPlus,
@@ -194,6 +195,12 @@ function AdminGate() {
       icon: UsersRound,
       title: t("admin.hub.cards.members.title"),
       desc: t("admin.hub.cards.members.desc"),
+    },
+    {
+      to: "/admin/offers-coupons",
+      icon: Tag,
+      title: t("admin.hub.cards.offersCoupons.title"),
+      desc: t("admin.hub.cards.offersCoupons.desc"),
     },
   ];
   return (

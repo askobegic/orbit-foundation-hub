@@ -151,6 +151,35 @@ export async function grantRewardAction(params: {
       } else {
         points = rule.points;
       }
+
+      // Priority 17: Reward Boosts -- a temporary multiplier on this
+      // action, applied here (the one place points are ever decided for
+      // CORE-internal actions) rather than as a second calculation path.
+      // Final business rule (pre-production audit): overlapping windows
+      // for the same action are rejected at write time by
+      // adminUpsertRewardBoost, so at most one boost should ever match
+      // here -- no stacking, ever. The explicit ORDER BY is defense in
+      // depth for the boundary instant where one window's ends_at equals
+      // another's starts_at (both inclusive bounds below), making
+      // resolution deterministic (most recently started wins) rather
+      // than left to whatever order the database happens to return.
+      if (points > 0) {
+        const now = new Date().toISOString();
+        const { data: boost } = await supabaseAdmin
+          .from("reward_boosts")
+          .select("multiplier")
+          .eq("action", params.action)
+          .eq("enabled", true)
+          .eq("archived", false)
+          .lte("starts_at", now)
+          .gte("ends_at", now)
+          .order("starts_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (boost) {
+          points = Math.floor(points * Number((boost as { multiplier: number }).multiplier));
+        }
+      }
     }
   }
 

@@ -1000,3 +1000,127 @@ export const adminListRewardMilestones = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return data ?? [];
   });
+
+// ---------- Priority 17: Reward Boosts ----------
+// Kept deliberately simple per spec: action + multiplier + validity
+// window. Read by the existing grantRewardAction() (rewards.server.ts) --
+// not a second reward calculation engine.
+
+export const adminListRewardBoosts = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { data, error } = await context.supabase
+      .from("reward_boosts")
+      .select("*")
+      .eq("archived", false)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+const boostUpsertSchema = z.object({
+  id: z.string().uuid().optional(),
+  action: z.string().min(1),
+  multiplier: z.number().positive(),
+  startsAt: z.string(),
+  endsAt: z.string(),
+  enabled: z.boolean().default(true),
+});
+
+export const adminUpsertRewardBoost = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => boostUpsertSchema.parse(raw))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+
+    if (new Date(data.endsAt).getTime() <= new Date(data.startsAt).getTime()) {
+      throw new Error("endsAt must be after startsAt.");
+    }
+
+    // Pre-production audit correction (final business rule): at most one
+    // time window may exist for a given action at any point in time --
+    // overlapping boosts on the same action are rejected outright, never
+    // silently resolved by picking one. Checked against every non-
+    // archived boost for this action, enabled or not -- a disabled boost
+    // still "reserves" its window rather than leaving room for a
+    // confusing double-booking that would only surface once someone
+    // re-enables it. Standard half-open interval overlap test:
+    // (existing.starts_at < new.ends_at) AND (new.starts_at < existing.ends_at).
+    // When editing an existing boost, that row is excluded from the
+    // check against itself.
+    let overlapQuery = context.supabase
+      .from("reward_boosts")
+      .select("id, starts_at, ends_at")
+      .eq("action", data.action)
+      .eq("archived", false)
+      .lt("starts_at", data.endsAt)
+      .gt("ends_at", data.startsAt);
+    if (data.id) overlapQuery = overlapQuery.neq("id", data.id);
+    const { data: overlapping, error: overlapError } = await overlapQuery;
+    if (overlapError) throw new Error(overlapError.message);
+    if (overlapping && overlapping.length > 0) {
+      throw new Error(
+        "An overlapping reward boost already exists for this action and time period.",
+      );
+    }
+
+    let previous: unknown = null;
+    if (data.id) {
+      const { data: existing } = await context.supabase
+        .from("reward_boosts")
+        .select("*")
+        .eq("id", data.id)
+        .maybeSingle();
+      previous = existing;
+    }
+
+    const payload = {
+      action: data.action,
+      multiplier: data.multiplier,
+      starts_at: data.startsAt,
+      ends_at: data.endsAt,
+      enabled: data.enabled,
+      created_by: context.userId,
+    };
+
+    const { data: saved, error } = data.id
+      ? await context.supabase
+          .from("reward_boosts")
+          .update(payload)
+          .eq("id", data.id)
+          .select("id")
+          .single()
+      : await context.supabase.from("reward_boosts").insert(payload).select("id").single();
+    if (error) throw new Error(error.message);
+
+    await writeAuditLog({
+      userId: context.userId,
+      action: data.id ? "reward_boost.updated" : "reward_boost.created",
+      entityType: "reward_boost",
+      entityId: (saved as { id: string }).id,
+      oldData: previous,
+      newData: payload,
+    });
+
+    return { id: (saved as { id: string }).id };
+  });
+
+export const adminArchiveRewardBoost = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => z.object({ id: z.string().uuid() }).parse(raw))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { error } = await context.supabase
+      .from("reward_boosts")
+      .update({ archived: true, enabled: false })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    await writeAuditLog({
+      userId: context.userId,
+      action: "reward_boost.archived",
+      entityType: "reward_boost",
+      entityId: data.id,
+    });
+    return { ok: true };
+  });

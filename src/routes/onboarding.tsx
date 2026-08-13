@@ -15,6 +15,7 @@ import type { UserLanguage } from "@/types/database";
 import { useServerFn } from "@tanstack/react-start";
 import { notifyNewUserRegistered } from "@/lib/notifications.functions";
 import { consumeReferral } from "@/lib/referral";
+import { peekPendingCoupon } from "@/lib/coupon-context";
 import { completeOnboardingRewards, linkReferral } from "@/lib/rewards.functions";
 
 export const Route = createFileRoute("/onboarding")({
@@ -157,7 +158,15 @@ function OnboardingPage() {
         }
       }
       toast.success(t("auth.profileSaved"));
-      void navigate({ to: "/dashboard", replace: true });
+      // Priority 17: a pending coupon code (captured on /offer/:code
+      // before registration) takes the new user back there to finish
+      // checkout instead of the default dashboard landing.
+      const pendingCoupon = peekPendingCoupon();
+      if (pendingCoupon) {
+        void navigate({ to: "/offer/$code", params: { code: pendingCoupon }, replace: true });
+      } else {
+        void navigate({ to: "/dashboard", replace: true });
+      }
     } catch {
       toast.error(t("auth.saveError"));
     } finally {

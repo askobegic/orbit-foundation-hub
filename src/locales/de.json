@@ -145,6 +145,11 @@
     "welcome": "Willkommen",
     "subtitle": "Dies ist dein Kontrollzentrum.",
     "myProfile": "Mein Profil",
+    "stats": {
+      "points": "Punkte",
+      "activity": "Aktivität",
+      "noLevel": "—"
+    },
     "myApps": "Meine Anwendungen",
     "activeSubscription": "Aktives Abonnement",
     "paymentHistory": "Zahlungsverlauf",
@@ -494,6 +499,9 @@
       "disabled": "Deaktiviert",
       "archive": "Archivieren",
       "unarchive": "Wiederherstellen",
+      "create": "Erstellen",
+      "enable": "Aktivieren",
+      "disable": "Deaktivieren",
       "add": "Hinzufügen",
       "select": "Auswählen...",
       "key": "Schlüssel",
@@ -1034,7 +1042,8 @@
         "events": { "title": "Universelle Ereignisse", "desc": "Ereignisregister, Anwendungszuordnung und Prämienregeln für von Anwendungen gemeldete Ereignisse." },
         "engagement": { "title": "Missionen, Herausforderungen & Serien", "desc": "Missionen, Herausforderungen und Serien definieren, global oder pro Anwendung." },
         "support": { "title": "Support", "desc": "Support-Anfragen und Antworten der Nutzer." },
-        "members": { "title": "Mitglieder", "desc": "Anzahl der Karten pro Bereich und Verzeichnis-Paginierung für die Mitgliederseite konfigurieren." }
+        "members": { "title": "Mitglieder", "desc": "Anzahl der Karten pro Bereich und Verzeichnis-Paginierung für die Mitgliederseite konfigurieren." },
+        "offersCoupons": { "title": "Angebote & Gutscheine", "desc": "Globale Angebote, individuelle Angebote, öffentliche Gutscheine, Bonuspunkte." }
       }
     },
     "verification": {
@@ -1084,6 +1093,42 @@
       "invoice": "Rechnung",
       "open": "Öffnen",
       "noPayments": "Noch keine Zahlungen."
+    },
+    "offersCoupons": {
+      "title": "Angebote & Gutscheine",
+      "subtitle": "Globale Angebote, individuelle Angebote, öffentliche Gutscheine und Bonuspunkte.",
+      "globalOffersTitle": "Globale Angebote",
+      "individualOffersTitle": "Individuelle Angebote",
+      "individualOffersHint": "Nur der ausgewählte Nutzer sieht dieses Angebot.",
+      "publicCouponsTitle": "Öffentliche Gutscheine",
+      "rewardBoostsTitle": "Bonuspunkte",
+      "titleBs": "Titel (BS)",
+      "titleEn": "Titel (EN)",
+      "titleDe": "Titel (DE)",
+      "segment": "Segment",
+      "targetUserId": "ID des Zielnutzers",
+      "targetUserIdPlaceholder": "Profil-UUID",
+      "productType": "Produkttyp",
+      "productSubscriptionPlan": "Abonnement-Plan",
+      "productAdPlacementPrice": "Werbeplatzierungspreis",
+      "productId": "Produkt-ID",
+      "productIdPlaceholder": "UUID aus subscription_plans / ad_placement_prices",
+      "discountType": "Rabattart",
+      "discountPercent": "Prozentsatz",
+      "discountFixedPrice": "Festpreis",
+      "discountPercentValue": "Rabatt %",
+      "fixedPriceValue": "Festpreis (€)",
+      "startsAt": "Beginnt am",
+      "endsAt": "Endet am",
+      "code": "Gutscheincode",
+      "maxTotalUses": "Max. Gesamtnutzungen",
+      "maxUsesPerUser": "Max. pro Nutzer",
+      "unlimited": "Unbegrenzt",
+      "redemptions": "Einlösungen",
+      "multiplier": "Multiplikator",
+      "offerCreated": "Angebot erstellt",
+      "couponCreated": "Gutschein erstellt",
+      "boostCreated": "Bonuspunkte erstellt"
     }
   },
   "members": {
@@ -1104,5 +1149,28 @@
     "statusPremiumDesc": "Mitgliedschaft mit zusätzlichen Vorteilen.",
     "statusVerifiedTitle": "VERIFIZIERT",
     "statusVerifiedDesc": "Die Identität des Mitglieds wurde verifiziert."
+  },
+  "offers": {
+    "title": "🎁 SPEZIELL FÜR SIE",
+    "subtitle": "Nutzen Sie Ihre besonderen Vorteile",
+    "useOffer": "Angebot nutzen",
+    "viewAll": "Alle Angebote ansehen",
+    "validUntil": "Gültig bis {{month}} {{year}}.",
+    "coupon": {
+      "notFound": "Dieser Gutschein wurde nicht gefunden.",
+      "useCoupon": "Gutschein einlösen",
+      "registerHint": "Sie benötigen ein Core-Konto, um diesen Gutschein einzulösen.",
+      "redeemFailed": "Der Bezahlvorgang für diesen Gutschein konnte nicht gestartet werden. Bitte versuchen Sie es erneut.",
+      "noPaymentLink": "Für dieses Produkt ist noch keine Zahlungsmethode konfiguriert.",
+      "invalid": {
+        "expired": "Dieser Gutschein ist abgelaufen.",
+        "not_started": "Dieser Gutschein ist noch nicht aktiv.",
+        "max_uses_reached": "Dieser Gutschein hat die maximale Anzahl an Einlösungen erreicht."
+      }
+    }
+  },
+  "advertisingSlot": {
+    "title": "IHRE WERBUNG AN DIESER STELLE!",
+    "cta": "Angebot ansehen"
   }
 }

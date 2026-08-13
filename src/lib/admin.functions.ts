@@ -7,6 +7,9 @@ import {
   writeAuditLog,
   addMonthsIso,
   deleteUserAccountCascade,
+  BRANDING_ALLOWED_TYPES,
+  brandingMaxSize,
+  writeBrandingAsset,
 } from "@/lib/admin.server";
 import { resolvePremiumStatus, resolvePremiumStatusBulk } from "@/lib/premium.server";
 
@@ -64,6 +67,57 @@ export const adminUpsertPlan = createServerFn({ method: "POST" })
       newData: row,
     });
     return row;
+  });
+
+// CORE admin panel's own branding-upload entry point (admin.applications.tsx)
+// -- shares BRANDING_ALLOWED_TYPES/brandingMaxSize/writeBrandingAsset with
+// the equivalent /v1/admin/media/branding endpoint (admin.server.ts) so the
+// two entry points can never drift out of sync, rather than the browser
+// client writing to Storage directly (security-sweep Finding 1: bypassed
+// server-side admin authorization/validation/audit logging).
+const brandingUploadPurposes = ["logo", "favicon", "cover"] as const;
+
+export const adminUploadBrandingAsset = createServerFn({ method: "POST" })
+  .inputValidator((data: FormData) => data)
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+
+    const file = data.get("file");
+    const purposeRaw = data.get("purpose");
+    const appId = data.get("appId");
+
+    if (!(file instanceof File)) throw new Error("file is required");
+    if (
+      typeof purposeRaw !== "string" ||
+      !brandingUploadPurposes.includes(purposeRaw as (typeof brandingUploadPurposes)[number])
+    ) {
+      throw new Error("purpose must be logo, favicon, or cover");
+    }
+    const purpose = purposeRaw as (typeof brandingUploadPurposes)[number];
+    if (typeof appId !== "string" || !appId) throw new Error("appId is required");
+    if (!BRANDING_ALLOWED_TYPES[file.type]) throw new Error("Unsupported file type.");
+    if (file.size > brandingMaxSize(purpose)) throw new Error("File is too large.");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: app } = await supabaseAdmin
+      .from("applications")
+      .select("slug")
+      .eq("id", appId)
+      .maybeSingle();
+    if (!app) throw new Error("Application not found.");
+
+    const result = await writeBrandingAsset({ appSlug: app.slug, purpose, file });
+
+    await writeAuditLog({
+      userId: context.userId,
+      action: "application.branding_uploaded",
+      entityType: "application",
+      entityId: appId,
+      newData: { purpose, url: result.url },
+    });
+
+    return result;
   });
 
 // Priority 8.7 (R-4): was a hard `DELETE`, the only one found across CORE

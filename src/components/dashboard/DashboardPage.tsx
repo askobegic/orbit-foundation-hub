@@ -29,6 +29,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { hasAnyActivePremium } from "@/lib/premium";
 import { getDashboardWidgets } from "@/lib/dashboard-widgets.functions";
 import { RewardsAdvertisingCards } from "@/components/dashboard/RewardsAdvertisingCards";
+import { DashboardStats } from "@/components/dashboard/DashboardStats";
+import { SpecialOffers } from "@/components/dashboard/SpecialOffers";
+import { DashboardAdCards } from "@/components/dashboard/DashboardAdCards";
+import { DashboardFeaturedBanner } from "@/components/dashboard/DashboardFeaturedBanner";
 import { DashboardMobileNav } from "@/components/dashboard/DashboardNav";
 import { getDashboardNavItems } from "@/lib/dashboard-nav";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
@@ -280,6 +284,17 @@ export function DashboardPage() {
                 </Link>
               </div>
             </section>
+
+            {/* Priority 17: Points + Activity stat cards, directly below
+                the profile card (spec section 14) -- real existing
+                Rewards/Activity data, no new calculation. */}
+            <DashboardStats userId={user?.id} />
+
+            {/* Priority 17: "SPECIJALNO ZA VAS" -- immediately after
+                profile/points/activity, before My Applications (spec
+                section 15). Renders nothing when there are no eligible
+                offers. */}
+            {isWidgetEnabled("special_offers") && <SpecialOffers userId={user?.id} />}
 
             {/* Applications */}
             {isWidgetEnabled("my_applications") && (
@@ -721,6 +736,20 @@ export function DashboardPage() {
               />
             )}
           </div>
+
+          {/* Priority 17: Dashboard Advertising -- always low on the page,
+              never above Profile/Points/Activity/Offers/My Applications
+              (spec section 24/38). Spans both columns like the footer. */}
+          {advertisingEnabled && (
+            <div className="lg:col-span-3">
+              <DashboardAdCards />
+            </div>
+          )}
+          {advertisingEnabled && (
+            <div className="lg:col-span-3">
+              <DashboardFeaturedBanner />
+            </div>
+          )}
 
           {/* Footer */}
           <footer className="lg:col-span-3">

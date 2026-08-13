@@ -296,6 +296,8 @@ export type Database = {
           expires_at: string | null
           id: string
           image_url: string | null
+          impressions_delivered: number
+          impressions_purchased: number | null
           link_url: string | null
           moderation_note: string | null
           placement_key: string
@@ -312,6 +314,8 @@ export type Database = {
           expires_at?: string | null
           id?: string
           image_url?: string | null
+          impressions_delivered?: number
+          impressions_purchased?: number | null
           link_url?: string | null
           moderation_note?: string | null
           placement_key: string
@@ -328,6 +332,8 @@ export type Database = {
           expires_at?: string | null
           id?: string
           image_url?: string | null
+          impressions_delivered?: number
+          impressions_purchased?: number | null
           link_url?: string | null
           moderation_note?: string | null
           placement_key?: string
@@ -623,6 +629,7 @@ export type Database = {
           duration_days: number
           enabled: boolean
           id: string
+          impressions_included: number | null
           paypal_payment_link: string | null
           placement_key: string
           price: number
@@ -639,6 +646,7 @@ export type Database = {
           duration_days: number
           enabled?: boolean
           id?: string
+          impressions_included?: number | null
           paypal_payment_link?: string | null
           placement_key: string
           price: number
@@ -655,6 +663,7 @@ export type Database = {
           duration_days?: number
           enabled?: boolean
           id?: string
+          impressions_included?: number | null
           paypal_payment_link?: string | null
           placement_key?: string
           price?: number
@@ -2799,6 +2808,324 @@ export type Database = {
           },
         ]
       }
+      offer_segments: {
+        Row: {
+          archived: boolean
+          created_at: string
+          description: string | null
+          display_order: number
+          enabled: boolean
+          key: string
+          label: string
+        }
+        Insert: {
+          archived?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          enabled?: boolean
+          key: string
+          label: string
+        }
+        Update: {
+          archived?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          enabled?: boolean
+          key?: string
+          label?: string
+        }
+        Relationships: []
+      }
+      dashboard_offers: {
+        Row: {
+          archived: boolean
+          badge_icon: string | null
+          created_at: string
+          created_by: string | null
+          cta_bs: string | null
+          cta_de: string | null
+          cta_en: string | null
+          description_bs: string | null
+          description_de: string | null
+          description_en: string | null
+          discount_percent: number | null
+          discount_type: string
+          enabled: boolean
+          ends_at: string
+          fixed_price: number | null
+          id: string
+          offer_type: string
+          priority: number
+          product_id: string
+          product_type: string
+          starts_at: string
+          target_segment: string | null
+          target_user_id: string | null
+          title_bs: string
+          title_de: string
+          title_en: string
+          updated_at: string
+        }
+        Insert: {
+          archived?: boolean
+          badge_icon?: string | null
+          created_at?: string
+          created_by?: string | null
+          cta_bs?: string | null
+          cta_de?: string | null
+          cta_en?: string | null
+          description_bs?: string | null
+          description_de?: string | null
+          description_en?: string | null
+          discount_percent?: number | null
+          discount_type: string
+          enabled?: boolean
+          ends_at: string
+          fixed_price?: number | null
+          id?: string
+          offer_type: string
+          priority?: number
+          product_id: string
+          product_type: string
+          starts_at: string
+          target_segment?: string | null
+          target_user_id?: string | null
+          title_bs: string
+          title_de: string
+          title_en: string
+          updated_at?: string
+        }
+        Update: {
+          archived?: boolean
+          badge_icon?: string | null
+          created_at?: string
+          created_by?: string | null
+          cta_bs?: string | null
+          cta_de?: string | null
+          cta_en?: string | null
+          description_bs?: string | null
+          description_de?: string | null
+          description_en?: string | null
+          discount_percent?: number | null
+          discount_type?: string
+          enabled?: boolean
+          ends_at?: string
+          fixed_price?: number | null
+          id?: string
+          offer_type?: string
+          priority?: number
+          product_id?: string
+          product_type?: string
+          starts_at?: string
+          target_segment?: string | null
+          target_user_id?: string | null
+          title_bs?: string
+          title_de?: string
+          title_en?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_offers_target_segment_fkey"
+            columns: ["target_segment"]
+            isOneToOne: false
+            referencedRelation: "offer_segments"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "dashboard_offers_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      public_coupons: {
+        Row: {
+          archived: boolean
+          code: string
+          created_at: string
+          created_by: string | null
+          description_bs: string | null
+          description_de: string | null
+          description_en: string | null
+          discount_percent: number | null
+          discount_type: string
+          display_label: string | null
+          enabled: boolean
+          ends_at: string
+          fixed_price: number | null
+          id: string
+          is_public: boolean
+          max_total_uses: number | null
+          max_uses_per_user: number
+          min_purchase: number | null
+          product_id: string
+          product_type: string
+          starts_at: string
+          title_bs: string
+          title_de: string
+          title_en: string
+          updated_at: string
+        }
+        Insert: {
+          archived?: boolean
+          code: string
+          created_at?: string
+          created_by?: string | null
+          description_bs?: string | null
+          description_de?: string | null
+          description_en?: string | null
+          discount_percent?: number | null
+          discount_type: string
+          display_label?: string | null
+          enabled?: boolean
+          ends_at: string
+          fixed_price?: number | null
+          id?: string
+          is_public?: boolean
+          max_total_uses?: number | null
+          max_uses_per_user?: number
+          min_purchase?: number | null
+          product_id: string
+          product_type: string
+          starts_at: string
+          title_bs: string
+          title_de: string
+          title_en: string
+          updated_at?: string
+        }
+        Update: {
+          archived?: boolean
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          description_bs?: string | null
+          description_de?: string | null
+          description_en?: string | null
+          discount_percent?: number | null
+          discount_type?: string
+          display_label?: string | null
+          enabled?: boolean
+          ends_at?: string
+          fixed_price?: number | null
+          id?: string
+          is_public?: boolean
+          max_total_uses?: number | null
+          max_uses_per_user?: number
+          min_purchase?: number | null
+          product_id?: string
+          product_type?: string
+          starts_at?: string
+          title_bs?: string
+          title_de?: string
+          title_en?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      coupon_redemptions: {
+        Row: {
+          coupon_id: string
+          currency: string
+          final_price: number
+          id: string
+          payment_id: string | null
+          redeemed_at: string
+          user_id: string
+        }
+        Insert: {
+          coupon_id: string
+          currency: string
+          final_price: number
+          id?: string
+          payment_id?: string | null
+          redeemed_at?: string
+          user_id: string
+        }
+        Update: {
+          coupon_id?: string
+          currency?: string
+          final_price?: number
+          id?: string
+          payment_id?: string | null
+          redeemed_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_redemptions_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "public_coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_redemptions_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_redemptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reward_boosts: {
+        Row: {
+          action: string
+          archived: boolean
+          created_at: string
+          created_by: string | null
+          enabled: boolean
+          ends_at: string
+          id: string
+          multiplier: number
+          starts_at: string
+          updated_at: string
+        }
+        Insert: {
+          action: string
+          archived?: boolean
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          ends_at: string
+          id?: string
+          multiplier: number
+          starts_at: string
+          updated_at?: string
+        }
+        Update: {
+          action?: string
+          archived?: boolean
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          ends_at?: string
+          id?: string
+          multiplier?: number
+          starts_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reward_boosts_action_fkey"
+            columns: ["action"]
+            isOneToOne: false
+            referencedRelation: "reward_action_rules"
+            referencedColumns: ["action"]
+          },
+        ]
+      }
       reward_fulfillment_types: {
         Row: {
           archived: boolean
@@ -3685,6 +4012,26 @@ export type Database = {
           ok: boolean
           redemption_id: string | null
         }[]
+      }
+      redeem_coupon_atomic: {
+        Args: {
+          p_coupon_id: string
+          p_currency: string
+          p_final_price: number
+          p_max_total_uses: number | null
+          p_max_uses_per_user: number
+          p_payment_id: string | null
+          p_user_id: string
+        }
+        Returns: {
+          error_code: string | null
+          ok: boolean
+          redemption_id: string | null
+        }[]
+      }
+      record_ad_impression: {
+        Args: { p_campaign_id: string }
+        Returns: undefined
       }
       event_analytics_by_event: {
         Args: { _app_id: string; _since: string }

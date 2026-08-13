@@ -15,6 +15,7 @@ import {
   getActivePlacementCreative,
   getAvailableApplicationPlacements,
   getAvailableChannelsForApp,
+  getDashboardCardCampaigns,
   resolveChannelPriceById,
   resolveInitialCampaignStatus,
   resolvePlacementPriceById,
@@ -24,6 +25,7 @@ import type { AdDevice } from "@/lib/advertising.server";
 import { getApplicationCapabilities } from "@/lib/capabilities.functions";
 import { isSafeProfileUrl } from "@/lib/url";
 import { signCampaignReference } from "@/lib/payment-reference.server";
+import { isRateLimited, clientIp } from "@/lib/rate-limit.server";
 
 async function adminClient() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -83,6 +85,53 @@ export const getActivePlacementAd = createServerFn({ method: "POST" })
       data.placementKey,
       data.device as AdDevice | undefined,
     );
+  });
+
+// Priority 17: Dashboard Cards -- up to 5 simultaneous creatives, fairly
+// rotated (see getDashboardCardCampaigns's own comment for the delivery
+// rule). Same capability gate as every other advertising surface.
+const dashboardCardsSchema = z.object({ appId: z.string().uuid() });
+
+export const getDashboardCards = createServerFn({ method: "POST" })
+  .inputValidator((raw: unknown) => dashboardCardsSchema.parse(raw))
+  .handler(async ({ data }) => {
+    const capabilities = await getApplicationCapabilities({ data: { appId: data.appId } });
+    if (!capabilities.includes("advertising")) return [];
+    return getDashboardCardCampaigns(data.appId);
+  });
+
+// Records one impression for a Dashboard Card or Featured Banner
+// creative actually shown to a real visitor -- the server decides
+// validity (spec section 26), never the client. Deduplicated per
+// (campaign, IP) for a short window to absorb rapid refresh/React
+// StrictMode double-render/retry without inflating counts, reusing the
+// exact in-memory limiter every other abuse-exposed endpoint in this
+// codebase already uses rather than a second mechanism.
+const recordImpressionSchema = z.object({ campaignId: z.string().uuid() });
+
+export const recordAdImpression = createServerFn({ method: "POST" })
+  .inputValidator((raw: unknown) => recordImpressionSchema.parse(raw))
+  .handler(async ({ data }) => {
+    const { getRequest } = await import("@tanstack/react-start/server");
+    const request = getRequest();
+    const ip = request ? clientIp(request) : "unknown";
+    if (isRateLimited(`ad-impression:${data.campaignId}:${ip}`, 1, 30 * 1000)) {
+      return { recorded: false };
+    }
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Pre-production audit correction: record_ad_impression() now
+    // atomically enforces impressions_delivered <= impressions_purchased
+    // and returns whether it actually incremented -- propagated here
+    // rather than assumed true, so a caller can tell "counted" apart
+    // from "campaign already exhausted its purchased quota."
+    const { data: recorded, error } = await supabaseAdmin.rpc("record_ad_impression", {
+      p_campaign_id: data.campaignId,
+    });
+    if (error) {
+      console.error("recordAdImpression failed", error);
+      return { recorded: false };
+    }
+    return { recorded: recorded === true };
   });
 
 // ---------- Authenticated: self-serve campaign creation ----------
@@ -554,6 +603,11 @@ const placementPriceSchema = z.object({
   enabled: z.boolean().default(true),
   archived: z.boolean().default(false),
   reason: z.string().trim().max(500).optional(),
+  // Priority 17: an alternative purchasable unit alongside durationDays
+  // (which remains required either way, as a safety-net expiry) -- when
+  // set, this price row represents "N impressions" for Dashboard Cards'
+  // equal-delivery rotation rather than a plain fixed-duration placement.
+  impressionsIncluded: z.number().int().positive().optional(),
 });
 
 export const adminUpsertAdPlacementPrice = createServerFn({ method: "POST" })
@@ -583,6 +637,7 @@ export const adminUpsertAdPlacementPrice = createServerFn({ method: "POST" })
       display_order: data.displayOrder,
       enabled: data.enabled,
       archived: data.archived,
+      impressions_included: data.impressionsIncluded ?? null,
     };
     const { data: row, error } = data.id
       ? await supabaseAdmin

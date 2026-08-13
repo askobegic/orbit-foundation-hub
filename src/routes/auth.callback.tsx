@@ -1,6 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { peekPendingCoupon } from "@/lib/coupon-context";
+
+// Priority 17: a completed profile with a pending coupon code returns to
+// /offer/:code (to finish checkout) instead of the default /dashboard.
+// The code is only peeked, not consumed, here -- the offer page itself
+// consumes it once it has actually resolved and displayed the coupon,
+// so a resolution failure doesn't silently lose the pending code.
+function postAuthDestination(profileComplete: boolean | null | undefined): string {
+  if (!profileComplete) return "/onboarding";
+  const pending = peekPendingCoupon();
+  return pending ? `/offer/${pending}` : "/dashboard";
+}
 
 export const Route = createFileRoute("/auth/callback")({
   component: AuthCallback,
@@ -57,11 +69,7 @@ function AuthCallback() {
           .eq("id", data.session.user.id)
           .maybeSingle();
 
-        if (profile?.profile_complete) {
-          window.location.href = "/dashboard";
-        } else {
-          window.location.href = "/onboarding";
-        }
+        window.location.href = postAuthDestination(profile?.profile_complete);
       } else {
         // Wait for auth state change
         setStatus("Čekanje...");
@@ -76,7 +84,7 @@ function AuthCallback() {
                 .select("profile_complete")
                 .eq("id", session.user.id)
                 .maybeSingle();
-              window.location.href = profile?.profile_complete ? "/dashboard" : "/onboarding";
+              window.location.href = postAuthDestination(profile?.profile_complete);
             }
           }
         );

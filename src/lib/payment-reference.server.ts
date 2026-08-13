@@ -77,3 +77,41 @@ export function verifyCampaignReference(
 
   return { user_id, app_id, campaign_id };
 }
+
+// Priority 17: Public Coupons. Same tagged-reference pattern as campaign
+// checkout above -- a coupon-backed purchase still goes through the
+// referenced product's own real, static, admin-configured Stripe/PayPal
+// Payment Link (this codebase has no dynamic Checkout Session creation),
+// so the coupon can only ever "unlock" a product whose OWN price the
+// admin has already set to the intended discounted amount -- the
+// existing webhook amount/plan verification (SE-2/SE-4) still checks the
+// paid amount against that referenced plan's real price, completely
+// unchanged. What this reference adds is purely the extra coupon_id tag,
+// so the webhook can additionally call redeem_coupon_atomic() once the
+// underlying subscription purchase (unchanged logic) succeeds.
+export function signCouponReference(
+  userId: string,
+  appId: string,
+  planId: string,
+  couponId: string,
+): string {
+  const base = `coupon__${userId}__${appId}__${planId}__${couponId}`;
+  return `${base}__${sign(base)}`;
+}
+
+export function verifyCouponReference(
+  ref: string | null | undefined,
+): { user_id: string; app_id: string; plan_id: string; coupon_id: string } | null {
+  if (!ref) return null;
+  const parts = ref.split("__");
+  if (parts.length !== 6 || parts[0] !== "coupon") return null;
+  const [, user_id, app_id, plan_id, coupon_id, signature] = parts;
+  if (!user_id || !app_id || !plan_id || !coupon_id || !signature) return null;
+
+  const expected = sign(`coupon__${user_id}__${app_id}__${plan_id}__${coupon_id}`);
+  const a = Buffer.from(signature, "hex");
+  const b = Buffer.from(expected, "hex");
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+
+  return { user_id, app_id, plan_id, coupon_id };
+}

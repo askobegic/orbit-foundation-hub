@@ -106,6 +106,54 @@ export async function deleteUserAccountCascade(params: {
   if (error) throw new Error(error.message);
 }
 
+// Shared by the /v1/admin/media/branding endpoint and the CORE admin
+// panel's own branding-upload server function (adminUploadBrandingAsset,
+// admin.functions.ts) -- one allowlist and one storage-write
+// implementation, never hand-duplicated between the two entry points.
+// image/svg+xml is deliberately excluded: SVG is active content (can
+// embed <script>) and these files are served publicly from the storage
+// domain -- accepting it would be a stored-XSS vector (Priority 11
+// security audit).
+export const BRANDING_ALLOWED_TYPES: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
+  "image/x-icon": "ico",
+  "image/vnd.microsoft.icon": "ico",
+};
+
+export function brandingMaxSize(purpose: "logo" | "favicon" | "cover"): number {
+  return purpose === "cover" ? 5 * 1024 * 1024 : 2 * 1024 * 1024;
+}
+
+// Writes an already-validated branding file to its known path. Callers are
+// responsible for validating file.type/size against BRANDING_ALLOWED_TYPES
+// /brandingMaxSize and resolving appSlug themselves first (each entry
+// point's error-reporting convention differs -- ApiError for /v1, a plain
+// Error for the CORE admin panel's own server function).
+export async function writeBrandingAsset(params: {
+  appSlug: string;
+  purpose: "logo" | "favicon" | "cover";
+  file: File;
+}): Promise<{ url: string }> {
+  // Extension is derived from the validated file.type, never the
+  // client-supplied filename -- a filename can carry an arbitrary trailing
+  // path segment that would otherwise become part of the storage object
+  // key (Priority 11 security audit).
+  const ext = BRANDING_ALLOWED_TYPES[params.file.type] ?? "png";
+  const path = `applications/${params.appSlug}/${params.purpose}.${ext}`;
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { error } = await supabaseAdmin.storage.from("core").upload(path, params.file, {
+    upsert: true,
+    contentType: params.file.type,
+  });
+  if (error) throw new Error(error.message);
+  const {
+    data: { publicUrl },
+  } = supabaseAdmin.storage.from("core").getPublicUrl(path);
+  return { url: publicUrl };
+}
+
 export function addMonthsIso(months: number, from: Date = new Date()): string {
   const d = new Date(from);
   const day = d.getDate();
