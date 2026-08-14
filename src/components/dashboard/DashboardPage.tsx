@@ -285,10 +285,24 @@ export function DashboardPage() {
               </div>
             </section>
 
-            {/* Priority 17: Points + Activity stat cards, directly below
-                the profile card (spec section 14) -- real existing
-                Rewards/Activity data, no new calculation. */}
-            <DashboardStats userId={user?.id} />
+            {/* Mandatory Dashboard UI change: Primary Dashboard Action
+                Area -- Bodovi/Aktivnost (DashboardStats, unchanged) sit
+                together with the existing Share/Invite actions
+                (ShareAndInvite, moved here from its previous position
+                near the bottom -- same component, same handlers, same
+                reward/referral logic, only repositioned) as one visible
+                4-card row on desktop / 2x2 grid on mobile, directly below
+                the profile card. */}
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <DashboardStats userId={user?.id} />
+              {isWidgetEnabled("share_and_invite") && (
+                <ShareAndInvite
+                  username={profile?.username ?? null}
+                  firstName={profile?.first_name ?? null}
+                  lastName={profile?.last_name ?? null}
+                />
+              )}
+            </div>
 
             {/* Priority 17: "SPECIJALNO ZA VAS" -- immediately after
                 profile/points/activity, before My Applications (spec
@@ -726,14 +740,6 @@ export function DashboardPage() {
                   ))}
                 </div>
               </section>
-            )}
-
-            {isWidgetEnabled("share_and_invite") && (
-              <ShareAndInvite
-                username={profile?.username ?? null}
-                firstName={profile?.first_name ?? null}
-                lastName={profile?.last_name ?? null}
-              />
             )}
           </div>
 

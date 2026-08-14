@@ -1,6 +1,12 @@
 // Priority 17: Profile + Points + Activity header stats. Reuses the
 // EXISTING getMyActivityDashboard() (lifetimePoints/level) -- no new
 // points calculation, no new level resolver.
+//
+// Renders its two cards as siblings (no wrapping grid of its own) so
+// DashboardPage can lay them out together with the Share/Invite action
+// cards in one shared "Bodovi | Aktivnost | Preporuci/Posalji | Pozovi
+// prijatelje" primary action area (mandatory Dashboard UI change --
+// existing referral/share mechanism only repositioned, not rebuilt).
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useTranslation } from "react-i18next";
@@ -23,7 +29,7 @@ export function DashboardStats({ userId }: { userId?: string }) {
   const levelLabel = query.data?.level?.label ?? null;
 
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <>
       <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
           <Trophy className="h-5 w-5" />
@@ -32,9 +38,7 @@ export function DashboardStats({ userId }: { userId?: string }) {
           {query.isLoading ? (
             <Skeleton className="h-6 w-16" />
           ) : (
-            <p className="truncate text-lg font-bold text-gray-900">
-              {points.toLocaleString()}
-            </p>
+            <p className="truncate text-lg font-bold text-gray-900">{points.toLocaleString()}</p>
           )}
           <p className="truncate text-xs text-gray-500">{t("dashboard.stats.points")}</p>
         </div>
@@ -54,6 +58,6 @@ export function DashboardStats({ userId }: { userId?: string }) {
           <p className="truncate text-xs text-gray-500">{t("dashboard.stats.activity")}</p>
         </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -50,6 +50,7 @@ export function ShareAndInvite({ username, firstName, lastName }: ShareAndInvite
   const { t } = useTranslation();
   const { application } = useApplication();
   const [copied, setCopied] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteCopied, setInviteCopied] = useState(false);
 
@@ -162,96 +163,120 @@ export function ShareAndInvite({ username, firstName, lastName }: ShareAndInvite
 
   return (
     <>
-      {/* Share To */}
-      <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-800">{t("share.shareApp")}</h3>
-          <button
-            onClick={() => nativeShare(shareTitle, shareDescription, shareUrl)}
-            className="flex items-center gap-1.5 rounded-lg bg-[#1D6BF3] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#1558D6]"
-          >
-            <Share2 size={12} />
-            {t("share.share")}
-          </button>
+      {/* Priority 17 UI change: "Preporuci / Posalji" -- compact primary
+          action card (same visual weight as the Bodovi/Aktivnost stat
+          cards), opens the Share modal below. All share logic/handlers
+          are unchanged, only moved from an always-inline section into a
+          modal, matching the Invite card's existing pattern. */}
+      <button
+        onClick={() => setShareOpen(true)}
+        className="flex items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm ring-1 ring-gray-100 transition hover:ring-[#1D6BF3]/40"
+      >
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-[#1D6BF3]">
+          <Share2 className="h-5 w-5" />
+        </span>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-gray-900">{t("share.shareApp")}</p>
+          <p className="truncate text-xs text-gray-500">{t("share.share")}</p>
         </div>
+      </button>
 
-        <p className="mb-3 text-xs text-gray-500">{shareDescription}</p>
-
-        <div className="mb-4 flex items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
-          <span className="min-w-0 flex-1 truncate text-xs text-gray-500">{shareUrl}</span>
-          <button
-            onClick={copyShareUrl}
-            aria-label={t("share.copyLink")}
-            className="flex h-8 w-8 flex-shrink-0 items-center justify-center text-gray-400 hover:text-[#1D6BF3]"
-          >
-            {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
-          </button>
+      {/* "Pozovi prijatelje / Preporuci stranicu" -- compact primary
+          action card, opens the existing Invite modal below (unchanged). */}
+      <button
+        onClick={() => setInviteOpen(true)}
+        className="flex items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm ring-1 ring-gray-100 transition hover:ring-[#1D6BF3]/40"
+      >
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
+          <UserPlus className="h-5 w-5" />
+        </span>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-gray-900">{t("share.inviteFriend")}</p>
+          <p className="truncate text-xs text-gray-500">{t("share.invite")}</p>
         </div>
+      </button>
 
-        <div className="flex items-center gap-2">
-          {socialLinks.map((s) => (
-            <a
-              key={s.name}
-              href={s.onClick ? undefined : s.href}
-              target={s.onClick ? undefined : "_blank"}
-              rel="noopener noreferrer"
-              onClick={
-                s.onClick
-                  ? (e) => {
-                      e.preventDefault();
-                      s.onClick?.();
-                    }
-                  : undefined
-              }
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-all duration-200 hover:border-transparent hover:text-white"
-              onMouseEnter={(e) => {
-                const el = e.currentTarget as HTMLElement;
-                el.style.backgroundColor = s.color;
-                el.style.borderColor = s.color;
-                el.style.color = "white";
-              }}
-              onMouseLeave={(e) => {
-                const el = e.currentTarget as HTMLElement;
-                el.style.backgroundColor = "";
-                el.style.borderColor = "";
-                el.style.color = "";
-              }}
-              title={s.name}
-              aria-label={s.name}
+      {/* Share Modal -- exact same content/handlers previously always-inline
+          in the "Share To" section (copy link, social icons, native
+          share), unchanged, now reachable from the compact card above. */}
+      {shareOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShareOpen(false);
+          }}
+        >
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-base font-semibold text-gray-900">{t("share.shareApp")}</h2>
+              <button
+                onClick={() => setShareOpen(false)}
+                aria-label={t("common.close")}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <p className="mb-3 text-xs text-gray-500">{shareDescription}</p>
+
+            <div className="mb-4 flex items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
+              <span className="min-w-0 flex-1 truncate text-xs text-gray-500">{shareUrl}</span>
+              <button
+                onClick={copyShareUrl}
+                aria-label={t("share.copyLink")}
+                className="flex h-8 w-8 flex-shrink-0 items-center justify-center text-gray-400 hover:text-[#1D6BF3]"
+              >
+                {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+              </button>
+            </div>
+
+            <div className="mb-4 flex items-center gap-2">
+              {socialLinks.map((s) => (
+                <a
+                  key={s.name}
+                  href={s.onClick ? undefined : s.href}
+                  target={s.onClick ? undefined : "_blank"}
+                  rel="noopener noreferrer"
+                  onClick={
+                    s.onClick
+                      ? (e) => {
+                          e.preventDefault();
+                          s.onClick?.();
+                        }
+                      : undefined
+                  }
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-all duration-200 hover:border-transparent hover:text-white"
+                  onMouseEnter={(e) => {
+                    const el = e.currentTarget as HTMLElement;
+                    el.style.backgroundColor = s.color;
+                    el.style.borderColor = s.color;
+                    el.style.color = "white";
+                  }}
+                  onMouseLeave={(e) => {
+                    const el = e.currentTarget as HTMLElement;
+                    el.style.backgroundColor = "";
+                    el.style.borderColor = "";
+                    el.style.color = "";
+                  }}
+                  title={s.name}
+                  aria-label={s.name}
+                >
+                  {s.icon}
+                </a>
+              ))}
+            </div>
+
+            <button
+              onClick={() => void nativeShare(shareTitle, shareDescription, shareUrl)}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#1D6BF3] py-2.5 text-sm font-medium text-white hover:bg-[#1558D6]"
             >
-              {s.icon}
-            </a>
-          ))}
-        </div>
-      </section>
-
-      {/* Invite Friend */}
-      <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
-        <div className="mb-3 flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-semibold text-gray-800">{t("share.inviteFriend")}</h3>
-            <p className="text-xs text-gray-400">{t("share.inviteSubtitle")}</p>
+              <Share2 size={14} />
+              {t("share.share")}
+            </button>
           </div>
-          <button
-            onClick={() => setInviteOpen(true)}
-            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:border-[#1D6BF3] hover:text-[#1D6BF3]"
-          >
-            <UserPlus size={12} />
-            {t("share.invite")}
-          </button>
         </div>
-
-        <div className="flex items-center gap-2 rounded-lg border border-dashed border-gray-200 px-3 py-2">
-          <span className="min-w-0 flex-1 truncate text-xs text-gray-400">{inviteLink}</span>
-          <button
-            onClick={copyInvite}
-            aria-label={t("share.copyLink")}
-            className="flex h-8 w-8 flex-shrink-0 items-center justify-center text-gray-400 hover:text-[#1D6BF3]"
-          >
-            {inviteCopied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
-          </button>
-        </div>
-      </section>
+      )}
 
       {/* Invite Modal */}
       {inviteOpen && (
