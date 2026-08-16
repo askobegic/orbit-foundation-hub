@@ -31,6 +31,22 @@ export const createPaymentReference = createServerFn({ method: "POST" })
       throw new Error("Invalid plan for this application");
     }
 
+    // Application Visibility: a plan may be individually active while its
+    // application is still draft/coming_soon/archived (Admin is expected to
+    // pre-configure products ahead of an application's launch -- see
+    // admin.applications.tsx). A plan being active is therefore not enough;
+    // the application itself must be commercially available. User-experience
+    // pre-check only -- the webhook re-checks this authoritatively (see
+    // stripe.ts/paypal.ts), matching the existing dependency-check pattern.
+    const { data: appRow } = await context.supabase
+      .from("applications")
+      .select("visibility")
+      .eq("id", data.app_id)
+      .maybeSingle();
+    if (!appRow || appRow.visibility !== "active") {
+      throw new Error("application_not_active");
+    }
+
     // Sponsored-requires-Listing: user-experience pre-check, so the user
     // is never even redirected to Stripe/PayPal for a purchase that would
     // fail its dependency -- prevents the charge entirely in the common

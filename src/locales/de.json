@@ -240,6 +240,7 @@
     "loading": "Wird geladen…",
     "noPlans": "Noch keine aktiven Tarife.",
     "dependencyNotMet": "Für den Kauf dieses Produkts ist ein aktiver erforderlicher Eintrag bzw. ein aktives Listing erforderlich.",
+    "applicationNotActive": "Diese Anwendung ist derzeit nicht für den Kauf verfügbar.",
     "months": "Monate",
     "perMonth": "Monat",
     "payStripe": "Mit Karte zahlen (Stripe)",

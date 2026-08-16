@@ -112,12 +112,15 @@ function PricingPage() {
       window.location.href = url;
     } catch (err) {
       console.error("createPaymentReference failed", err);
-      // Sponsored-requires-Listing pre-check (see createPaymentReference):
-      // a specific, actionable message instead of the generic fallback.
+      // Sponsored-requires-Listing / Application Visibility pre-checks (see
+      // createPaymentReference): a specific, actionable message instead of
+      // the generic fallback.
       const message =
         err instanceof Error && err.message === "dependency_not_met"
           ? t("pricing.dependencyNotMet")
-          : t("common.errorGeneric");
+          : err instanceof Error && err.message === "application_not_active"
+            ? t("pricing.applicationNotActive")
+            : t("common.errorGeneric");
       toast.error(message);
       setPayingPlanId(null);
     }

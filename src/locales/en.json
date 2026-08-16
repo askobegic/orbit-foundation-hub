@@ -240,6 +240,7 @@
     "loading": "Loading…",
     "noPlans": "No active plans for this app yet.",
     "dependencyNotMet": "An active required listing or profile is required to purchase this product.",
+    "applicationNotActive": "This application is not currently available for purchase.",
     "months": "months",
     "perMonth": "month",
     "payStripe": "Pay with card (Stripe)",

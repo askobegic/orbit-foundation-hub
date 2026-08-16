@@ -240,6 +240,7 @@
     "loading": "Učitavanje…",
     "noPlans": "Nema aktivnih planova za ovu aplikaciju.",
     "dependencyNotMet": "Za kupovinu ove ponude potreban je aktivan odgovarajući profil ili listing.",
+    "applicationNotActive": "Ova aplikacija trenutno nije dostupna za kupovinu.",
     "months": "mjeseci",
     "perMonth": "mjesečno",
     "payStripe": "Plati karticom (Stripe)",

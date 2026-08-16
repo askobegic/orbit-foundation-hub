@@ -424,6 +424,22 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
               return Response.json({ received: true, ignored: "plan_mismatch" });
             }
           }
+
+          // Application Visibility: the authoritative check -- see the
+          // matching comment in the Stripe webhook.
+          const { data: appRow } = await supabaseAdmin
+            .from("applications")
+            .select("visibility")
+            .eq("id", ref.app_id)
+            .maybeSingle();
+          if (!appRow || appRow.visibility !== "active") {
+            console.warn("PayPal webhook: application not active", {
+              app_id: ref.app_id,
+              visibility: appRow?.visibility ?? "not_found",
+            });
+            return Response.json({ received: true, ignored: "application_not_active" });
+          }
+
           planGrantsBenefitKey = (plan as { grants_benefit_key: string | null }).grants_benefit_key;
           planGrantsPremium = (plan as { grants_premium: boolean }).grants_premium;
           planRequiresBenefitKey = (plan as { requires_benefit_key: string | null }).requires_benefit_key;

@@ -429,6 +429,31 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
               return Response.json({ received: true, ignored: "plan_mismatch" });
             }
           }
+
+          // Application Visibility: the authoritative check -- a plan being
+          // active is not sufficient on its own; the application it belongs
+          // to must also be visibility='active'. Admin may legitimately
+          // pre-configure active products for a draft/coming_soon
+          // application ahead of launch (see admin.applications.tsx), so
+          // this must be checked here, not assumed from the plan alone.
+          // Same "before any payment record exists" early-return shape as
+          // the plan_mismatch check directly above -- this is the same
+          // class of static eligibility gate, not a dynamic entitlement
+          // check, so it does not need the dependency check's separate
+          // refund-after-payment handling below.
+          const { data: appRow } = await supabaseAdmin
+            .from("applications")
+            .select("visibility")
+            .eq("id", ref.app_id)
+            .maybeSingle();
+          if (!appRow || appRow.visibility !== "active") {
+            console.warn("Stripe webhook: application not active", {
+              app_id: ref.app_id,
+              visibility: appRow?.visibility ?? "not_found",
+            });
+            return Response.json({ received: true, ignored: "application_not_active" });
+          }
+
           planGrantsBenefitKey = (plan as { grants_benefit_key: string | null }).grants_benefit_key;
           planGrantsPremium = (plan as { grants_premium: boolean }).grants_premium;
           planRequiresBenefitKey = (plan as { requires_benefit_key: string | null }).requires_benefit_key;
