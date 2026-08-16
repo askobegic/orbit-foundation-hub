@@ -100,6 +100,30 @@ Each application owns its own:
 
 An application must not move its unique business logic into CORE merely because it is convenient.
 
+## Future Application Rule
+
+CORE-connected applications must be treated as dynamic. New applications will be added after this standard is written.
+
+CORE standards must never depend on a fixed list of application names.
+
+Do not implement shared CORE functionality using architecture such as:
+
+    if app === "BosniaFans"
+    if app === "Muzika"
+    if app === "Svadba"
+
+Use instead:
+
+- application context
+- configuration
+- capabilities
+- permissions
+- entitlements
+- product configuration
+- generic APIs
+
+This rule applies to every current and future CORE-connected application, without exception.
+
 ---
 
 # 4. Database Isolation
@@ -303,6 +327,138 @@ Billing/subscription records may remain application-scoped where required for pr
 The derived Premium permission is global.
 
 Do not create application-specific Premium permission checks.
+
+## Application Premium Benefits
+
+Global Premium and Application Premium Benefits are not the same thing.
+
+Global Premium:
+
+→ one user-level membership, recognized by every application.
+
+Application Premium Benefits:
+
+→ additional functionality an application unlocks for users who already have Global Premium.
+
+Application Premium Benefits:
+
+- belong to the individual application
+- are defined and implemented by that application
+- may differ between applications
+- do not create a second Premium membership
+- do not require the application to sell Premium
+
+Example:
+
+A user has Global Premium.
+
+Muzika.ba may unlock additional musician-related Premium features for that user.
+
+Svadba.ba may unlock different wedding-related Premium features for the same user.
+
+Both are benefits of the same Global Premium status, not two Premium memberships.
+
+## Premium Sale Availability
+
+An application may independently choose:
+
+    Premium Sale = ON
+    or
+    Premium Sale = OFF
+
+without creating a second Premium system.
+
+Supported configurations:
+
+1. Premium Sale ON + Application Premium Benefits
+2. Premium Sale ON + no additional benefits
+3. Premium Sale OFF + Application Premium Benefits (existing Global Premium users still receive them)
+4. Premium Sale OFF + application-specific paid products (see Application-Specific Commercial Products below)
+5. Premium Sale OFF + no commercial products
+
+Disabling Premium Sale for an application must never affect any user's existing Global Premium status — it only means that application currently offers no way to purchase a new one.
+
+This is an outcome of the generic product configuration already required by this standard (an application simply has no active Premium product), not a separate "premium_enabled" mechanism.
+
+## Premium Plans, Durations & Pricing
+
+Premium commercial plans are configuration-driven, not hardcoded.
+
+The generic product model supports multiple plan durations, for example:
+
+- 1 month
+- 3 months
+- 6 months
+- 12 months
+
+An application/administrator may choose to offer only some of these durations — not every duration needs to exist or be active for every application.
+
+Example (illustrative only — not a fixed CORE price):
+
+    1 month   = €4.90
+    12 months = a separately configured annual price
+
+Prices, currencies, and durations belong to product configuration. They must never be hardcoded into application or CORE logic.
+
+## Application-Specific Commercial Products
+
+Applications may sell products other than Global Premium, using CORE's generic payment and entitlement infrastructure — this is a related but distinct concept from Global Premium above, documented here because both are commercial/entitlement concepts.
+
+Examples:
+
+- Musician Listing
+- Vendor Listing
+- Professional Listing
+- Studio Listing
+- Sponsored Listing
+- Featured Listing
+- other future application-specific products
+
+These products are NOT Global Premium. See Separation of Responsibilities above: the application owns what the product means; CORE owns the generic payment/entitlement mechanism that delivers it.
+
+### Listing
+
+A Listing product may grant an application-specific entitlement.
+
+Example:
+
+    musician_listing
+
+The application decides what that entitlement means and how the listing is displayed.
+
+CORE provides the generic payment/entitlement infrastructure only. CORE must not contain "Musician" business logic, or any other application's business logic.
+
+### Sponsored
+
+Sponsored is a separate application-specific product, using the same mechanism as Listing.
+
+Example:
+
+    sponsored_musician
+
+Sponsored can optionally require an existing Listing entitlement.
+
+The dependency itself is generic — CORE does not know that `musician_listing` means a musician. It only knows that one configured benefit can optionally depend on another configured benefit.
+
+### Entitlement Model (conceptual)
+
+    Global Premium
+    → global user-level status
+
+    Application-specific benefits
+    → application-scoped entitlements
+
+    Products
+    → may grant Premium
+    → may grant an application benefit
+    → may grant both
+    → may grant neither
+
+    Dependencies
+    → optional
+    → configured per product
+
+This is the conceptual model only. The detailed technical implementation (database schema, specific functions, API endpoints) is owned by each project's own implementation documentation (for the CORE platform itself, `PROJECT_KNOWLEDGE.md`) — not duplicated here.
 
 ---
 
