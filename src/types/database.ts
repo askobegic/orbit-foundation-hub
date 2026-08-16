@@ -13,6 +13,11 @@ export type UserType = "standard" | "premium" | "admin";
 // users, preserved for administration/history. See PROJECT_KNOWLEDGE.md ->
 // Applications -> Application Visibility.
 export type ApplicationVisibility = "draft" | "coming_soon" | "active" | "archived";
+// Universal Pre-Launch / Public Launch Standard (CORE-connected applications
+// only -- never the CORE platform's own 'core' row). Independent of
+// ApplicationVisibility above -- see the migration comment for why these
+// are two separate columns, not one.
+export type ApplicationLaunchStatus = "pre_launch" | "public";
 export type SubscriptionStatus = "active" | "expired" | "cancelled" | "pending";
 // Priority 8.11: classifies what kind of purchasable item a
 // subscription_plans row represents -- "Products & Purchases" evolved from
@@ -130,6 +135,10 @@ export interface ApplicationRow {
   // alongside a "coming_soon" application. Never read by any activation
   // logic; moving to "active" is always a separate, explicit admin action.
   launch_date: string | null;
+  // Pre-Launch / Public Launch standard: whether this application's own
+  // public site is open to ordinary visitors. Never the CORE platform
+  // itself (always 'public' for slug === 'core').
+  launch_status: ApplicationLaunchStatus;
   // Localization resolution order step 3 (see PROJECT_KNOWLEDGE.md ->
   // Authentication -> Localization / API_CONTRACT.md). Nullable -- falls
   // through to the next resolution step when unset.

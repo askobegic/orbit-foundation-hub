@@ -1150,7 +1150,39 @@ Before production:
 
 ---
 
-# 41. Permanent Rule
+# 41. Universal Pre-Launch / Public Launch Standard
+
+This standard applies to every CORE-connected application. It does not apply to CORE itself — CORE is the platform providing this infrastructure, not a consumer of it.
+
+## Launch status
+
+Every CORE-connected application has exactly one launch status: `PRE_LAUNCH` or `PUBLIC`. A newly created application always starts `PRE_LAUNCH`. It never becomes `PUBLIC` automatically — not because development finished, not because a deployment succeeded, not because a domain was connected. Only an explicit administrator action changes it.
+
+## While PRE_LAUNCH
+
+The application's main production domain and normal URL structure are used from day one — there is no separate coming-soon domain and no URL migration at launch. While `PRE_LAUNCH`:
+
+- An ordinary public visitor may access only the application's Pre-Launch Front Page, at every URL. A direct request to any other application route returns the visitor to the Pre-Launch Front Page. This is enforced at the application's actual access/authorization layer — never by hiding navigation, buttons, or links alone.
+- The application's authorized administrator has full, unrestricted access to the entire application, for testing, configuration, and quality control.
+- The administrator may explicitly authorize specific individual users as test users, who then get access to the application per the access granted. Test access is per-application, not global, and is never hardcoded to a specific user or application.
+- A normal registered user who has not been authorized as a test user sees the Pre-Launch Front Page only, exactly like a public visitor.
+- The auth bootstrap flow (sign in, register) remains reachable regardless of launch status — a visitor cannot be authorized as the administrator or a test user without first being able to sign in.
+
+## Pre-Launch Front Page
+
+A configurable public entry page, owned by the application (not hardcoded by CORE), that may show a logo, one banner image, a title, information text, a "currently being prepared" message, and social/contact links where configured. Content is application-specific; CORE provides the mechanism, never the branding.
+
+## Going PUBLIC
+
+Moving from `PRE_LAUNCH` to `PUBLIC` is always one explicit administrator action. It changes access availability only — domain, URLs, routes, architecture, and business logic are unaffected, since `PRE_LAUNCH` is an access state of the application, not a separate website.
+
+## CORE's role
+
+CORE provides the generic launch-state mechanism and the generic access-control read every connected application uses to decide, for its own routes, whether the current caller may proceed: current launch status, the configured Pre-Launch content, and whether the caller is the administrator or an authorized test user. The connected application owns enforcing this on its own pages — CORE never absorbs an application's business routes to do this for it. See `PROJECT_KNOWLEDGE.md` → Pre-Launch / Public Launch and `API_CONTRACT.md` → Applications (`GET /v1/me/launch-access`) for the CORE-side implementation.
+
+---
+
+# 42. Permanent Rule
 
 Every future CORE-connected application must start from this standard.
 

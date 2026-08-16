@@ -908,6 +908,117 @@ export type Database = {
           },
         ]
       }
+      application_pre_launch_content: {
+        Row: {
+          app_id: string
+          banner_image_url: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          facebook_url: string | null
+          info_text_bs: string | null
+          info_text_de: string | null
+          info_text_en: string | null
+          instagram_url: string | null
+          logo_url: string | null
+          tiktok_url: string | null
+          title_bs: string | null
+          title_de: string | null
+          title_en: string | null
+          updated_at: string
+          youtube_url: string | null
+        }
+        Insert: {
+          app_id: string
+          banner_image_url?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          facebook_url?: string | null
+          info_text_bs?: string | null
+          info_text_de?: string | null
+          info_text_en?: string | null
+          instagram_url?: string | null
+          logo_url?: string | null
+          tiktok_url?: string | null
+          title_bs?: string | null
+          title_de?: string | null
+          title_en?: string | null
+          updated_at?: string
+          youtube_url?: string | null
+        }
+        Update: {
+          app_id?: string
+          banner_image_url?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          facebook_url?: string | null
+          info_text_bs?: string | null
+          info_text_de?: string | null
+          info_text_en?: string | null
+          instagram_url?: string | null
+          logo_url?: string | null
+          tiktok_url?: string | null
+          title_bs?: string | null
+          title_de?: string | null
+          title_en?: string | null
+          updated_at?: string
+          youtube_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_pre_launch_content_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: true
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      application_test_users: {
+        Row: {
+          app_id: string
+          granted_at: string
+          granted_by: string | null
+          user_id: string
+        }
+        Insert: {
+          app_id: string
+          granted_at?: string
+          granted_by?: string | null
+          user_id: string
+        }
+        Update: {
+          app_id?: string
+          granted_at?: string
+          granted_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_test_users_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_test_users_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_test_users_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       applications: {
         Row: {
           cover_image_url: string | null
@@ -918,6 +1029,7 @@ export type Database = {
           google_client_id: string | null
           id: string
           launch_date: string | null
+          launch_status: string
           logo_url: string | null
           name: string
           primary_color: string | null
@@ -939,6 +1051,7 @@ export type Database = {
           google_client_id?: string | null
           id?: string
           launch_date?: string | null
+          launch_status?: string
           logo_url?: string | null
           name: string
           primary_color?: string | null
@@ -960,6 +1073,7 @@ export type Database = {
           google_client_id?: string | null
           id?: string
           launch_date?: string | null
+          launch_status?: string
           logo_url?: string | null
           name?: string
           primary_color?: string | null

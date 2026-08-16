@@ -67,6 +67,7 @@ export const Route = createFileRoute("/v1/applications/$idOrSlug")({
           defaultLanguage: row.default_language,
           visibility: row.visibility,
           launchDate: row.launch_date,
+          launchStatus: row.launch_status,
           shortDescription,
         });
       }),

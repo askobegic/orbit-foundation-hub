@@ -20,6 +20,7 @@ function toListItem(app: ApplicationRow, locale: SupportedLocale) {
     secondaryColor: app.secondary_color,
     visibility: app.visibility,
     launchDate: app.launch_date,
+    launchStatus: app.launch_status,
     shortDescription:
       pickLocalized(app as unknown as Record<string, unknown>, "short_description", locale) ??
       app.short_description_en,

@@ -15,12 +15,26 @@ import {
   getMyIsAdmin,
   adminCreateApplication,
   adminSetApplicationVisibility,
+  adminSetApplicationLaunchStatus,
   adminUpdateAppSettings,
   adminUploadBrandingAsset,
 } from "@/lib/admin.functions";
 import { adminListRewardFulfillmentTypes } from "@/lib/rewards.functions";
 import { adminUpsertShareInviteTemplate, getShareInviteConfig } from "@/lib/share-invite.functions";
-import type { ApplicationRow, ApplicationVisibility, ProductType, SubscriptionPlanRow } from "@/types/database";
+import {
+  adminFindUserByUsername,
+  adminListTestUsers,
+  adminSetTestUser,
+  adminUpsertPreLaunchContent,
+  getPreLaunchContent,
+} from "@/lib/launch.functions";
+import type {
+  ApplicationLaunchStatus,
+  ApplicationRow,
+  ApplicationVisibility,
+  ProductType,
+  SubscriptionPlanRow,
+} from "@/types/database";
 
 export const Route = createFileRoute("/admin/applications")({
   head: () => ({
@@ -92,6 +106,7 @@ function AdminApps() {
   const archive = useServerFn(adminArchivePlan);
   const createApp = useServerFn(adminCreateApplication);
   const setVisibility = useServerFn(adminSetApplicationVisibility);
+  const setLaunchStatus = useServerFn(adminSetApplicationLaunchStatus);
   const updateSettings = useServerFn(adminUpdateAppSettings);
 
   const createAppMutation = useMutation({
@@ -108,6 +123,15 @@ function AdminApps() {
     mutationFn: (v: { app_id: string; visibility: ApplicationVisibility }) => setVisibility({ data: v }),
     onSuccess: () => {
       toast.success(t("admin.applications.visibilityUpdated"));
+      qc.invalidateQueries({ queryKey: ["admin-apps"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const changeLaunchStatus = useMutation({
+    mutationFn: (v: { app_id: string; launch_status: ApplicationLaunchStatus }) => setLaunchStatus({ data: v }),
+    onSuccess: () => {
+      toast.success(t("admin.applications.launchStatusUpdated"));
       qc.invalidateQueries({ queryKey: ["admin-apps"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -231,6 +255,19 @@ function AdminApps() {
               onSetVisibility={(visibility) => changeVisibility.mutate({ app_id: activeApp.id, visibility })}
               visibilityBusy={changeVisibility.isPending}
             />
+            {activeApp.slug !== "core" && (
+              <>
+                <LaunchStatusSettings
+                  launchStatus={activeApp.launch_status}
+                  onSetLaunchStatus={(launch_status) =>
+                    changeLaunchStatus.mutate({ app_id: activeApp.id, launch_status })
+                  }
+                  busy={changeLaunchStatus.isPending}
+                />
+                <PreLaunchContentSettings appId={activeApp.id} />
+                <TestUsersSettings appId={activeApp.id} />
+              </>
+            )}
             <ShareInviteSettings appId={activeApp.id} />
 
             <div>
@@ -1076,6 +1113,389 @@ function ShareInviteSettings({ appId }: { appId: string }) {
           {save.isPending ? t("common.saving") : t("common.save")}
         </button>
       </div>
+    </div>
+  );
+}
+
+// Universal Pre-Launch / Public Launch Standard: the one explicit action
+// that moves an application between pre_launch/public, mirroring the
+// Visibility control above exactly (dedicated state-machine transition,
+// never bundled into AppSettings' general save). Never rendered for the
+// CORE application itself (activeApp.slug === "core", see the call site) --
+// CORE is explicitly excluded from this mechanism.
+function LaunchStatusSettings({
+  launchStatus,
+  onSetLaunchStatus,
+  busy,
+}: {
+  launchStatus: ApplicationLaunchStatus;
+  onSetLaunchStatus: (v: ApplicationLaunchStatus) => void;
+  busy?: boolean;
+}) {
+  const { t } = useTranslation();
+  const [value, setValue] = useState<ApplicationLaunchStatus>(launchStatus);
+
+  useEffectR(() => setValue(launchStatus), [launchStatus]);
+
+  return (
+    <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
+      <h2 className="mb-1 text-sm font-semibold text-gray-900">
+        {t("admin.applications.launchStatusTitle")}
+      </h2>
+      <p className="mb-4 text-xs text-gray-500">
+        {t("admin.applications.launchStatusHint")}
+      </p>
+      <select
+        className="input max-w-sm"
+        value={value}
+        onChange={(e) => setValue(e.target.value as ApplicationLaunchStatus)}
+      >
+        <option value="pre_launch">
+          {t("admin.applications.launchStatus.preLaunch.label")}
+        </option>
+        <option value="public">
+          {t("admin.applications.launchStatus.public.label")}
+        </option>
+      </select>
+      <p className="mt-2 text-xs text-gray-500">
+        {value === "pre_launch"
+          ? t("admin.applications.launchStatus.preLaunch.hint")
+          : t("admin.applications.launchStatus.public.hint")}
+      </p>
+      <button
+        type="button"
+        onClick={() => onSetLaunchStatus(value)}
+        disabled={busy || value === launchStatus}
+        className="mt-3 inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {busy
+          ? t("admin.applications.updatingVisibility")
+          : t("admin.applications.updateLaunchStatus")}
+      </button>
+    </div>
+  );
+}
+
+// Pre-Launch Front Page content (Universal Pre-Launch / Public Launch
+// Standard). Mirrors ShareInviteSettings exactly: one row per application,
+// every field nullable and blank means the generic localized fallback the
+// public-facing PreLaunchFrontPage.tsx already falls back to -- no
+// server-side hardcoded branding for any application.
+function PreLaunchContentSettings({ appId }: { appId: string }) {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const getContentFn = useServerFn(getPreLaunchContent);
+  const upsertFn = useServerFn(adminUpsertPreLaunchContent);
+
+  const contentQ = useQuery({
+    queryKey: ["admin-pre-launch-content", appId],
+    queryFn: () => getContentFn({ data: { appId } }),
+  });
+
+  const [logoUrl, setLogoUrl] = useState("");
+  const [bannerImageUrl, setBannerImageUrl] = useState("");
+  const [titleBs, setTitleBs] = useState("");
+  const [titleEn, setTitleEn] = useState("");
+  const [titleDe, setTitleDe] = useState("");
+  const [infoTextBs, setInfoTextBs] = useState("");
+  const [infoTextEn, setInfoTextEn] = useState("");
+  const [infoTextDe, setInfoTextDe] = useState("");
+  const [facebookUrl, setFacebookUrl] = useState("");
+  const [instagramUrl, setInstagramUrl] = useState("");
+  const [tiktokUrl, setTiktokUrl] = useState("");
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+
+  useEffectR(() => {
+    setLogoUrl(contentQ.data?.logoUrl ?? "");
+    setBannerImageUrl(contentQ.data?.bannerImageUrl ?? "");
+    setTitleBs(contentQ.data?.titleBs ?? "");
+    setTitleEn(contentQ.data?.titleEn ?? "");
+    setTitleDe(contentQ.data?.titleDe ?? "");
+    setInfoTextBs(contentQ.data?.infoTextBs ?? "");
+    setInfoTextEn(contentQ.data?.infoTextEn ?? "");
+    setInfoTextDe(contentQ.data?.infoTextDe ?? "");
+    setFacebookUrl(contentQ.data?.facebookUrl ?? "");
+    setInstagramUrl(contentQ.data?.instagramUrl ?? "");
+    setTiktokUrl(contentQ.data?.tiktokUrl ?? "");
+    setYoutubeUrl(contentQ.data?.youtubeUrl ?? "");
+    setContactEmail(contentQ.data?.contactEmail ?? "");
+    setContactPhone(contentQ.data?.contactPhone ?? "");
+  }, [contentQ.data]);
+
+  const save = useMutation({
+    mutationFn: () =>
+      upsertFn({
+        data: {
+          appId,
+          logoUrl: logoUrl.trim() || null,
+          bannerImageUrl: bannerImageUrl.trim() || null,
+          titleBs: titleBs.trim() || null,
+          titleEn: titleEn.trim() || null,
+          titleDe: titleDe.trim() || null,
+          infoTextBs: infoTextBs.trim() || null,
+          infoTextEn: infoTextEn.trim() || null,
+          infoTextDe: infoTextDe.trim() || null,
+          facebookUrl: facebookUrl.trim() || null,
+          instagramUrl: instagramUrl.trim() || null,
+          tiktokUrl: tiktokUrl.trim() || null,
+          youtubeUrl: youtubeUrl.trim() || null,
+          contactEmail: contactEmail.trim() || null,
+          contactPhone: contactPhone.trim() || null,
+        },
+      }),
+    onSuccess: () => {
+      toast.success(t("admin.applications.preLaunchContentSaved"));
+      qc.invalidateQueries({ queryKey: ["admin-pre-launch-content", appId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
+      <h2 className="mb-1 text-sm font-semibold text-gray-900">
+        {t("admin.applications.preLaunchContentTitle")}
+      </h2>
+      <p className="mb-4 text-xs text-gray-500">
+        {t("admin.applications.preLaunchContentHint")}
+      </p>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <Field label={t("admin.applications.preLaunchLogoUrl")}>
+          <input
+            className="input"
+            value={logoUrl}
+            onChange={(e) => setLogoUrl(e.target.value)}
+            placeholder="https://..."
+          />
+        </Field>
+        <Field label={t("admin.applications.preLaunchBannerUrl")}>
+          <input
+            className="input"
+            value={bannerImageUrl}
+            onChange={(e) => setBannerImageUrl(e.target.value)}
+            placeholder="https://..."
+          />
+        </Field>
+        <Field label={t("admin.applications.preLaunchTitleBs")}>
+          <input
+            className="input"
+            value={titleBs}
+            onChange={(e) => setTitleBs(e.target.value)}
+          />
+        </Field>
+        <Field label={t("admin.applications.preLaunchTitleEn")}>
+          <input
+            className="input"
+            value={titleEn}
+            onChange={(e) => setTitleEn(e.target.value)}
+          />
+        </Field>
+        <Field label={t("admin.applications.preLaunchTitleDe")}>
+          <input
+            className="input"
+            value={titleDe}
+            onChange={(e) => setTitleDe(e.target.value)}
+          />
+        </Field>
+        <Field label={t("admin.applications.preLaunchInfoTextBs")} wide>
+          <textarea
+            className="input min-h-[60px]"
+            value={infoTextBs}
+            onChange={(e) => setInfoTextBs(e.target.value)}
+          />
+        </Field>
+        <Field label={t("admin.applications.preLaunchInfoTextEn")} wide>
+          <textarea
+            className="input min-h-[60px]"
+            value={infoTextEn}
+            onChange={(e) => setInfoTextEn(e.target.value)}
+          />
+        </Field>
+        <Field label={t("admin.applications.preLaunchInfoTextDe")} wide>
+          <textarea
+            className="input min-h-[60px]"
+            value={infoTextDe}
+            onChange={(e) => setInfoTextDe(e.target.value)}
+          />
+        </Field>
+        <Field label="Facebook">
+          <input
+            className="input"
+            value={facebookUrl}
+            onChange={(e) => setFacebookUrl(e.target.value)}
+            placeholder="https://facebook.com/..."
+          />
+        </Field>
+        <Field label="Instagram">
+          <input
+            className="input"
+            value={instagramUrl}
+            onChange={(e) => setInstagramUrl(e.target.value)}
+            placeholder="https://instagram.com/..."
+          />
+        </Field>
+        <Field label="TikTok">
+          <input
+            className="input"
+            value={tiktokUrl}
+            onChange={(e) => setTiktokUrl(e.target.value)}
+            placeholder="https://tiktok.com/@..."
+          />
+        </Field>
+        <Field label="YouTube">
+          <input
+            className="input"
+            value={youtubeUrl}
+            onChange={(e) => setYoutubeUrl(e.target.value)}
+            placeholder="https://youtube.com/..."
+          />
+        </Field>
+        <Field label={t("admin.applications.preLaunchContactEmail")}>
+          <input
+            className="input"
+            value={contactEmail}
+            onChange={(e) => setContactEmail(e.target.value)}
+            placeholder="hello@example.com"
+          />
+        </Field>
+        <Field label={t("admin.applications.preLaunchContactPhone")}>
+          <input
+            className="input"
+            value={contactPhone}
+            onChange={(e) => setContactPhone(e.target.value)}
+          />
+        </Field>
+      </div>
+
+      <div className="mt-4 flex justify-end">
+        <button
+          type="button"
+          onClick={() => save.mutate()}
+          disabled={save.isPending}
+          className="inline-flex items-center gap-2 rounded-lg bg-[#1D6BF3] px-4 py-2 text-sm font-medium text-white hover:bg-[#1858cf] disabled:opacity-60"
+        >
+          <Save className="h-4 w-4" />
+          {save.isPending ? t("common.saving") : t("common.save")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Authorized test users (Universal Pre-Launch / Public Launch Standard).
+// Mirrors the existing Trusted Advertiser admin management pattern
+// (advertising.functions.ts's adminSetTrustedAdvertiser /
+// adminListTrustedAdvertisers) exactly -- grant/revoke by username,
+// per-application, admin-only.
+function TestUsersSettings({ appId }: { appId: string }) {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const listFn = useServerFn(adminListTestUsers);
+  const findUserFn = useServerFn(adminFindUserByUsername);
+  const setTestUserFn = useServerFn(adminSetTestUser);
+  const [username, setUsername] = useState("");
+
+  const listQ = useQuery({
+    queryKey: ["admin-test-users", appId],
+    queryFn: () => listFn({ data: { appId } }),
+  });
+
+  const grant = useMutation({
+    mutationFn: async () => {
+      const found = await findUserFn({ data: { username: username.trim() } });
+      if (!found) throw new Error(t("admin.applications.testUserNotFound"));
+      return setTestUserFn({
+        data: { userId: found.id, appId, authorized: true },
+      });
+    },
+    onSuccess: () => {
+      toast.success(t("admin.applications.testUserGranted"));
+      setUsername("");
+      qc.invalidateQueries({ queryKey: ["admin-test-users", appId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const revoke = useMutation({
+    mutationFn: (userId: string) =>
+      setTestUserFn({ data: { userId, appId, authorized: false } }),
+    onSuccess: () => {
+      toast.success(t("admin.applications.testUserRevoked"));
+      qc.invalidateQueries({ queryKey: ["admin-test-users", appId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
+      <h2 className="mb-1 text-sm font-semibold text-gray-900">
+        {t("admin.applications.testUsersTitle")}
+      </h2>
+      <p className="mb-4 text-xs text-gray-500">
+        {t("admin.applications.testUsersHint")}
+      </p>
+
+      <div className="flex gap-2">
+        <input
+          className="input"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder={t("admin.applications.testUserUsernamePlaceholder")}
+        />
+        <button
+          type="button"
+          onClick={() => grant.mutate()}
+          disabled={grant.isPending || !username.trim()}
+          className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-[#1D6BF3] px-4 py-2 text-sm font-medium text-white hover:bg-[#1858cf] disabled:opacity-60"
+        >
+          {grant.isPending
+            ? t("common.saving")
+            : t("admin.applications.testUserGrant")}
+        </button>
+      </div>
+
+      <ul className="mt-4 divide-y divide-gray-100">
+        {(listQ.data ?? []).map((row) => {
+          const profile = (
+            row as {
+              profiles?: {
+                username: string | null;
+                first_name: string | null;
+                last_name: string | null;
+              };
+            }
+          ).profiles;
+          const label =
+            profile?.username ||
+            [profile?.first_name, profile?.last_name]
+              .filter(Boolean)
+              .join(" ") ||
+            row.user_id;
+          return (
+            <li
+              key={row.user_id}
+              className="flex items-center justify-between py-2 text-sm"
+            >
+              <span className="text-gray-700">{label}</span>
+              <button
+                type="button"
+                onClick={() => revoke.mutate(row.user_id)}
+                disabled={revoke.isPending}
+                className="text-xs font-medium text-red-600 hover:text-red-700 disabled:opacity-50"
+              >
+                {t("admin.applications.testUserRevoke")}
+              </button>
+            </li>
+          );
+        })}
+        {listQ.data?.length === 0 && (
+          <li className="py-2 text-xs text-gray-400">
+            {t("admin.applications.testUsersEmpty")}
+          </li>
+        )}
+      </ul>
     </div>
   );
 }

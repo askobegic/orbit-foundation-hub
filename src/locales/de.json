@@ -1027,7 +1027,37 @@
         "coming_soon": { "label": "Demnächst", "hint": "Im Dashboard sichtbar, deutlich gekennzeichnet. Nutzer können nicht eintreten." },
         "active": { "label": "Aktiv", "hint": "Vollständig sichtbar und zugänglich." },
         "archived": { "label": "Archiviert", "hint": "Für normale Nutzer ausgeblendet. Für Verwaltung und Historie erhalten." }
-      }
+      },
+      "launchStatusUpdated": "Launch-Status aktualisiert",
+      "launchStatusTitle": "Pre-Launch / Öffentlicher Launch",
+      "launchStatusHint": "Solange Pre-Launch aktiv ist, haben nur der Administrator und ausdrücklich autorisierte Testnutzer Zugriff auf diese Anwendung — alle anderen sehen die Pre-Launch-Startseite. Nichts ändert dies automatisch; nur diese ausdrückliche Aktion.",
+      "launchStatus": {
+        "preLaunch": { "label": "Pre-Launch", "hint": "Öffentliche Besucher sehen nur die Pre-Launch-Startseite. Administrator und autorisierte Testnutzer haben vollen Zugriff." },
+        "public": { "label": "Öffentlich", "hint": "Für alle öffentlich zugänglich, gemäß den eigenen Autorisierungsregeln dieser Anwendung." }
+      },
+      "updateLaunchStatus": "Launch-Status aktualisieren",
+      "preLaunchContentTitle": "Inhalt der Pre-Launch-Startseite",
+      "preLaunchContentHint": "Wird öffentlichen Besuchern angezeigt, solange die Anwendung Pre-Launch ist. Feld leer lassen, um es wegzulassen — es gibt kein eingebautes Platzhalter-Branding.",
+      "preLaunchLogoUrl": "Logo-URL",
+      "preLaunchBannerUrl": "Banner-Bild-URL",
+      "preLaunchTitleBs": "Titel (BS)",
+      "preLaunchTitleEn": "Titel (EN)",
+      "preLaunchTitleDe": "Titel (DE)",
+      "preLaunchInfoTextBs": "Infotext (BS)",
+      "preLaunchInfoTextEn": "Infotext (EN)",
+      "preLaunchInfoTextDe": "Infotext (DE)",
+      "preLaunchContactEmail": "Kontakt-E-Mail",
+      "preLaunchContactPhone": "Kontakttelefon",
+      "preLaunchContentSaved": "Pre-Launch-Inhalt gespeichert",
+      "testUsersTitle": "Autorisierte Testnutzer",
+      "testUsersHint": "Gewähren Sie einem registrierten Nutzer vollen Zugriff auf diese Anwendung, solange sie Pre-Launch ist, per Benutzername.",
+      "testUserUsernamePlaceholder": "Benutzername",
+      "testUserGrant": "Zugriff gewähren",
+      "testUserGranted": "Testzugriff gewährt",
+      "testUserRevoke": "Entziehen",
+      "testUserRevoked": "Testzugriff entzogen",
+      "testUserNotFound": "Kein Nutzer mit diesem Benutzernamen gefunden",
+      "testUsersEmpty": "Noch keine autorisierten Testnutzer"
     },
     "hub": {
       "title": "Admin",
@@ -1162,6 +1192,12 @@
     "statusPremiumDesc": "Mitgliedschaft mit zusätzlichen Vorteilen.",
     "statusVerifiedTitle": "VERIFIZIERT",
     "statusVerifiedDesc": "Die Identität des Mitglieds wurde verifiziert."
+  },
+  "launch": {
+    "preLaunch": {
+      "badge": "Derzeit in Vorbereitung",
+      "defaultInfoText": "Diese Anwendung wird derzeit vorbereitet. Wir sind bald online."
+    }
   },
   "offers": {
     "title": "🎁 SPEZIELL FÜR SIE",

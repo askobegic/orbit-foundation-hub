@@ -59,6 +59,7 @@ import { Route as V1EventsIndexRouteImport } from './routes/v1/events/index'
 import { Route as V1MeIndexRouteImport } from './routes/v1/me/index'
 import { Route as V1MeEntitlementsRouteImport } from './routes/v1/me/entitlements'
 import { Route as V1MeExportRouteImport } from './routes/v1/me/export'
+import { Route as V1MeLaunchAccessRouteImport } from './routes/v1/me/launch-access'
 import { Route as V1MePremiumRouteImport } from './routes/v1/me/premium'
 import { Route as V1MePremiumProfileRouteImport } from './routes/v1/me/premium-profile'
 import { Route as V1MePurchasesRouteImport } from './routes/v1/me/purchases'
@@ -113,6 +114,7 @@ import { Route as V1AdminAdvertisingPricesIndexRouteImport } from './routes/v1/a
 import { Route as V1AdminAdvertisingPricesIdRouteImport } from './routes/v1/admin/advertising/prices/$id'
 import { Route as V1AdminApplicationsAppIdIndexRouteImport } from './routes/v1/admin/applications/$appId/index'
 import { Route as V1AdminApplicationsAppIdAdvertisingSettingsRouteImport } from './routes/v1/admin/applications/$appId/advertising-settings'
+import { Route as V1AdminApplicationsAppIdLaunchStatusRouteImport } from './routes/v1/admin/applications/$appId/launch-status'
 import { Route as V1AdminApplicationsAppIdShareInviteRouteImport } from './routes/v1/admin/applications/$appId/share-invite'
 import { Route as V1AdminApplicationsAppIdVisibilityRouteImport } from './routes/v1/admin/applications/$appId/visibility'
 import { Route as V1AdminPremiumPurchaseIdRevokeRouteImport } from './routes/v1/admin/premium/$purchaseId/revoke'
@@ -399,6 +401,11 @@ const V1MeEntitlementsRoute = V1MeEntitlementsRouteImport.update({
 const V1MeExportRoute = V1MeExportRouteImport.update({
   id: '/v1/me/export',
   path: '/v1/me/export',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1MeLaunchAccessRoute = V1MeLaunchAccessRouteImport.update({
+  id: '/v1/me/launch-access',
+  path: '/v1/me/launch-access',
   getParentRoute: () => rootRouteImport,
 } as any)
 const V1MePremiumRoute = V1MePremiumRouteImport.update({
@@ -693,6 +700,12 @@ const V1AdminApplicationsAppIdAdvertisingSettingsRoute =
     path: '/v1/admin/applications/$appId/advertising-settings',
     getParentRoute: () => rootRouteImport,
   } as any)
+const V1AdminApplicationsAppIdLaunchStatusRoute =
+  V1AdminApplicationsAppIdLaunchStatusRouteImport.update({
+    id: '/v1/admin/applications/$appId/launch-status',
+    path: '/v1/admin/applications/$appId/launch-status',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const V1AdminApplicationsAppIdShareInviteRoute =
   V1AdminApplicationsAppIdShareInviteRouteImport.update({
     id: '/v1/admin/applications/$appId/share-invite',
@@ -952,6 +965,7 @@ export interface FileRoutesByFullPath {
   '/v1/auth/session': typeof V1AuthSessionRoute
   '/v1/me/entitlements': typeof V1MeEntitlementsRoute
   '/v1/me/export': typeof V1MeExportRoute
+  '/v1/me/launch-access': typeof V1MeLaunchAccessRoute
   '/v1/me/premium': typeof V1MePremiumRoute
   '/v1/me/premium-profile': typeof V1MePremiumProfileRoute
   '/v1/me/purchases': typeof V1MePurchasesRoute
@@ -1005,6 +1019,7 @@ export interface FileRoutesByFullPath {
   '/v1/admin/advertising/placements/$key': typeof V1AdminAdvertisingPlacementsKeyRoute
   '/v1/admin/advertising/prices/$id': typeof V1AdminAdvertisingPricesIdRoute
   '/v1/admin/applications/$appId/advertising-settings': typeof V1AdminApplicationsAppIdAdvertisingSettingsRoute
+  '/v1/admin/applications/$appId/launch-status': typeof V1AdminApplicationsAppIdLaunchStatusRoute
   '/v1/admin/applications/$appId/share-invite': typeof V1AdminApplicationsAppIdShareInviteRoute
   '/v1/admin/applications/$appId/visibility': typeof V1AdminApplicationsAppIdVisibilityRoute
   '/v1/admin/premium/$purchaseId/revoke': typeof V1AdminPremiumPurchaseIdRevokeRoute
@@ -1094,6 +1109,7 @@ export interface FileRoutesByTo {
   '/v1/auth/session': typeof V1AuthSessionRoute
   '/v1/me/entitlements': typeof V1MeEntitlementsRoute
   '/v1/me/export': typeof V1MeExportRoute
+  '/v1/me/launch-access': typeof V1MeLaunchAccessRoute
   '/v1/me/premium': typeof V1MePremiumRoute
   '/v1/me/premium-profile': typeof V1MePremiumProfileRoute
   '/v1/me/purchases': typeof V1MePurchasesRoute
@@ -1147,6 +1163,7 @@ export interface FileRoutesByTo {
   '/v1/admin/advertising/placements/$key': typeof V1AdminAdvertisingPlacementsKeyRoute
   '/v1/admin/advertising/prices/$id': typeof V1AdminAdvertisingPricesIdRoute
   '/v1/admin/applications/$appId/advertising-settings': typeof V1AdminApplicationsAppIdAdvertisingSettingsRoute
+  '/v1/admin/applications/$appId/launch-status': typeof V1AdminApplicationsAppIdLaunchStatusRoute
   '/v1/admin/applications/$appId/share-invite': typeof V1AdminApplicationsAppIdShareInviteRoute
   '/v1/admin/applications/$appId/visibility': typeof V1AdminApplicationsAppIdVisibilityRoute
   '/v1/admin/premium/$purchaseId/revoke': typeof V1AdminPremiumPurchaseIdRevokeRoute
@@ -1237,6 +1254,7 @@ export interface FileRoutesById {
   '/v1/auth/session': typeof V1AuthSessionRoute
   '/v1/me/entitlements': typeof V1MeEntitlementsRoute
   '/v1/me/export': typeof V1MeExportRoute
+  '/v1/me/launch-access': typeof V1MeLaunchAccessRoute
   '/v1/me/premium': typeof V1MePremiumRoute
   '/v1/me/premium-profile': typeof V1MePremiumProfileRoute
   '/v1/me/purchases': typeof V1MePurchasesRoute
@@ -1290,6 +1308,7 @@ export interface FileRoutesById {
   '/v1/admin/advertising/placements/$key': typeof V1AdminAdvertisingPlacementsKeyRoute
   '/v1/admin/advertising/prices/$id': typeof V1AdminAdvertisingPricesIdRoute
   '/v1/admin/applications/$appId/advertising-settings': typeof V1AdminApplicationsAppIdAdvertisingSettingsRoute
+  '/v1/admin/applications/$appId/launch-status': typeof V1AdminApplicationsAppIdLaunchStatusRoute
   '/v1/admin/applications/$appId/share-invite': typeof V1AdminApplicationsAppIdShareInviteRoute
   '/v1/admin/applications/$appId/visibility': typeof V1AdminApplicationsAppIdVisibilityRoute
   '/v1/admin/premium/$purchaseId/revoke': typeof V1AdminPremiumPurchaseIdRevokeRoute
@@ -1381,6 +1400,7 @@ export interface FileRouteTypes {
     | '/v1/auth/session'
     | '/v1/me/entitlements'
     | '/v1/me/export'
+    | '/v1/me/launch-access'
     | '/v1/me/premium'
     | '/v1/me/premium-profile'
     | '/v1/me/purchases'
@@ -1434,6 +1454,7 @@ export interface FileRouteTypes {
     | '/v1/admin/advertising/placements/$key'
     | '/v1/admin/advertising/prices/$id'
     | '/v1/admin/applications/$appId/advertising-settings'
+    | '/v1/admin/applications/$appId/launch-status'
     | '/v1/admin/applications/$appId/share-invite'
     | '/v1/admin/applications/$appId/visibility'
     | '/v1/admin/premium/$purchaseId/revoke'
@@ -1523,6 +1544,7 @@ export interface FileRouteTypes {
     | '/v1/auth/session'
     | '/v1/me/entitlements'
     | '/v1/me/export'
+    | '/v1/me/launch-access'
     | '/v1/me/premium'
     | '/v1/me/premium-profile'
     | '/v1/me/purchases'
@@ -1576,6 +1598,7 @@ export interface FileRouteTypes {
     | '/v1/admin/advertising/placements/$key'
     | '/v1/admin/advertising/prices/$id'
     | '/v1/admin/applications/$appId/advertising-settings'
+    | '/v1/admin/applications/$appId/launch-status'
     | '/v1/admin/applications/$appId/share-invite'
     | '/v1/admin/applications/$appId/visibility'
     | '/v1/admin/premium/$purchaseId/revoke'
@@ -1665,6 +1688,7 @@ export interface FileRouteTypes {
     | '/v1/auth/session'
     | '/v1/me/entitlements'
     | '/v1/me/export'
+    | '/v1/me/launch-access'
     | '/v1/me/premium'
     | '/v1/me/premium-profile'
     | '/v1/me/purchases'
@@ -1718,6 +1742,7 @@ export interface FileRouteTypes {
     | '/v1/admin/advertising/placements/$key'
     | '/v1/admin/advertising/prices/$id'
     | '/v1/admin/applications/$appId/advertising-settings'
+    | '/v1/admin/applications/$appId/launch-status'
     | '/v1/admin/applications/$appId/share-invite'
     | '/v1/admin/applications/$appId/visibility'
     | '/v1/admin/premium/$purchaseId/revoke'
@@ -1791,6 +1816,7 @@ export interface RootRouteChildren {
   V1AuthSessionRoute: typeof V1AuthSessionRoute
   V1MeEntitlementsRoute: typeof V1MeEntitlementsRoute
   V1MeExportRoute: typeof V1MeExportRoute
+  V1MeLaunchAccessRoute: typeof V1MeLaunchAccessRoute
   V1MePremiumRoute: typeof V1MePremiumRoute
   V1MePremiumProfileRoute: typeof V1MePremiumProfileRoute
   V1MePurchasesRoute: typeof V1MePurchasesRoute
@@ -1844,6 +1870,7 @@ export interface RootRouteChildren {
   V1AdminAdvertisingPlacementsKeyRoute: typeof V1AdminAdvertisingPlacementsKeyRoute
   V1AdminAdvertisingPricesIdRoute: typeof V1AdminAdvertisingPricesIdRoute
   V1AdminApplicationsAppIdAdvertisingSettingsRoute: typeof V1AdminApplicationsAppIdAdvertisingSettingsRoute
+  V1AdminApplicationsAppIdLaunchStatusRoute: typeof V1AdminApplicationsAppIdLaunchStatusRoute
   V1AdminApplicationsAppIdShareInviteRoute: typeof V1AdminApplicationsAppIdShareInviteRoute
   V1AdminApplicationsAppIdVisibilityRoute: typeof V1AdminApplicationsAppIdVisibilityRoute
   V1AdminPremiumPurchaseIdRevokeRoute: typeof V1AdminPremiumPurchaseIdRevokeRoute
@@ -2240,6 +2267,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof V1MeExportRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/v1/me/launch-access': {
+      id: '/v1/me/launch-access'
+      path: '/v1/me/launch-access'
+      fullPath: '/v1/me/launch-access'
+      preLoaderRoute: typeof V1MeLaunchAccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/v1/me/premium': {
       id: '/v1/me/premium'
       path: '/v1/me/premium'
@@ -2618,6 +2652,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof V1AdminApplicationsAppIdAdvertisingSettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/v1/admin/applications/$appId/launch-status': {
+      id: '/v1/admin/applications/$appId/launch-status'
+      path: '/v1/admin/applications/$appId/launch-status'
+      fullPath: '/v1/admin/applications/$appId/launch-status'
+      preLoaderRoute: typeof V1AdminApplicationsAppIdLaunchStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/v1/admin/applications/$appId/share-invite': {
       id: '/v1/admin/applications/$appId/share-invite'
       path: '/v1/admin/applications/$appId/share-invite'
@@ -2963,6 +3004,7 @@ const rootRouteChildren: RootRouteChildren = {
   V1AuthSessionRoute: V1AuthSessionRoute,
   V1MeEntitlementsRoute: V1MeEntitlementsRoute,
   V1MeExportRoute: V1MeExportRoute,
+  V1MeLaunchAccessRoute: V1MeLaunchAccessRoute,
   V1MePremiumRoute: V1MePremiumRoute,
   V1MePremiumProfileRoute: V1MePremiumProfileRoute,
   V1MePurchasesRoute: V1MePurchasesRoute,
@@ -3019,6 +3061,8 @@ const rootRouteChildren: RootRouteChildren = {
   V1AdminAdvertisingPricesIdRoute: V1AdminAdvertisingPricesIdRoute,
   V1AdminApplicationsAppIdAdvertisingSettingsRoute:
     V1AdminApplicationsAppIdAdvertisingSettingsRoute,
+  V1AdminApplicationsAppIdLaunchStatusRoute:
+    V1AdminApplicationsAppIdLaunchStatusRoute,
   V1AdminApplicationsAppIdShareInviteRoute:
     V1AdminApplicationsAppIdShareInviteRoute,
   V1AdminApplicationsAppIdVisibilityRoute:

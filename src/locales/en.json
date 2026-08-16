@@ -1027,7 +1027,37 @@
         "coming_soon": { "label": "Coming Soon", "hint": "Visible on the Dashboard, clearly marked. Users cannot enter." },
         "active": { "label": "Active", "hint": "Fully visible and accessible." },
         "archived": { "label": "Archived", "hint": "Hidden from normal users. Preserved for administration and history." }
-      }
+      },
+      "launchStatusUpdated": "Launch status updated",
+      "launchStatusTitle": "Pre-Launch / Public Launch",
+      "launchStatusHint": "While Pre-Launch, only the admin and explicitly authorized test users can access this application — everyone else sees the Pre-Launch Front Page. Nothing switches this automatically; only this explicit action does.",
+      "launchStatus": {
+        "preLaunch": { "label": "Pre-Launch", "hint": "Public visitors see only the Pre-Launch Front Page. Admin and authorized test users have full access." },
+        "public": { "label": "Public", "hint": "Publicly accessible to everyone, per this application's own authorization rules." }
+      },
+      "updateLaunchStatus": "Update launch status",
+      "preLaunchContentTitle": "Pre-Launch Front Page Content",
+      "preLaunchContentHint": "Shown to public visitors while this application is Pre-Launch. Leave a field blank to omit it — there is no built-in placeholder branding.",
+      "preLaunchLogoUrl": "Logo URL",
+      "preLaunchBannerUrl": "Banner image URL",
+      "preLaunchTitleBs": "Title (BS)",
+      "preLaunchTitleEn": "Title (EN)",
+      "preLaunchTitleDe": "Title (DE)",
+      "preLaunchInfoTextBs": "Info text (BS)",
+      "preLaunchInfoTextEn": "Info text (EN)",
+      "preLaunchInfoTextDe": "Info text (DE)",
+      "preLaunchContactEmail": "Contact email",
+      "preLaunchContactPhone": "Contact phone",
+      "preLaunchContentSaved": "Pre-Launch content saved",
+      "testUsersTitle": "Authorized Test Users",
+      "testUsersHint": "Grant a registered user full access to this application while it is Pre-Launch, by username.",
+      "testUserUsernamePlaceholder": "Username",
+      "testUserGrant": "Grant access",
+      "testUserGranted": "Test access granted",
+      "testUserRevoke": "Revoke",
+      "testUserRevoked": "Test access revoked",
+      "testUserNotFound": "No user found with that username",
+      "testUsersEmpty": "No authorized test users yet"
     },
     "hub": {
       "title": "Admin",
@@ -1162,6 +1192,12 @@
     "statusPremiumDesc": "Membership with additional benefits.",
     "statusVerifiedTitle": "VERIFIED",
     "statusVerifiedDesc": "Identity of the member has been verified."
+  },
+  "launch": {
+    "preLaunch": {
+      "badge": "Currently in preparation",
+      "defaultInfoText": "This application is currently being prepared. We'll be online soon."
+    }
   },
   "offers": {
     "title": "🎁 SPECIAL FOR YOU",

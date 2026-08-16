@@ -16,6 +16,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { ApplicationProvider } from "@/context/ApplicationContext";
 import { captureReferralFromUrl } from "@/lib/referral";
+import { LaunchGate } from "@/components/launch/LaunchGate";
 
 function NotFoundComponent() {
   return (
@@ -134,7 +135,9 @@ function RootComponent() {
         <AuthProvider>
           <LanguageProvider>
             {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-            <Outlet />
+            <LaunchGate>
+              <Outlet />
+            </LaunchGate>
             <Toaster position="top-right" richColors />
           </LanguageProvider>
         </AuthProvider>

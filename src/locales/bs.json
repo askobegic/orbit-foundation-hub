@@ -1027,7 +1027,37 @@
         "coming_soon": { "label": "Uskoro", "hint": "Vidljivo na Dashboardu, jasno označeno. Korisnici ne mogu ući." },
         "active": { "label": "Aktivno", "hint": "Potpuno vidljivo i dostupno." },
         "archived": { "label": "Arhivirano", "hint": "Skriveno od običnih korisnika. Sačuvano za administraciju i historiju." }
-      }
+      },
+      "launchStatusUpdated": "Status lansiranja ažuriran",
+      "launchStatusTitle": "Pre-Launch / Javno lansiranje",
+      "launchStatusHint": "Dok je Pre-Launch, aplikaciji mogu pristupiti samo administrator i izričito ovlašteni test korisnici — svi ostali vide Pre-Launch naslovnu stranicu. Ništa se ne mijenja automatski; samo ova izričita akcija.",
+      "launchStatus": {
+        "preLaunch": { "label": "Pre-Launch", "hint": "Javni posjetioci vide samo Pre-Launch naslovnu stranicu. Administrator i ovlašteni test korisnici imaju pun pristup." },
+        "public": { "label": "Javno", "hint": "Javno dostupno svima, prema vlastitim pravilima autorizacije ove aplikacije." }
+      },
+      "updateLaunchStatus": "Ažuriraj status lansiranja",
+      "preLaunchContentTitle": "Sadržaj Pre-Launch naslovne stranice",
+      "preLaunchContentHint": "Prikazuje se javnim posjetiocima dok je aplikacija Pre-Launch. Ostavite polje prazno da ga izostavite — nema ugrađenog placeholder brendinga.",
+      "preLaunchLogoUrl": "URL loga",
+      "preLaunchBannerUrl": "URL banner slike",
+      "preLaunchTitleBs": "Naslov (BS)",
+      "preLaunchTitleEn": "Naslov (EN)",
+      "preLaunchTitleDe": "Naslov (DE)",
+      "preLaunchInfoTextBs": "Informativni tekst (BS)",
+      "preLaunchInfoTextEn": "Informativni tekst (EN)",
+      "preLaunchInfoTextDe": "Informativni tekst (DE)",
+      "preLaunchContactEmail": "Kontakt email",
+      "preLaunchContactPhone": "Kontakt telefon",
+      "preLaunchContentSaved": "Pre-Launch sadržaj sačuvan",
+      "testUsersTitle": "Ovlašteni test korisnici",
+      "testUsersHint": "Dodijelite registrovanom korisniku pun pristup ovoj aplikaciji dok je Pre-Launch, po korisničkom imenu.",
+      "testUserUsernamePlaceholder": "Korisničko ime",
+      "testUserGrant": "Dodijeli pristup",
+      "testUserGranted": "Test pristup dodijeljen",
+      "testUserRevoke": "Ukini",
+      "testUserRevoked": "Test pristup ukinut",
+      "testUserNotFound": "Korisnik s tim korisničkim imenom nije pronađen",
+      "testUsersEmpty": "Još nema ovlaštenih test korisnika"
     },
     "hub": {
       "title": "Admin",
@@ -1162,6 +1192,12 @@
     "statusPremiumDesc": "Članstvo sa dodatnim pogodnostima",
     "statusVerifiedTitle": "VERIFIKOVAN",
     "statusVerifiedDesc": "Identitet člana je verifikovan."
+  },
+  "launch": {
+    "preLaunch": {
+      "badge": "Trenutno u pripremi",
+      "defaultInfoText": "Ova aplikacija je trenutno u pripremi. Uskoro online."
+    }
   },
   "offers": {
     "title": "🎁 SPECIJALNO ZA VAS",

@@ -444,6 +444,23 @@ The **one explicit action** that changes an application's visibility state — k
 - **Response 200:** `{ "data": { "id": "...", "visibility": "active" } }`
 - **Errors:** `VALIDATION_ERROR` (not one of the four allowed values).
 
+### 7.2 Pre-Launch / Public Launch — a second, independent state
+
+**Decided.** `launchStatus` (`pre_launch` | `public`, backed by `applications.launch_status` — the enum value itself keeps its underscore form, same as `visibility`'s `coming_soon` above; camelCase applies to JSON keys, not enum values, per §4.8) is a separate axis from `visibility` — `visibility` answers "is this application listed inside CORE," `launchStatus` answers "is this application's own public site open to ordinary visitors." Every application defaults to `pre_launch`; only `PUT /v1/admin/applications/{appId}/launch-status` (mirroring §7's dedicated visibility-transition pattern) ever moves it to `public` — nothing in this contract does so automatically. The CORE platform's own application (`slug: "core"`) always behaves as `public` regardless of this column's stored value — CORE is never gated by this mechanism, only the applications connected to it. `launchStatus` is included in the `GET /v1/applications` and `GET /v1/applications/{idOrSlug}` responses above (§7's examples predate this field; every response now also carries `"launchStatus": "pre_launch"` or `"public"`).
+
+### `PUT /v1/admin/applications/{appId}/launch-status`
+The one explicit action that changes an application's Pre-Launch / Public Launch state, mirroring `PUT .../visibility` above exactly.
+- **Auth:** admin.
+- **Request body:** `{ "launchStatus": "public", "reason": "Launch day" }` (`reason` optional, audited if present).
+- **Response 200:** `{ "data": { "id": "...", "launchStatus": "public" } }`
+- **Errors:** `VALIDATION_ERROR` (not `pre_launch`/`public`).
+
+### `GET /v1/me/launch-access`
+The generic access-control read a CORE-connected application's own (separately-deployed) server calls to decide, for its own routes, whether the current caller may proceed while the application is `pre_launch`. Scoped by the caller's JWT `azp` (§3.3) — never a caller-supplied `appId`.
+- **Auth:** required.
+- **Response 200:** `{ "data": { "launchStatus": "pre_launch", "authorized": false } }`. `authorized` is `true` when `launchStatus` is already `public`, when the calling application is CORE itself, when the caller holds the platform's `admin` role, or when the caller has been explicitly granted test access to this application (`PROJECT_KNOWLEDGE.md` → Pre-Launch / Public Launch) — `false` otherwise, including for a normal registered user with no such grant.
+- **Errors:** `UNAUTHORIZED` (missing/invalid token), `NOT_FOUND` (the caller's `azp` application no longer exists).
+
 ---
 
 ## 8. Capabilities

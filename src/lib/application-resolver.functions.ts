@@ -58,6 +58,10 @@ export interface ApplicationBranding {
   primary_color: string;
   secondary_color: string;
   google_client_id: string | null;
+  // Pre-Launch / Public Launch standard -- see LaunchGate.tsx. Always
+  // 'public' for slug === 'core' (the CORE platform itself is never
+  // gated); every other application defaults to 'pre_launch'.
+  launch_status: ApplicationRow["launch_status"];
 }
 
 const APP_OVERRIDE_COOKIE = "app_override";
@@ -74,6 +78,7 @@ function toBranding(row: ApplicationRow): ApplicationBranding {
     primary_color: row.primary_color,
     secondary_color: row.secondary_color,
     google_client_id: row.google_client_id,
+    launch_status: row.launch_status,
   };
 }
 

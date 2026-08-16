@@ -843,6 +843,57 @@ export const adminSetApplicationVisibility = createServerFn({ method: "POST" })
     return row;
   });
 
+// ---------- Pre-Launch / Public Launch status ----------
+// Independent of visibility above -- see the migration comment on
+// applications.launch_status for why this is a separate column/action
+// rather than a repurposing of visibility. Same dedicated-action pattern:
+// a state-machine transition, never bundled into adminUpdateAppSettings.
+// New applications always start 'pre_launch' (the column default); moving
+// to 'public' is always this one explicit admin call -- nothing in this
+// codebase ever flips it automatically. The 'core' application row is
+// excluded from this mechanism entirely at the gating layer (LaunchGate),
+// regardless of whatever value this column holds for it.
+const LAUNCH_STATUS_VALUES = ["pre_launch", "public"] as const;
+
+const launchStatusSchema = z.object({
+  app_id: z.string().uuid(),
+  launch_status: z.enum(LAUNCH_STATUS_VALUES),
+  reason: z.string().trim().max(500).optional(),
+});
+
+export const adminSetApplicationLaunchStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) => launchStatusSchema.parse(raw))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: previous } = await supabaseAdmin
+      .from("applications")
+      .select("launch_status, slug")
+      .eq("id", data.app_id)
+      .maybeSingle();
+
+    const { data: row, error } = await supabaseAdmin
+      .from("applications")
+      .update({ launch_status: data.launch_status })
+      .eq("id", data.app_id)
+      .select("id, launch_status")
+      .single();
+    if (error) throw new Error(error.message);
+
+    await writeAuditLog({
+      userId: context.userId,
+      action: "application.launch_status_change",
+      entityType: "application",
+      entityId: data.app_id,
+      oldData: { launch_status: previous?.launch_status ?? null },
+      newData: { launch_status: data.launch_status },
+      reason: data.reason ?? null,
+    });
+    return row;
+  });
+
 // ---------- App settings (identity, branding, logo, favicon, descriptions) ----------
 // Extensible by design: every field here is optional except app_id, so
 // adding another editable application setting in the future means adding
