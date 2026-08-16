@@ -18,6 +18,7 @@ import {
   adminUpdateAppSettings,
   adminUploadBrandingAsset,
 } from "@/lib/admin.functions";
+import { adminListRewardFulfillmentTypes } from "@/lib/rewards.functions";
 import { adminUpsertShareInviteTemplate, getShareInviteConfig } from "@/lib/share-invite.functions";
 import type { ApplicationRow, ApplicationVisibility, ProductType, SubscriptionPlanRow } from "@/types/database";
 
@@ -81,6 +82,12 @@ function AdminApps() {
     },
   });
 
+  const fulfillmentTypesFn = useServerFn(adminListRewardFulfillmentTypes);
+  const fulfillmentTypesQ = useQuery({
+    queryKey: ["admin-reward-fulfillment-types"],
+    queryFn: () => fulfillmentTypesFn(),
+  });
+
   const upsert = useServerFn(adminUpsertPlan);
   const archive = useServerFn(adminArchivePlan);
   const createApp = useServerFn(adminCreateApplication);
@@ -132,6 +139,9 @@ function AdminApps() {
           features_de: plan.features_de ?? [],
           is_active: plan.is_active ?? true,
           product_type: plan.product_type ?? "subscription",
+          grants_premium: plan.grants_premium ?? true,
+          grants_benefit_key: plan.grants_benefit_key ?? null,
+          requires_benefit_key: plan.requires_benefit_key ?? null,
         },
       }),
     onSuccess: () => {
@@ -231,6 +241,7 @@ function AdminApps() {
                   <PlanForm
                     key={plan.id}
                     initial={plan}
+                    fulfillmentTypes={fulfillmentTypesQ.data ?? []}
                     onSave={(p) => savePlan.mutate({ ...p, id: plan.id })}
                     onArchive={() => archivePlan.mutate(plan.id)}
                   />
@@ -244,10 +255,12 @@ function AdminApps() {
                     currency: "EUR",
                     is_active: true,
                     product_type: "subscription",
+                    grants_premium: true,
                     features_bs: [],
                     features_en: [],
                     features_de: [],
                   }}
+                  fulfillmentTypes={fulfillmentTypesQ.data ?? []}
                   isNew
                   onSave={(p) => savePlan.mutate(p)}
                 />
@@ -262,11 +275,13 @@ function AdminApps() {
 
 function PlanForm({
   initial,
+  fulfillmentTypes,
   isNew,
   onSave,
   onArchive,
 }: {
   initial: Partial<SubscriptionPlanRow>;
+  fulfillmentTypes: { key: string; label: string; enabled: boolean; archived: boolean }[];
   isNew?: boolean;
   onSave: (p: Partial<SubscriptionPlanRow>) => void;
   onArchive?: () => void;
@@ -349,6 +364,62 @@ function PlanForm({
             value={p.currency ?? "EUR"}
             onChange={(e) => setP({ ...p, currency: e.target.value })}
           />
+        </Field>
+        <Field label={t("admin.applications.grantsPremium")}>
+          <label className="input flex cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              checked={p.grants_premium ?? true}
+              onChange={(e) => setP({ ...p, grants_premium: e.target.checked })}
+            />
+            {p.grants_premium ?? true
+              ? t("admin.applications.grantsPremiumOn")
+              : t("admin.applications.grantsPremiumOff")}
+          </label>
+        </Field>
+        <Field label={t("admin.applications.grantsBenefit")} wide>
+          <select
+            className="input"
+            value={p.grants_benefit_key ?? ""}
+            onChange={(e) => setP({ ...p, grants_benefit_key: e.target.value || null })}
+          >
+            <option value="">{t("admin.applications.grantsBenefitNone")}</option>
+            {fulfillmentTypes
+              .filter((f) => f.enabled && !f.archived)
+              .map((f) => (
+                <option key={f.key} value={f.key}>
+                  {f.label}
+                </option>
+              ))}
+          </select>
+          <p className="mt-1 text-[11px] text-gray-400">{t("admin.applications.grantsBenefitHint")}</p>
+        </Field>
+        <Field label={t("admin.applications.requiresBenefit")} wide>
+          <select
+            className="input"
+            value={p.requires_benefit_key ?? ""}
+            onChange={(e) => setP({ ...p, requires_benefit_key: e.target.value || null })}
+          >
+            <option value="">{t("admin.applications.requiresBenefitNone")}</option>
+            {fulfillmentTypes
+              .filter((f) => f.enabled && !f.archived)
+              .map((f) => (
+                <option key={f.key} value={f.key}>
+                  {f.label}
+                </option>
+              ))}
+          </select>
+          <p className="mt-1 text-[11px] text-gray-400">{t("admin.applications.requiresBenefitHint")}</p>
+          {p.requires_benefit_key && p.requires_benefit_key === p.grants_benefit_key && (
+            <p className="mt-1 text-[11px] font-medium text-amber-600">
+              {t("admin.applications.requiresBenefitSelfWarning")}
+            </p>
+          )}
+          {p.requires_benefit_key && !p.grants_benefit_key && (
+            <p className="mt-1 text-[11px] font-medium text-amber-600">
+              {t("admin.applications.requiresBenefitNoGrantWarning")}
+            </p>
+          )}
         </Field>
         <Field label={t("admin.applications.stripeLink")} wide>
           <input

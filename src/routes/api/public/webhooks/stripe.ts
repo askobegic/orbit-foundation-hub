@@ -24,6 +24,32 @@ function parseRef(ref: string | null | undefined): {
   return verified;
 }
 
+// Payment/entitlement consistency for dependent Commercial Products
+// (Sponsored-requires-Listing): the pre-payment check in
+// createPaymentReference (payments.functions.ts) prevents the vast
+// majority of ineligible purchases before any charge happens, but the
+// required entitlement can still lapse between that check and webhook
+// confirmation -- the webhook remains authoritative, so a payment that
+// arrives here with an unmet dependency must not result in a silent
+// "charged, nothing delivered" state. Server-side only, using the
+// idempotency key Stripe's own API natively supports (no new
+// idempotency system) -- a webhook redelivery never reaches this code a
+// second time anyway, since the existingPayment check above it already
+// short-circuits duplicates before this point is ever reached.
+async function refundStripePayment(
+  stripe: Stripe,
+  paymentIntentId: string,
+  idempotencyKey: string,
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    await stripe.refunds.create({ payment_intent: paymentIntentId }, { idempotencyKey });
+    return { ok: true };
+  } catch (err) {
+    console.error("Stripe refund (dependency not met) failed", err);
+    return { ok: false, error: err instanceof Error ? err.message : "unknown_error" };
+  }
+}
+
 export const Route = createFileRoute("/api/public/webhooks/stripe")({
   server: {
     handlers: {
@@ -176,6 +202,19 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
               if (cancelCampaignErr) {
                 console.error("Stripe webhook: campaign cancel on refund failed", cancelCampaignErr);
               }
+            }
+
+            // Commercial Products: a benefit-only purchase has no
+            // subscriptions row to cancel above -- revoke whatever
+            // entitlement this specific payment granted, if any (a
+            // Premium-only or campaign payment granted none, so this is a
+            // safe no-op for those).
+            const { revokeEntitlementForPayment } = await import("@/lib/entitlements.server");
+            const revoked = await revokeEntitlementForPayment(paymentRow.id);
+            if (revoked && !revoked.ok) {
+              console.error("Stripe webhook: entitlement revoke on refund failed", {
+                payment_id: paymentRow.id,
+              });
             }
 
             // Global Premium Visibility & Contact System: Premium status
@@ -351,10 +390,25 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
         let planMonths = 12;
         let currency = (session.currency ?? "eur").toUpperCase();
         let planPrice: number | null = null;
+        // Commercial Products (Listing/Sponsored/Featured): a plan may
+        // optionally grant a distinct, application-specific entitlements
+        // benefit, and may or may not also grant Global Premium -- see the
+        // migration header comment
+        // (20260815100000_commercial_product_benefits.sql) and the
+        // "benefit-only" follow-up that made grants_premium load-bearing.
+        let planGrantsBenefitKey: string | null = null;
+        let planGrantsPremium = true;
+        let planRequiresBenefitKey: string | null = null;
+        // Set true only if a dependency-not-met refund actually succeeds
+        // below -- changes the notification wording and suppresses the
+        // "success" framing a customer would otherwise see.
+        let dependencyRefunded = false;
         if (ref.plan_id) {
           const { data: plan } = await supabaseAdmin
             .from("subscription_plans")
-            .select("duration_months, currency, price, app_id, is_active")
+            .select(
+              "duration_months, currency, price, app_id, is_active, grants_benefit_key, grants_premium, requires_benefit_key",
+            )
             .eq("id", ref.plan_id)
             .maybeSingle();
           if (!plan) {
@@ -375,6 +429,9 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
               return Response.json({ received: true, ignored: "plan_mismatch" });
             }
           }
+          planGrantsBenefitKey = (plan as { grants_benefit_key: string | null }).grants_benefit_key;
+          planGrantsPremium = (plan as { grants_premium: boolean }).grants_premium;
+          planRequiresBenefitKey = (plan as { requires_benefit_key: string | null }).requires_benefit_key;
         }
         const amount = (session.amount_total ?? 0) / 100;
 
@@ -411,52 +468,67 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
           }
         }
 
+        // subscriptions is semantically Premium-specific, not "any paid
+        // product" -- its UNIQUE(user_id, app_id) constraint structurally
+        // allows only one row per user per app, so a benefit-only product
+        // (e.g. Musician Listing) must never write to it: doing so would
+        // collide with (or silently overwrite) a real Premium subscription
+        // for the same app. When grants_premium is false, sub stays null
+        // and every step below that depends on it is skipped accordingly.
+        //
         // Checked before the upsert below so we can tell first purchase
         // apart from a renewal for Rewards & Loyalty (reward_action_rules
         // has separate entries for premium_purchase/premium_renewal) --
         // the upsert itself reuses the same row either way.
-        const { data: existingSub } = await supabaseAdmin
-          .from("subscriptions")
-          .select("id")
-          .eq("user_id", ref.user_id)
-          .eq("app_id", ref.app_id)
-          .maybeSingle();
-        const isRenewal = !!existingSub;
+        let sub: { id: string } | null = null;
+        let isRenewal = false;
+        if (planGrantsPremium) {
+          const { data: existingSub } = await supabaseAdmin
+            .from("subscriptions")
+            .select("id")
+            .eq("user_id", ref.user_id)
+            .eq("app_id", ref.app_id)
+            .maybeSingle();
+          isRenewal = !!existingSub;
 
-        const { data: sub, error: subErr } = await supabaseAdmin
-          .from("subscriptions")
-          .upsert(
-            {
-              user_id: ref.user_id,
-              app_id: ref.app_id,
-              plan_id: ref.plan_id,
-              status: "active",
-              stripe_payment_id: session.id,
-              amount_paid: amount,
-              currency,
-              started_at: new Date().toISOString(),
-              expires_at: addMonthsIso(planMonths),
-            },
-            { onConflict: "user_id,app_id" },
-          )
-          .select("id")
-          .single();
-        if (subErr) {
-          console.error(subErr);
-          return new Response("DB error", { status: 500 });
+          const { data: subRow, error: subErr } = await supabaseAdmin
+            .from("subscriptions")
+            .upsert(
+              {
+                user_id: ref.user_id,
+                app_id: ref.app_id,
+                plan_id: ref.plan_id,
+                status: "active",
+                stripe_payment_id: session.id,
+                amount_paid: amount,
+                currency,
+                started_at: new Date().toISOString(),
+                expires_at: addMonthsIso(planMonths),
+              },
+              { onConflict: "user_id,app_id" },
+            )
+            .select("id")
+            .single();
+          if (subErr) {
+            console.error(subErr);
+            return new Response("DB error", { status: 500 });
+          }
+          sub = subRow;
         }
+
+        const paymentIntentId =
+          typeof session.payment_intent === "string"
+            ? session.payment_intent
+            : (session.payment_intent?.id ?? null);
 
         const { data: insertedPayment, error: insertPaymentErr } = await supabaseAdmin
           .from("payments")
           .insert({
             user_id: ref.user_id,
             app_id: ref.app_id,
-            subscription_id: (sub as { id: string }).id,
+            subscription_id: sub?.id ?? null,
             stripe_payment_id: session.id,
-            stripe_payment_intent_id:
-              typeof session.payment_intent === "string"
-                ? session.payment_intent
-                : (session.payment_intent?.id ?? null),
+            stripe_payment_intent_id: paymentIntentId,
             amount,
             currency,
             status: "success",
@@ -511,22 +583,184 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
           }
         }
 
+        // Commercial Products: purely additive to the unchanged Premium
+        // grant above -- grantOrExtendEntitlement() extends the existing
+        // benefit on a renewal instead of rejecting it (grantEntitlement()
+        // alone would reject an already-active grant). A failure here is
+        // logged, never rolled back or allowed to fail the webhook,
+        // matching the coupon-redemption block's own "payment already
+        // succeeded, never undo it" rule.
+        //
+        // Sponsored-requires-Listing: if this plan declares a dependency,
+        // it's checked here, server-side, immediately before granting --
+        // the authoritative check, never the Admin UI/frontend. The
+        // required entitlement must be active for the SAME app_id as this
+        // purchase; a Listing held in a different application never
+        // satisfies it. Payment already succeeded and stays recorded
+        // either way -- only the dependent benefit is withheld.
+        if (planGrantsBenefitKey && insertedPayment) {
+          let dependencyMet = true;
+          if (planRequiresBenefitKey) {
+            const { hasActiveEntitlement } = await import("@/lib/entitlements.server");
+            dependencyMet = await hasActiveEntitlement(ref.user_id, planRequiresBenefitKey, ref.app_id);
+          }
+          if (!dependencyMet) {
+            console.warn("Stripe webhook: commercial product dependency not met", {
+              plan_id: ref.plan_id,
+              benefit_type: planGrantsBenefitKey,
+              requires_benefit_key: planRequiresBenefitKey,
+            });
+            // Payment already succeeded and was already recorded above --
+            // the required entitlement lapsed in the window between the
+            // pre-payment check and this webhook. Never leave the
+            // customer charged with nothing delivered: refund the
+            // payment, mark it accordingly (existing 'refunded' status,
+            // the same value the incoming-refund handler already uses --
+            // no new status introduced), and skip the benefit grant
+            // entirely.
+            if (paymentIntentId) {
+              const refundResult = await refundStripePayment(
+                stripe,
+                paymentIntentId,
+                `dependency_refund:${insertedPayment.id}`,
+              );
+              if (refundResult.ok) {
+                dependencyRefunded = true;
+                await supabaseAdmin
+                  .from("payments")
+                  .update({ status: "refunded" })
+                  .eq("id", insertedPayment.id);
+                // Rare configuration (grants_premium=true AND a
+                // requires_benefit_key on the same plan): the
+                // subscriptions row above was created unconditionally,
+                // before this dependency check ran. A refund must reverse
+                // everything this specific payment funded, not just the
+                // withheld benefit -- same cancellation shape the
+                // incoming-refund handler above already uses.
+                if (sub) {
+                  await supabaseAdmin
+                    .from("subscriptions")
+                    .update({ status: "cancelled", expires_at: new Date().toISOString() })
+                    .eq("id", sub.id);
+                }
+                await writeAuditLog({
+                  userId: ref.user_id,
+                  action: "product_payment.refunded_dependency_not_met",
+                  entityType: "payment",
+                  entityId: insertedPayment.id,
+                  newData: { benefit_type: planGrantsBenefitKey, requires_benefit_key: planRequiresBenefitKey },
+                });
+              } else {
+                // Refund itself failed (e.g. transient Stripe API error) --
+                // documented limitation: this is not silently swallowed
+                // (logged + audited for manual follow-up), but no
+                // additional retry mechanism is invented here. The
+                // dependent benefit is still correctly withheld either way.
+                console.error("Stripe webhook: dependency refund failed, manual follow-up required", {
+                  payment_id: insertedPayment.id,
+                  reason: refundResult.error,
+                });
+                // payments.status stays 'success' (accurate -- the money
+                // genuinely has not been returned) rather than inventing a
+                // new status the schema has no other use for; this audit
+                // entry is the actionable flag for manual reconciliation
+                // via the Stripe dashboard, so it carries everything an
+                // admin needs to act on it without cross-referencing
+                // other tables.
+                await writeAuditLog({
+                  userId: ref.user_id,
+                  action: "product_payment.refund_failed_dependency_not_met",
+                  entityType: "payment",
+                  entityId: insertedPayment.id,
+                  newData: {
+                    reason: refundResult.error,
+                    payment_intent_id: paymentIntentId,
+                    amount,
+                    currency,
+                    plan_id: ref.plan_id,
+                    app_id: ref.app_id,
+                    benefit_type: planGrantsBenefitKey,
+                    requires_benefit_key: planRequiresBenefitKey,
+                  },
+                });
+              }
+            }
+            await writeAuditLog({
+              userId: ref.user_id,
+              action: "product_benefit.grant_skipped_dependency_not_met",
+              entityType: "payment",
+              entityId: insertedPayment.id,
+              newData: { benefit_type: planGrantsBenefitKey, requires_benefit_key: planRequiresBenefitKey },
+            });
+          } else {
+            const { grantOrExtendEntitlement } = await import("@/lib/entitlements.server");
+            const result = await grantOrExtendEntitlement({
+              userId: ref.user_id,
+              benefitType: planGrantsBenefitKey,
+              appId: ref.app_id,
+              durationDays: planMonths * 30,
+              source: "product_purchase",
+              metadata: { paymentId: insertedPayment.id, planId: ref.plan_id },
+            });
+            if (!result.ok) {
+              console.warn("Stripe webhook: commercial product benefit not granted", {
+                plan_id: ref.plan_id,
+                benefit_type: planGrantsBenefitKey,
+                reason: result.error,
+              });
+              await writeAuditLog({
+                userId: ref.user_id,
+                action: "product_benefit.grant_skipped_after_payment",
+                entityType: "payment",
+                entityId: insertedPayment.id,
+                newData: { benefit_type: planGrantsBenefitKey, reason: result.error },
+              });
+            }
+          }
+        }
+
         // Global Premium Visibility & Contact System: Premium status is
         // derived solely from hasAnyActivePremium() (live, from
-        // `subscriptions`, upserted above) -- profiles.user_type is no
-        // longer written here.
+        // `subscriptions`, upserted above when granted) -- profiles.user_type
+        // is no longer written here.
 
-        const { error: notifyErr } = await supabaseAdmin.from("notifications").insert({
-          user_id: ref.user_id,
-          title_bs: "Uplata primljena",
-          title_en: "Payment received",
-          title_de: "Zahlung erhalten",
-          message_bs: "Vaša premium pretplata je aktivirana.",
-          message_en: "Your premium subscription is active.",
-          message_de: "Ihr Premium-Abonnement ist aktiv.",
-          type: "success",
-          app_id: ref.app_id,
-        });
+        const { error: notifyErr } = await supabaseAdmin.from("notifications").insert(
+          dependencyRefunded
+            ? {
+                user_id: ref.user_id,
+                title_bs: "Kupovina nije aktivirana",
+                title_en: "Purchase could not be activated",
+                title_de: "Kauf konnte nicht aktiviert werden",
+                message_bs:
+                  "Vaša uplata je vraćena jer potreban preduslov za ovaj proizvod više nije aktivan.",
+                message_en:
+                  "Your payment was refunded because a required prerequisite for this product is no longer active.",
+                message_de:
+                  "Ihre Zahlung wurde erstattet, da eine erforderliche Voraussetzung für dieses Produkt nicht mehr aktiv ist.",
+                type: "warning",
+                app_id: ref.app_id,
+              }
+            : {
+                user_id: ref.user_id,
+                title_bs: "Uplata primljena",
+                title_en: "Payment received",
+                title_de: "Zahlung erhalten",
+                // Wording must not claim Premium was activated when this
+                // plan doesn't grant it (Commercial Products / benefit-only
+                // purchase).
+                message_bs: planGrantsPremium
+                  ? "Vaša premium pretplata je aktivirana."
+                  : "Vaša kupovina je aktivirana.",
+                message_en: planGrantsPremium
+                  ? "Your premium subscription is active."
+                  : "Your purchase is now active.",
+                message_de: planGrantsPremium
+                  ? "Ihr Premium-Abonnement ist aktiv."
+                  : "Ihr Kauf ist jetzt aktiv.",
+                type: "success",
+                app_id: ref.app_id,
+              },
+        );
         if (notifyErr) {
           console.error("Stripe webhook: notification insert failed", notifyErr);
         }
@@ -534,62 +768,77 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
         await writeAuditLog({
           userId: ref.user_id,
           action: "payment.stripe.success",
-          entityType: "subscription",
-          entityId: (sub as { id: string }).id,
+          entityType: sub ? "subscription" : "payment",
+          entityId: sub?.id ?? insertedPayment?.id ?? session.id,
           newData: { session_id: session.id, amount, currency },
         });
 
-        const { grantRewardAction, recordPremiumReferralIfApplicable } = await import(
-          "@/lib/rewards.server"
-        );
-        // Priority 16: proportional financial points (EUR paid x 10),
-        // replacing the previous flat premium_purchase/premium_renewal
-        // reward. Server-verified amount only. Non-EUR is reported, not
-        // guessed at.
-        if (currency === "EUR" && insertedPayment) {
-          await grantRewardAction({
+        // Premium-specific rewards/referral tracking/n8n activation event
+        // only ever apply when this purchase actually grants Premium --
+        // a benefit-only purchase must not generate premium_purchase
+        // points, a false Premium referral credit, or a premium_activated
+        // event. (Rewarding a benefit-only purchase itself is intentionally
+        // out of scope here -- no reward_action_rules entry exists for it
+        // yet; a future pass can add one without touching this webhook.)
+        const { sendN8nEvent } = await import("@/lib/n8n.server");
+        if (planGrantsPremium && sub && !dependencyRefunded) {
+          const { grantRewardAction, recordPremiumReferralIfApplicable } = await import(
+            "@/lib/rewards.server"
+          );
+          // Priority 16: proportional financial points (EUR paid x 10),
+          // replacing the previous flat premium_purchase/premium_renewal
+          // reward. Server-verified amount only. Non-EUR is reported, not
+          // guessed at.
+          if (currency === "EUR" && insertedPayment) {
+            await grantRewardAction({
+              userId: ref.user_id,
+              action: isRenewal ? "premium_renewal" : "premium_purchase",
+              resourceType: "payment",
+              resourceId: insertedPayment.id,
+              sourceAppId: ref.app_id,
+              amountEur: amount,
+              dedupeKey: `payment:${insertedPayment.id}`,
+            });
+          } else if (insertedPayment) {
+            console.warn("Stripe webhook: non-EUR payment, proportional points not calculated", {
+              payment_id: insertedPayment.id,
+              currency,
+            });
+            await writeAuditLog({
+              userId: ref.user_id,
+              action: "payment.stripe.non_eur_points_skipped",
+              entityType: "payment",
+              entityId: insertedPayment.id,
+              newData: { currency, amount },
+            });
+          }
+          await recordPremiumReferralIfApplicable({
             userId: ref.user_id,
-            action: isRenewal ? "premium_renewal" : "premium_purchase",
-            resourceType: "payment",
-            resourceId: insertedPayment.id,
-            sourceAppId: ref.app_id,
-            amountEur: amount,
-            dedupeKey: `payment:${insertedPayment.id}`,
+            subscriptionId: sub.id,
           });
-        } else if (insertedPayment) {
-          console.warn("Stripe webhook: non-EUR payment, proportional points not calculated", {
-            payment_id: insertedPayment.id,
-            currency,
-          });
-          await writeAuditLog({
-            userId: ref.user_id,
-            action: "payment.stripe.non_eur_points_skipped",
-            entityType: "payment",
-            entityId: insertedPayment.id,
-            newData: { currency, amount },
+          await sendN8nEvent("premium_activated", {
+            provider: "stripe",
+            user_id: ref.user_id,
+            app_id: ref.app_id,
+            subscription_id: sub.id,
           });
         }
-        await recordPremiumReferralIfApplicable({
-          userId: ref.user_id,
-          subscriptionId: (sub as { id: string }).id,
-        });
 
-        const { sendN8nEvent } = await import("@/lib/n8n.server");
-        await sendN8nEvent("payment_received", {
-          provider: "stripe",
-          user_id: ref.user_id,
-          app_id: ref.app_id,
-          subscription_id: (sub as { id: string }).id,
-          amount,
-          currency,
-          session_id: session.id,
-        });
-        await sendN8nEvent("premium_activated", {
-          provider: "stripe",
-          user_id: ref.user_id,
-          app_id: ref.app_id,
-          subscription_id: (sub as { id: string }).id,
-        });
+        // Suppressed when the payment was reversed above -- money did not
+        // durably move, so downstream automation built around this event
+        // must not treat it as a completed payment (no paired "refunded"
+        // n8n event exists to correct the record otherwise).
+        if (!dependencyRefunded) {
+          await sendN8nEvent("payment_received", {
+            provider: "stripe",
+            user_id: ref.user_id,
+            app_id: ref.app_id,
+            subscription_id: sub?.id ?? null,
+            amount,
+            currency,
+            session_id: session.id,
+          });
+        }
 
         return Response.json({ received: true });
       },

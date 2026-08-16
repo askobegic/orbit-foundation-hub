@@ -526,6 +526,28 @@ Business rules: `PROJECT_KNOWLEDGE.md` → Premium Model, CORE Premium Service. 
 - **Auth:** user. **Capability:** none.
 - **Response 200:** `{ "data": [ { "appId": "a2...", "appName": "Svadba", "slug": "svadba" } ] }` — backs "Public profile on" for the caller's own profile-editing UI.
 
+### `GET /v1/me/entitlements`
+- **Auth:** user. **Capability:** none.
+- The cross-application read layer for Commercial Products (Application Listing/Sponsored/other application-specific benefits — `PROJECT_KNOWLEDGE.md` → Commercial Products). Deliberately not a second Premium endpoint: any `reward_fulfillment_types` row with `grants_premium=true` is excluded here — call `GET /v1/me/premium` for that question, never re-derived from this endpoint's data.
+- Scoped by the caller's own JWT `azp` per §3.3, the same rule every other azp-scoped endpoint in this contract follows: only entitlements that are either global (`appId: null`, e.g. a platform-wide benefit) or belong to the calling application itself are returned — never another application's, closing the same cross-application information-disclosure surface every other azp-scoped endpoint already closes. There is no way to query another user's or another application's entitlements through this endpoint.
+- **Response 200:**
+  ```json
+  {
+    "data": {
+      "entitlements": [
+        {
+          "benefitType": "musician_listing",
+          "label": "Musician Listing",
+          "appId": "a3...",
+          "startsAt": "2026-08-01T00:00:00.000Z",
+          "expiresAt": "2026-09-01T00:00:00.000Z"
+        }
+      ]
+    }
+  }
+  ```
+  `expiresAt: null` means the entitlement never expires. Only currently-active entitlements are returned (status + `expiresAt` both checked server-side, matching the same expiry-aware resolution `has_any_active_premium()`/`resolvePremiumStatus()` already use — never a raw `status` column read alone).
+
 ---
 
 ## 11. Promotional Trial

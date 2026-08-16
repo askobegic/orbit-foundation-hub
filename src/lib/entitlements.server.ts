@@ -14,6 +14,18 @@ async function admin() {
 
 type SupabaseAdmin = Awaited<ReturnType<typeof admin>>;
 
+// "Active" here means status='active' AND started (starts_at <= now,
+// defensive -- no current grant path ever sets a future starts_at, since
+// GrantEntitlementParams has no such field and the column defaults to
+// now() -- but the check costs nothing and closes the gap for any future
+// caller or manually-inserted row) AND not yet past ends_at --
+// entitlements never have their status flipped by a cron job (nullable
+// ends_at = never expires, deterministic and time-based only, exactly
+// like subscriptions/promotional_trials -- see the table's own schema
+// comment). A row can sit at status='active' long after its ends_at has
+// passed; every caller of this function (grant/extend, and the
+// Sponsored-requires-Listing dependency check) needs the real,
+// currently-valid state, not the stale status column alone.
 async function findActiveEntitlement(
   supabaseAdmin: SupabaseAdmin,
   userId: string,
@@ -25,10 +37,28 @@ async function findActiveEntitlement(
     .select("*")
     .eq("user_id", userId)
     .eq("benefit_type", benefitType)
-    .eq("status", "active");
+    .eq("status", "active")
+    .lte("starts_at", new Date().toISOString())
+    .or(`ends_at.is.null,ends_at.gt.${new Date().toISOString()}`);
   query = appId === null ? query.is("app_id", null) : query.eq("app_id", appId);
   const { data } = await query.maybeSingle();
   return data;
+}
+
+// Commercial Products (Sponsored-requires-Listing): a thin, read-only
+// boolean check over the same active-entitlement query grant/extend
+// already use -- reused, not a second dependency engine. Scoped by
+// (user, benefitType, appId) together, never benefitType alone, so a
+// Listing in one application can never satisfy a dependency check for a
+// different application's Sponsored product.
+export async function hasActiveEntitlement(
+  userId: string,
+  benefitType: string,
+  appId: string | null,
+): Promise<boolean> {
+  const supabaseAdmin = await admin();
+  const existing = await findActiveEntitlement(supabaseAdmin, userId, benefitType, appId);
+  return !!existing;
 }
 
 export type GrantEntitlementParams = {
@@ -131,6 +161,42 @@ export async function extendEntitlement(
     .eq("id", entitlementId);
   if (error) return { ok: false, error: "update_failed" };
   return { ok: true };
+}
+
+// Commercial Products (benefit-only purchases, e.g. Musician Listing):
+// recurring billing needs "grant on first purchase, extend on renewal,"
+// which grantEntitlement() alone can't express -- it deliberately rejects
+// an already-active entitlement (the "never auto-extends" policy this
+// file's other functions already document). This is not a second grant
+// function; it's a thin coordinator over the two that already exist, so
+// every payment-driven caller (Stripe/PayPal webhooks) gets correct
+// renewal behavior without duplicating the active-entitlement check.
+export async function grantOrExtendEntitlement(params: GrantEntitlementParams): Promise<GrantResult> {
+  const supabaseAdmin = await admin();
+  const appId = params.appId ?? null;
+  const existing = await findActiveEntitlement(supabaseAdmin, params.userId, params.benefitType, appId);
+  if (!existing) return grantEntitlement(params);
+  if (!params.durationDays) return { ok: true, entitlementId: existing.id as string };
+  const result = await extendEntitlement(existing.id as string, params.durationDays);
+  return result.ok ? { ok: true, entitlementId: existing.id as string } : { ok: false, error: result.error };
+}
+
+// Commercial Products refund handling: a benefit-only purchase has no
+// subscriptions row for a refund handler to cancel, so the entitlement it
+// granted (traced via the same metadata.paymentId every grant already
+// records) is revoked directly instead. Returns null when this payment
+// never granted a benefit (the normal case for a Premium-only purchase),
+// so callers can no-op cleanly.
+export async function revokeEntitlementForPayment(paymentId: string): Promise<{ ok: boolean } | null> {
+  const supabaseAdmin = await admin();
+  const { data: existing } = await supabaseAdmin
+    .from("entitlements")
+    .select("id")
+    .eq("metadata->>paymentId", paymentId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!existing) return null;
+  return revokeEntitlement(existing.id as string);
 }
 
 export async function revokeEntitlement(entitlementId: string): Promise<{ ok: boolean; error?: string }> {

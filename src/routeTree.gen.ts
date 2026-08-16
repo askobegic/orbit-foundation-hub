@@ -57,6 +57,7 @@ import { Route as V1CapabilitiesIndexRouteImport } from './routes/v1/capabilitie
 import { Route as V1ConversationsIndexRouteImport } from './routes/v1/conversations/index'
 import { Route as V1EventsIndexRouteImport } from './routes/v1/events/index'
 import { Route as V1MeIndexRouteImport } from './routes/v1/me/index'
+import { Route as V1MeEntitlementsRouteImport } from './routes/v1/me/entitlements'
 import { Route as V1MeExportRouteImport } from './routes/v1/me/export'
 import { Route as V1MePremiumRouteImport } from './routes/v1/me/premium'
 import { Route as V1MePremiumProfileRouteImport } from './routes/v1/me/premium-profile'
@@ -388,6 +389,11 @@ const V1EventsIndexRoute = V1EventsIndexRouteImport.update({
 const V1MeIndexRoute = V1MeIndexRouteImport.update({
   id: '/v1/me/',
   path: '/v1/me/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1MeEntitlementsRoute = V1MeEntitlementsRouteImport.update({
+  id: '/v1/me/entitlements',
+  path: '/v1/me/entitlements',
   getParentRoute: () => rootRouteImport,
 } as any)
 const V1MeExportRoute = V1MeExportRouteImport.update({
@@ -944,6 +950,7 @@ export interface FileRoutesByFullPath {
   '/v1/auth/logout': typeof V1AuthLogoutRoute
   '/v1/auth/refresh': typeof V1AuthRefreshRoute
   '/v1/auth/session': typeof V1AuthSessionRoute
+  '/v1/me/entitlements': typeof V1MeEntitlementsRoute
   '/v1/me/export': typeof V1MeExportRoute
   '/v1/me/premium': typeof V1MePremiumRoute
   '/v1/me/premium-profile': typeof V1MePremiumProfileRoute
@@ -1085,6 +1092,7 @@ export interface FileRoutesByTo {
   '/v1/auth/logout': typeof V1AuthLogoutRoute
   '/v1/auth/refresh': typeof V1AuthRefreshRoute
   '/v1/auth/session': typeof V1AuthSessionRoute
+  '/v1/me/entitlements': typeof V1MeEntitlementsRoute
   '/v1/me/export': typeof V1MeExportRoute
   '/v1/me/premium': typeof V1MePremiumRoute
   '/v1/me/premium-profile': typeof V1MePremiumProfileRoute
@@ -1227,6 +1235,7 @@ export interface FileRoutesById {
   '/v1/auth/logout': typeof V1AuthLogoutRoute
   '/v1/auth/refresh': typeof V1AuthRefreshRoute
   '/v1/auth/session': typeof V1AuthSessionRoute
+  '/v1/me/entitlements': typeof V1MeEntitlementsRoute
   '/v1/me/export': typeof V1MeExportRoute
   '/v1/me/premium': typeof V1MePremiumRoute
   '/v1/me/premium-profile': typeof V1MePremiumProfileRoute
@@ -1370,6 +1379,7 @@ export interface FileRouteTypes {
     | '/v1/auth/logout'
     | '/v1/auth/refresh'
     | '/v1/auth/session'
+    | '/v1/me/entitlements'
     | '/v1/me/export'
     | '/v1/me/premium'
     | '/v1/me/premium-profile'
@@ -1511,6 +1521,7 @@ export interface FileRouteTypes {
     | '/v1/auth/logout'
     | '/v1/auth/refresh'
     | '/v1/auth/session'
+    | '/v1/me/entitlements'
     | '/v1/me/export'
     | '/v1/me/premium'
     | '/v1/me/premium-profile'
@@ -1652,6 +1663,7 @@ export interface FileRouteTypes {
     | '/v1/auth/logout'
     | '/v1/auth/refresh'
     | '/v1/auth/session'
+    | '/v1/me/entitlements'
     | '/v1/me/export'
     | '/v1/me/premium'
     | '/v1/me/premium-profile'
@@ -1777,6 +1789,7 @@ export interface RootRouteChildren {
   V1AuthLogoutRoute: typeof V1AuthLogoutRoute
   V1AuthRefreshRoute: typeof V1AuthRefreshRoute
   V1AuthSessionRoute: typeof V1AuthSessionRoute
+  V1MeEntitlementsRoute: typeof V1MeEntitlementsRoute
   V1MeExportRoute: typeof V1MeExportRoute
   V1MePremiumRoute: typeof V1MePremiumRoute
   V1MePremiumProfileRoute: typeof V1MePremiumProfileRoute
@@ -2211,6 +2224,13 @@ declare module '@tanstack/react-router' {
       path: '/v1/me'
       fullPath: '/v1/me/'
       preLoaderRoute: typeof V1MeIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/me/entitlements': {
+      id: '/v1/me/entitlements'
+      path: '/v1/me/entitlements'
+      fullPath: '/v1/me/entitlements'
+      preLoaderRoute: typeof V1MeEntitlementsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/v1/me/export': {
@@ -2941,6 +2961,7 @@ const rootRouteChildren: RootRouteChildren = {
   V1AuthLogoutRoute: V1AuthLogoutRoute,
   V1AuthRefreshRoute: V1AuthRefreshRoute,
   V1AuthSessionRoute: V1AuthSessionRoute,
+  V1MeEntitlementsRoute: V1MeEntitlementsRoute,
   V1MeExportRoute: V1MeExportRoute,
   V1MePremiumRoute: V1MePremiumRoute,
   V1MePremiumProfileRoute: V1MePremiumProfileRoute,

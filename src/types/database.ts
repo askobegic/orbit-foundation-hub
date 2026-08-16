@@ -158,6 +158,19 @@ export interface SubscriptionPlanRow {
   // One-Time -- an admin-facing classification only, does not change
   // checkout/entitlement logic. See ProductType above.
   product_type: ProductType;
+  // Commercial Products: grants_premium is schema-level infrastructure for
+  // a future "benefit-only, no Premium" purchase flow -- not yet read by
+  // either webhook (every plan still grants Premium exactly as before).
+  // grants_benefit_key, when set, additionally grants a distinct
+  // application-specific entitlements benefit (must match a
+  // reward_fulfillment_types.key) alongside the unchanged Premium grant.
+  grants_premium: boolean;
+  grants_benefit_key: string | null;
+  // Sponsored-requires-Listing: when set, purchasing this plan only
+  // grants grants_benefit_key if the purchaser already holds an active
+  // entitlement of this benefit_type for the same app_id -- checked
+  // server-side by the webhook, never by the Admin UI/frontend.
+  requires_benefit_key: string | null;
   created_at: string;
 }
 export type SubscriptionPlanInsert = Partial<SubscriptionPlanRow> & {

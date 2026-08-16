@@ -45,12 +45,20 @@ function PricingPage() {
   const [payingPlanId, setPayingPlanId] = useState<string | null>(null);
   const createReference = useServerFn(createPaymentReference);
 
+  // /pricing is the actual purchase surface, not a status display -- unlike
+  // the Dashboard "My Applications" widget (which also shows coming_soon,
+  // disabled, for visibility), an application must be fully `active` before
+  // it can be offered for purchase here. draft/coming_soon/archived
+  // applications are excluded at the query level, matching the same
+  // visibility gate already used elsewhere (DashboardPage.tsx's appsQuery),
+  // not a second filtering convention.
   const appsQuery = useQuery({
     queryKey: ["pricing", "apps"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("applications")
         .select("*")
+        .eq("visibility", "active")
         .order("sort_order", { ascending: true });
       if (error) throw error;
       return (data ?? []) as ApplicationRow[];
@@ -104,7 +112,13 @@ function PricingPage() {
       window.location.href = url;
     } catch (err) {
       console.error("createPaymentReference failed", err);
-      toast.error(t("common.errorGeneric"));
+      // Sponsored-requires-Listing pre-check (see createPaymentReference):
+      // a specific, actionable message instead of the generic fallback.
+      const message =
+        err instanceof Error && err.message === "dependency_not_met"
+          ? t("pricing.dependencyNotMet")
+          : t("common.errorGeneric");
+      toast.error(message);
       setPayingPlanId(null);
     }
   }

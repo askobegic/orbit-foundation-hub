@@ -45,6 +45,29 @@ const planInputSchema = z.object({
   // Priority 8.11: admin-facing classification only -- does not change
   // checkout/entitlement logic. See ProductType (src/types/database.ts).
   product_type: z.enum(["subscription", "promotion", "one_time"]).default("subscription"),
+  // Commercial Products: whether purchasing this plan grants Global
+  // Premium (the unchanged, original behavior every existing plan already
+  // has -- default true) and/or a distinct, application-specific
+  // entitlements benefit (must match a reward_fulfillment_types.key).
+  // Both are independent -- a plan can grant Premium only (default),
+  // benefit only (grants_premium=false, e.g. a Musician Listing), or
+  // both. Empty string from the admin UI means "no benefit" -- normalized
+  // to null, matching every other nullable optional field on this form.
+  grants_premium: z.boolean().default(true),
+  grants_benefit_key: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((v) => (v ? v : null)),
+  // Sponsored-requires-Listing: when set, this plan's own grants_benefit_key
+  // is only granted if the purchaser already holds an active entitlement of
+  // this benefit_type for the same application -- enforced server-side in
+  // the payment webhooks, never here (this is just the configured value).
+  requires_benefit_key: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((v) => (v ? v : null)),
 });
 
 export const adminUpsertPlan = createServerFn({ method: "POST" })

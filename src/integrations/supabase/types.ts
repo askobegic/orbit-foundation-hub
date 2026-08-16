@@ -3479,12 +3479,15 @@ export type Database = {
           features_bs: Json | null
           features_de: Json | null
           features_en: Json | null
+          grants_benefit_key: string | null
+          grants_premium: boolean
           id: string
           is_active: boolean | null
           name: string
           paypal_payment_link: string | null
           price: number
           product_type: string
+          requires_benefit_key: string | null
           stripe_payment_link: string | null
         }
         Insert: {
@@ -3495,12 +3498,15 @@ export type Database = {
           features_bs?: Json | null
           features_de?: Json | null
           features_en?: Json | null
+          grants_benefit_key?: string | null
+          grants_premium?: boolean
           id?: string
           is_active?: boolean | null
           name: string
           paypal_payment_link?: string | null
           price: number
           product_type?: string
+          requires_benefit_key?: string | null
           stripe_payment_link?: string | null
         }
         Update: {
@@ -3511,12 +3517,15 @@ export type Database = {
           features_bs?: Json | null
           features_de?: Json | null
           features_en?: Json | null
+          grants_benefit_key?: string | null
+          grants_premium?: boolean
           id?: string
           is_active?: boolean | null
           name?: string
           paypal_payment_link?: string | null
           price?: number
           product_type?: string
+          requires_benefit_key?: string | null
           stripe_payment_link?: string | null
         }
         Relationships: [
@@ -3526,6 +3535,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "applications"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_plans_grants_benefit_key_fkey"
+            columns: ["grants_benefit_key"]
+            isOneToOne: false
+            referencedRelation: "reward_fulfillment_types"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "subscription_plans_requires_benefit_key_fkey"
+            columns: ["requires_benefit_key"]
+            isOneToOne: false
+            referencedRelation: "reward_fulfillment_types"
+            referencedColumns: ["key"]
           },
         ]
       }

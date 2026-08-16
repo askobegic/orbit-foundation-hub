@@ -63,6 +63,53 @@ async function verifyPayPalSignature(headers: Headers, rawBody: string): Promise
   return j.verification_status === "SUCCESS";
 }
 
+// Payment/entitlement consistency for dependent Commercial Products
+// (Sponsored-requires-Listing): see the matching, more fully commented
+// refundStripePayment() in the Stripe webhook for the full rationale.
+// Deliberately does not reuse verifyPayPalSignature()'s own token-fetch
+// code (kept untouched, zero diff, given how security-sensitive it is) --
+// a few duplicated lines here instead. `PayPal-Request-Id` is PayPal's own
+// native idempotency mechanism for this call, matching Stripe's
+// idempotencyKey option -- no new idempotency system invented, and in
+// practice a webhook redelivery never reaches this code twice anyway
+// (the existingPayment check above already short-circuits duplicates).
+async function refundPayPalCapture(
+  captureId: string,
+  idempotencyKey: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const id = process.env.PAYPAL_CLIENT_ID;
+  const secret = process.env.PAYPAL_CLIENT_SECRET;
+  if (!id || !secret) return { ok: false, error: "not_configured" };
+  const base = await paypalBase();
+
+  const tokenRes = await fetch(`${base}/v1/oauth2/token`, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${btoa(`${id}:${secret}`)}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: "grant_type=client_credentials",
+  });
+  if (!tokenRes.ok) return { ok: false, error: "token_request_failed" };
+  const { access_token } = (await tokenRes.json()) as { access_token: string };
+
+  const refundRes = await fetch(`${base}/v2/payments/captures/${captureId}/refund`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${access_token}`,
+      "Content-Type": "application/json",
+      "PayPal-Request-Id": idempotencyKey,
+    },
+    body: "{}",
+  });
+  if (!refundRes.ok) {
+    const body = await refundRes.text();
+    console.error("PayPal refund (dependency not met) failed", { status: refundRes.status, body });
+    return { ok: false, error: `paypal_refund_http_${refundRes.status}` };
+  }
+  return { ok: true };
+}
+
 export const Route = createFileRoute("/api/public/webhooks/paypal")({
   server: {
     handlers: {
@@ -178,6 +225,17 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
               if (cancelCampaignErr) {
                 console.error("PayPal webhook: campaign cancel on refund failed", cancelCampaignErr);
               }
+            }
+
+            // Commercial Products: a benefit-only purchase has no
+            // subscriptions row to cancel above -- revoke whatever
+            // entitlement this specific payment granted, if any.
+            const { revokeEntitlementForPayment } = await import("@/lib/entitlements.server");
+            const revoked = await revokeEntitlementForPayment(paymentRow.id);
+            if (revoked && !revoked.ok) {
+              console.error("PayPal webhook: entitlement revoke on refund failed", {
+                payment_id: paymentRow.id,
+              });
             }
 
             await writeAuditLog({
@@ -328,10 +386,24 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
         let months = 12;
         let currency = resource.amount?.currency_code ?? "EUR";
         let planPrice: number | null = null;
+        // Commercial Products (Listing/Sponsored/Featured): a plan may
+        // optionally grant a distinct, application-specific entitlements
+        // benefit, and may or may not also grant Global Premium -- see the
+        // migration header comment
+        // (20260815100000_commercial_product_benefits.sql) and the
+        // "benefit-only" follow-up that made grants_premium load-bearing.
+        let planGrantsBenefitKey: string | null = null;
+        let planGrantsPremium = true;
+        let planRequiresBenefitKey: string | null = null;
+        // Set true only if a dependency-not-met refund actually succeeds
+        // below -- see the matching flag in the Stripe webhook.
+        let dependencyRefunded = false;
         if (ref.plan_id) {
           const { data: plan } = await supabaseAdmin
             .from("subscription_plans")
-            .select("duration_months, currency, price, app_id, is_active")
+            .select(
+              "duration_months, currency, price, app_id, is_active, grants_benefit_key, grants_premium, requires_benefit_key",
+            )
             .eq("id", ref.plan_id)
             .maybeSingle();
           if (!plan) {
@@ -352,6 +424,9 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
               return Response.json({ received: true, ignored: "plan_mismatch" });
             }
           }
+          planGrantsBenefitKey = (plan as { grants_benefit_key: string | null }).grants_benefit_key;
+          planGrantsPremium = (plan as { grants_premium: boolean }).grants_premium;
+          planRequiresBenefitKey = (plan as { requires_benefit_key: string | null }).requires_benefit_key;
         }
         const amount = Number(resource.amount?.value ?? 0);
 
@@ -387,37 +462,47 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
           }
         }
 
+        // subscriptions is semantically Premium-specific, not "any paid
+        // product" -- see the matching, more fully commented note in the
+        // Stripe webhook. When grants_premium is false, sub stays null and
+        // every step below that depends on it is skipped accordingly.
+        //
         // Checked before the upsert below so we can tell first purchase
         // apart from a renewal for Rewards & Loyalty (reward_action_rules
         // has separate entries for premium_purchase/premium_renewal) --
         // the upsert itself reuses the same row either way.
-        const { data: existingSub } = await supabaseAdmin
-          .from("subscriptions")
-          .select("id")
-          .eq("user_id", ref.user_id)
-          .eq("app_id", ref.app_id)
-          .maybeSingle();
-        const isRenewal = !!existingSub;
+        let sub: { id: string } | null = null;
+        let isRenewal = false;
+        if (planGrantsPremium) {
+          const { data: existingSub } = await supabaseAdmin
+            .from("subscriptions")
+            .select("id")
+            .eq("user_id", ref.user_id)
+            .eq("app_id", ref.app_id)
+            .maybeSingle();
+          isRenewal = !!existingSub;
 
-        const { data: sub, error } = await supabaseAdmin
-          .from("subscriptions")
-          .upsert(
-            {
-              user_id: ref.user_id,
-              app_id: ref.app_id,
-              plan_id: ref.plan_id,
-              status: "active",
-              paypal_payment_id: resource.id,
-              amount_paid: amount,
-              currency,
-              started_at: new Date().toISOString(),
-              expires_at: addMonthsIso(months),
-            },
-            { onConflict: "user_id,app_id" },
-          )
-          .select("id")
-          .single();
-        if (error) return new Response("DB error", { status: 500 });
+          const { data: subRow, error } = await supabaseAdmin
+            .from("subscriptions")
+            .upsert(
+              {
+                user_id: ref.user_id,
+                app_id: ref.app_id,
+                plan_id: ref.plan_id,
+                status: "active",
+                paypal_payment_id: resource.id,
+                amount_paid: amount,
+                currency,
+                started_at: new Date().toISOString(),
+                expires_at: addMonthsIso(months),
+              },
+              { onConflict: "user_id,app_id" },
+            )
+            .select("id")
+            .single();
+          if (error) return new Response("DB error", { status: 500 });
+          sub = subRow;
+        }
 
         // If this request lost a race against a concurrent redelivery of the
         // same capture, the payments.paypal_payment_id UNIQUE constraint
@@ -428,7 +513,7 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
           .insert({
             user_id: ref.user_id,
             app_id: ref.app_id,
-            subscription_id: (sub as { id: string }).id,
+            subscription_id: sub?.id ?? null,
             paypal_payment_id: resource.id,
             amount,
             currency,
@@ -476,22 +561,154 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
           }
         }
 
+        // Commercial Products: purely additive to the unchanged Premium
+        // grant above -- see the matching, more fully commented branch in
+        // the Stripe webhook for the full rationale, including why
+        // grantOrExtendEntitlement() (not grantEntitlement()) is used and
+        // how the Sponsored-requires-Listing dependency is checked
+        // server-side, scoped to (user, app), before granting.
+        if (planGrantsBenefitKey && insertedPayment) {
+          let dependencyMet = true;
+          if (planRequiresBenefitKey) {
+            const { hasActiveEntitlement } = await import("@/lib/entitlements.server");
+            dependencyMet = await hasActiveEntitlement(ref.user_id, planRequiresBenefitKey, ref.app_id);
+          }
+          if (!dependencyMet) {
+            console.warn("PayPal webhook: commercial product dependency not met", {
+              plan_id: ref.plan_id,
+              benefit_type: planGrantsBenefitKey,
+              requires_benefit_key: planRequiresBenefitKey,
+            });
+            // Payment already succeeded and was already recorded above --
+            // see the matching, more fully commented branch in the Stripe
+            // webhook for the full rationale.
+            const refundResult = await refundPayPalCapture(
+              resource.id,
+              `dependency_refund:${insertedPayment.id}`,
+            );
+            if (refundResult.ok) {
+              dependencyRefunded = true;
+              await supabaseAdmin
+                .from("payments")
+                .update({ status: "refunded" })
+                .eq("id", insertedPayment.id);
+              // Rare configuration (grants_premium=true AND a
+              // requires_benefit_key on the same plan) -- see the matching
+              // note in the Stripe webhook.
+              if (sub) {
+                await supabaseAdmin
+                  .from("subscriptions")
+                  .update({ status: "cancelled", expires_at: new Date().toISOString() })
+                  .eq("id", sub.id);
+              }
+              await writeAuditLog({
+                userId: ref.user_id,
+                action: "product_payment.refunded_dependency_not_met",
+                entityType: "payment",
+                entityId: insertedPayment.id,
+                newData: { benefit_type: planGrantsBenefitKey, requires_benefit_key: planRequiresBenefitKey },
+              });
+            } else {
+              console.error("PayPal webhook: dependency refund failed, manual follow-up required", {
+                payment_id: insertedPayment.id,
+                reason: refundResult.error,
+              });
+              // payments.status stays 'success' -- see the matching note
+              // in the Stripe webhook. This audit entry is the actionable
+              // flag for manual reconciliation via the PayPal dashboard.
+              await writeAuditLog({
+                userId: ref.user_id,
+                action: "product_payment.refund_failed_dependency_not_met",
+                entityType: "payment",
+                entityId: insertedPayment.id,
+                newData: {
+                  reason: refundResult.error,
+                  capture_id: resource.id,
+                  amount,
+                  currency,
+                  plan_id: ref.plan_id,
+                  app_id: ref.app_id,
+                  benefit_type: planGrantsBenefitKey,
+                  requires_benefit_key: planRequiresBenefitKey,
+                },
+              });
+            }
+            await writeAuditLog({
+              userId: ref.user_id,
+              action: "product_benefit.grant_skipped_dependency_not_met",
+              entityType: "payment",
+              entityId: insertedPayment.id,
+              newData: { benefit_type: planGrantsBenefitKey, requires_benefit_key: planRequiresBenefitKey },
+            });
+          } else {
+            const { grantOrExtendEntitlement } = await import("@/lib/entitlements.server");
+            const result = await grantOrExtendEntitlement({
+              userId: ref.user_id,
+              benefitType: planGrantsBenefitKey,
+              appId: ref.app_id,
+              durationDays: months * 30,
+              source: "product_purchase",
+              metadata: { paymentId: insertedPayment.id, planId: ref.plan_id },
+            });
+            if (!result.ok) {
+              console.warn("PayPal webhook: commercial product benefit not granted", {
+                plan_id: ref.plan_id,
+                benefit_type: planGrantsBenefitKey,
+                reason: result.error,
+              });
+              await writeAuditLog({
+                userId: ref.user_id,
+                action: "product_benefit.grant_skipped_after_payment",
+                entityType: "payment",
+                entityId: insertedPayment.id,
+                newData: { benefit_type: planGrantsBenefitKey, reason: result.error },
+              });
+            }
+          }
+        }
+
         // Global Premium Visibility & Contact System: Premium status is
         // derived solely from hasAnyActivePremium() (live, from
-        // `subscriptions`, upserted above) -- profiles.user_type is no
-        // longer written here.
+        // `subscriptions`, upserted above when granted) -- profiles.user_type
+        // is no longer written here.
 
-        const { error: notifyErr } = await supabaseAdmin.from("notifications").insert({
-          user_id: ref.user_id,
-          title_bs: "Uplata primljena",
-          title_en: "Payment received",
-          title_de: "Zahlung erhalten",
-          message_bs: "Vaša premium pretplata je aktivirana.",
-          message_en: "Your premium subscription is active.",
-          message_de: "Ihr Premium-Abonnement ist aktiv.",
-          type: "success",
-          app_id: ref.app_id,
-        });
+        const { error: notifyErr } = await supabaseAdmin.from("notifications").insert(
+          dependencyRefunded
+            ? {
+                user_id: ref.user_id,
+                title_bs: "Kupovina nije aktivirana",
+                title_en: "Purchase could not be activated",
+                title_de: "Kauf konnte nicht aktiviert werden",
+                message_bs:
+                  "Vaša uplata je vraćena jer potreban preduslov za ovaj proizvod više nije aktivan.",
+                message_en:
+                  "Your payment was refunded because a required prerequisite for this product is no longer active.",
+                message_de:
+                  "Ihre Zahlung wurde erstattet, da eine erforderliche Voraussetzung für dieses Produkt nicht mehr aktiv ist.",
+                type: "warning",
+                app_id: ref.app_id,
+              }
+            : {
+                user_id: ref.user_id,
+                title_bs: "Uplata primljena",
+                title_en: "Payment received",
+                title_de: "Zahlung erhalten",
+                // Wording must not claim Premium was activated when this
+                // plan doesn't grant it (Commercial Products / benefit-only
+                // purchase).
+                message_bs: planGrantsPremium
+                  ? "Vaša premium pretplata je aktivirana."
+                  : "Vaša kupovina je aktivirana.",
+                message_en: planGrantsPremium
+                  ? "Your premium subscription is active."
+                  : "Your purchase is now active.",
+                message_de: planGrantsPremium
+                  ? "Ihr Premium-Abonnement ist aktiv."
+                  : "Ihr Kauf ist jetzt aktiv.",
+                type: "success",
+                app_id: ref.app_id,
+              },
+        );
         if (notifyErr) {
           console.error("PayPal webhook: notification insert failed", notifyErr);
         }
@@ -499,60 +716,69 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
         await writeAuditLog({
           userId: ref.user_id,
           action: "payment.paypal.success",
-          entityType: "subscription",
-          entityId: (sub as { id: string }).id,
+          entityType: sub ? "subscription" : "payment",
+          entityId: sub?.id ?? insertedPayment?.id ?? resource.id,
           newData: { paypal_id: resource.id, amount, currency },
         });
 
-        const { grantRewardAction, recordPremiumReferralIfApplicable } = await import(
-          "@/lib/rewards.server"
-        );
-        // Priority 16: proportional financial points (EUR paid x 10).
-        // Server-verified amount only. Non-EUR reported, not guessed.
-        if (currency.toUpperCase() === "EUR" && insertedPayment) {
-          await grantRewardAction({
+        // Premium-specific rewards/referral tracking/n8n activation event
+        // only ever apply when this purchase actually grants Premium --
+        // see the matching note in the Stripe webhook.
+        const { sendN8nEvent } = await import("@/lib/n8n.server");
+        if (planGrantsPremium && sub && !dependencyRefunded) {
+          const { grantRewardAction, recordPremiumReferralIfApplicable } = await import(
+            "@/lib/rewards.server"
+          );
+          // Priority 16: proportional financial points (EUR paid x 10).
+          // Server-verified amount only. Non-EUR reported, not guessed.
+          if (currency.toUpperCase() === "EUR" && insertedPayment) {
+            await grantRewardAction({
+              userId: ref.user_id,
+              action: isRenewal ? "premium_renewal" : "premium_purchase",
+              resourceType: "payment",
+              resourceId: insertedPayment.id,
+              sourceAppId: ref.app_id,
+              amountEur: amount,
+              dedupeKey: `payment:${insertedPayment.id}`,
+            });
+          } else if (insertedPayment) {
+            console.warn("PayPal webhook: non-EUR payment, proportional points not calculated", {
+              payment_id: insertedPayment.id,
+              currency,
+            });
+            await writeAuditLog({
+              userId: ref.user_id,
+              action: "payment.paypal.non_eur_points_skipped",
+              entityType: "payment",
+              entityId: insertedPayment.id,
+              newData: { currency, amount },
+            });
+          }
+          await recordPremiumReferralIfApplicable({
             userId: ref.user_id,
-            action: isRenewal ? "premium_renewal" : "premium_purchase",
-            resourceType: "payment",
-            resourceId: insertedPayment.id,
-            sourceAppId: ref.app_id,
-            amountEur: amount,
-            dedupeKey: `payment:${insertedPayment.id}`,
+            subscriptionId: sub.id,
           });
-        } else if (insertedPayment) {
-          console.warn("PayPal webhook: non-EUR payment, proportional points not calculated", {
-            payment_id: insertedPayment.id,
-            currency,
-          });
-          await writeAuditLog({
-            userId: ref.user_id,
-            action: "payment.paypal.non_eur_points_skipped",
-            entityType: "payment",
-            entityId: insertedPayment.id,
-            newData: { currency, amount },
+          await sendN8nEvent("premium_activated", {
+            provider: "paypal",
+            user_id: ref.user_id,
+            app_id: ref.app_id,
+            subscription_id: sub.id,
           });
         }
-        await recordPremiumReferralIfApplicable({
-          userId: ref.user_id,
-          subscriptionId: (sub as { id: string }).id,
-        });
 
-        const { sendN8nEvent } = await import("@/lib/n8n.server");
-        await sendN8nEvent("payment_received", {
-          provider: "paypal",
-          user_id: ref.user_id,
-          app_id: ref.app_id,
-          subscription_id: (sub as { id: string }).id,
-          amount,
-          currency,
-          paypal_id: resource.id,
-        });
-        await sendN8nEvent("premium_activated", {
-          provider: "paypal",
-          user_id: ref.user_id,
-          app_id: ref.app_id,
-          subscription_id: (sub as { id: string }).id,
-        });
+        // Suppressed when the payment was reversed above -- see the
+        // matching note in the Stripe webhook.
+        if (!dependencyRefunded) {
+          await sendN8nEvent("payment_received", {
+            provider: "paypal",
+            user_id: ref.user_id,
+            app_id: ref.app_id,
+            subscription_id: sub?.id ?? null,
+            amount,
+            currency,
+            paypal_id: resource.id,
+          });
+        }
 
         return Response.json({ received: true });
       },
