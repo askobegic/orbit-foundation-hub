@@ -8,6 +8,7 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertAdmin, writeAuditLog } from "@/lib/admin.server";
+import { sendNotification } from "@/lib/notify.server";
 
 async function adminClient() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -213,20 +214,23 @@ export const adminReplySupportTicket = createServerFn({ method: "POST" })
         })
         .eq("id", data.ticketId);
 
-      // Engagement Notifications (D8): Admin Reply -- existing
-      // notifications table, no second mechanism. Deep-links to the
-      // support inbox (D4).
-      await supabaseAdmin.from("notifications").insert({
-        user_id: ticket.user_id,
-        type: "info",
+      // Engagement Notifications (D8): Admin Reply -- routed through the
+      // shared sendNotification() (CORE Notification & User Engagement
+      // System), deep-linking to the support inbox (D4).
+      await sendNotification({
+        userId: ticket.user_id,
         category: "information",
-        target_path: "/dashboard/help",
-        title_bs: "Odgovor na vaš zahtjev za podrškom",
-        title_en: "Reply to your support request",
-        title_de: "Antwort auf Ihre Support-Anfrage",
-        message_bs: ticket.subject,
-        message_en: ticket.subject,
-        message_de: ticket.subject,
+        type: "info",
+        targetPath: "/dashboard/help",
+        dedupeKey: `support_reply:${row.id}`,
+        content: {
+          titleBs: "Odgovor na vaš zahtjev za podrškom",
+          titleEn: "Reply to your support request",
+          titleDe: "Antwort auf Ihre Support-Anfrage",
+          messageBs: ticket.subject,
+          messageEn: ticket.subject,
+          messageDe: ticket.subject,
+        },
       });
     }
 

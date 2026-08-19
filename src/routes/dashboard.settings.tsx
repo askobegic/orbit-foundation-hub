@@ -12,7 +12,22 @@ import { useLanguage } from "@/context/LanguageContext";
 import { updateUserSettings } from "@/lib/notifications.functions";
 import { exportUserData, deleteMyAccount } from "@/lib/gdpr.functions";
 import { supabase } from "@/integrations/supabase/client";
-import type { ApplicationRow } from "@/types/database";
+import type { ApplicationRow, NotificationCategory } from "@/types/database";
+
+// CORE Notification & User Engagement System: the full notification
+// category vocabulary (notifications.category), offered here as
+// per-category email opt-outs -- only shown once the blanket "Email
+// notifications" toggle above is on.
+const EMAIL_CATEGORIES: NotificationCategory[] = [
+  "information",
+  "reward",
+  "premium",
+  "offer",
+  "message",
+  "inactivity",
+  "warning",
+  "system",
+];
 
 export const Route = createFileRoute("/dashboard/settings")({
   head: () => ({
@@ -47,6 +62,7 @@ function SettingsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState("");
 
   const [lang, setLang] = useState<"bs" | "en" | "de">("bs");
+  const [disabledEmailCategories, setDisabledEmailCategories] = useState<string[]>([]);
   const [email, setEmail] = useState(true);
   const [inApp, setInApp] = useState(true);
   const [marketing, setMarketing] = useState(false);
@@ -132,7 +148,14 @@ function SettingsPage() {
     setEmail(profile.notify_email ?? true);
     setInApp(profile.notify_in_app ?? true);
     setMarketing(profile.notify_marketing ?? false);
+    setDisabledEmailCategories(profile.email_disabled_categories ?? []);
   }, [profile]);
+
+  function toggleEmailCategory(category: string, enabled: boolean) {
+    setDisabledEmailCategories((prev) =>
+      enabled ? prev.filter((c) => c !== category) : [...new Set([...prev, category])],
+    );
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -143,6 +166,7 @@ function SettingsPage() {
           notify_email: email,
           notify_in_app: inApp,
           notify_marketing: marketing,
+          email_disabled_categories: disabledEmailCategories,
         },
       });
       await setLanguage(lang);
@@ -255,6 +279,25 @@ function SettingsPage() {
             />
           </div>
         </section>
+
+        {email && (
+          <section className="mb-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
+            <h2 className="mb-1 text-sm font-semibold text-gray-900">
+              {t("settings.emailCategories")}
+            </h2>
+            <p className="mb-4 text-xs text-gray-500">{t("settings.emailCategoriesHint")}</p>
+            <div className="divide-y divide-gray-100">
+              {EMAIL_CATEGORIES.map((category) => (
+                <Row
+                  key={category}
+                  label={t(`settings.emailCategory.${category}`)}
+                  value={!disabledEmailCategories.includes(category)}
+                  onChange={(enabled) => toggleEmailCategory(category, enabled)}
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
         <section className="mb-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
           <h2 className="mb-1 text-sm font-semibold text-gray-900">

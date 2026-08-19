@@ -594,6 +594,16 @@ Server-only logic lives in `*.server.ts`/`*.functions.ts` files under `src/lib/`
 - **Commit:** —
 - **Date:** Logged and resolved 2026-08-13
 
+**DB-12 — `profiles.notify_email`/`notify_in_app`/`notify_marketing` silently lost their `authenticated` UPDATE grant a second time, blocking every notification-preference save since 2026-08-07**
+- **Status:** ✅ Resolved (2026-08-19)
+- **Files:** `supabase/migrations/20260819110000_restore_notify_prefs_grant_regression.sql` (new)
+- **Description:** Discovered live (via `information_schema.column_privileges`, not assumed) while verifying the CORE Notification & User Engagement System's own new grant on `profiles`. `20260729130100_restore_missing_notification_prefs.sql` had correctly added these three columns to the `authenticated` column-level UPDATE allowlist. `20260807100000_priority11_security_hardening.sql` later re-asserted `20260726120000_protect_profile_privileged_columns.sql`'s grant list *verbatim* (because live inspection at the time showed that original migration had never actually taken effect in production, the same class of drift as **DB-10**) — but that original list predates `20260729130100`, so its `REVOKE UPDATE ON public.profiles FROM authenticated` followed by a narrower `GRANT UPDATE (...)` silently dropped the notify_* columns' grant a second time, an unintended side effect of an otherwise-correct security fix.
+- **Risk:** Since 2026-08-07, every attempt by a user to change their notification preferences (`dashboard.settings.tsx` via `updateUserSettings`) has failed with a database permission-denied error, with no user-visible distinction from a generic save failure.
+- **Recommendation:** Restore the grant; when any future migration re-asserts a "verbatim" historical grant list to recover from drift, cross-check it against every migration that additively extended the *current* allowlist since, not just the one being restored.
+- **Resolution:** Purely additive `GRANT UPDATE (notify_email, notify_in_app, notify_marketing) ON public.profiles TO authenticated` — live-verified via `information_schema.column_privileges` after applying.
+- **Commit:** —
+- **Date:** Logged and resolved 2026-08-19
+
 ### Low
 
 **DB-4 — `is_user_premium()` is not scoped per application, despite a per-app subscription/pricing model**

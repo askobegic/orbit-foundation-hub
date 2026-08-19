@@ -274,6 +274,18 @@
     "notifyEmailHint": "Send important updates via email.",
     "notifyMarketing": "Marketing emails",
     "notifyMarketingHint": "News, offers and announcements.",
+    "emailCategories": "Email categories",
+    "emailCategoriesHint": "Choose which kinds of notifications also send you an email.",
+    "emailCategory": {
+      "information": "General information",
+      "reward": "Rewards & achievements",
+      "premium": "Premium",
+      "offer": "Offers",
+      "message": "New messages",
+      "inactivity": "Inactivity reminders",
+      "warning": "Warnings",
+      "system": "System"
+    },
     "saved": "Settings saved.",
     "appVisibility": "App visibility",
     "appVisibilityHint": "Choose where you appear and who can contact you.",
@@ -566,6 +578,10 @@
       "monthlyLimit": "Monthly limit",
       "priority": "Priority",
       "repeatable": "Repeatable",
+      "notifyCategory": "Send notification",
+      "notifyCategoryNone": "— none —",
+      "notifyTitle": "Title",
+      "notifyMessage": "Message",
       "save": "Save",
       "saved": "Rule saved",
       "conditions": "Conditions",
@@ -1123,7 +1139,12 @@
       "messagePlaceholder": "Message",
       "sending": "Sending…",
       "send": "Send notification",
-      "sentTo": "Sent to {{count}} user(s)"
+      "sentTo": "Sent to {{count}} user(s)",
+      "inactivityTitle": "Inactivity Reminder Sweep",
+      "inactivityHint": "Sends a reminder to every user inactive for 7+ days who hasn't already been reminded for their current inactivity period. Safe to run repeatedly — already-reminded users are automatically skipped.",
+      "sweepRun": "Run sweep now",
+      "sweepRunning": "Running…",
+      "sweepResult": "Scanned {{scanned}}, notified {{notified}}"
     },
     "payments": {
       "title": "Payments History",

@@ -421,6 +421,14 @@ function RuleRow({
   const [repeatable, setRepeatable] = useState(rule?.repeatable ?? true);
   const [enabled, setEnabled] = useState(rule?.enabled ?? true);
   const [showConditions, setShowConditions] = useState(false);
+  const [notifyCategory, setNotifyCategory] = useState<string>(rule?.notify_category ?? "");
+  const [notifyTitleBs, setNotifyTitleBs] = useState(rule?.notify_title_bs ?? "");
+  const [notifyTitleEn, setNotifyTitleEn] = useState(rule?.notify_title_en ?? "");
+  const [notifyTitleDe, setNotifyTitleDe] = useState(rule?.notify_title_de ?? "");
+  const [notifyMessageBs, setNotifyMessageBs] = useState(rule?.notify_message_bs ?? "");
+  const [notifyMessageEn, setNotifyMessageEn] = useState(rule?.notify_message_en ?? "");
+  const [notifyMessageDe, setNotifyMessageDe] = useState(rule?.notify_message_de ?? "");
+  const [notifyTargetPath, setNotifyTargetPath] = useState(rule?.notify_target_path ?? "");
 
   const save = useMutation({
     mutationFn: () =>
@@ -441,6 +449,17 @@ function RuleRow({
           displayOrder: rule?.display_order ?? 0,
           enabled,
           archived: rule?.archived ?? false,
+          notifyCategory:
+            notifyCategory === ""
+              ? null
+              : (notifyCategory as NonNullable<EventRuleRow["notify_category"]>),
+          notifyTitleBs: notifyTitleBs.trim() || null,
+          notifyTitleEn: notifyTitleEn.trim() || null,
+          notifyTitleDe: notifyTitleDe.trim() || null,
+          notifyMessageBs: notifyMessageBs.trim() || null,
+          notifyMessageEn: notifyMessageEn.trim() || null,
+          notifyMessageDe: notifyMessageDe.trim() || null,
+          notifyTargetPath: notifyTargetPath.trim() || null,
         },
       }),
     onSuccess: () => {
@@ -487,6 +506,74 @@ function RuleRow({
         {numberField("admin.events.weeklyLimit", weeklyLimit, setWeeklyLimit)}
         {numberField("admin.events.monthlyLimit", monthlyLimit, setMonthlyLimit)}
         {numberField("admin.events.priority", priority, (v) => setPriority(v === "" ? 0 : v))}
+      </div>
+      <div className="mt-3 border-t border-gray-100 pt-3">
+        <label className="text-xs">
+          {t("admin.events.notifyCategory")}
+          <select
+            value={notifyCategory}
+            onChange={(e) => setNotifyCategory(e.target.value)}
+            className="mt-1 block w-48 rounded-lg border border-gray-200 px-2 py-1 text-sm"
+          >
+            <option value="">{t("admin.events.notifyCategoryNone")}</option>
+            <option value="information">{t("admin.communication.categoryInformation")}</option>
+            <option value="reward">{t("admin.communication.categoryReward")}</option>
+            <option value="premium">{t("admin.communication.categoryPremium")}</option>
+            <option value="offer">{t("admin.communication.categoryOffer")}</option>
+            <option value="warning">{t("admin.communication.categoryWarning")}</option>
+            <option value="system">{t("admin.communication.categorySystem")}</option>
+          </select>
+        </label>
+        {notifyCategory !== "" && (
+          <div className="mt-2 space-y-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <input
+                value={notifyTitleBs}
+                onChange={(e) => setNotifyTitleBs(e.target.value)}
+                placeholder={`${t("admin.events.notifyTitle")} (BS)`}
+                className="rounded-lg border border-gray-200 px-2 py-1 text-xs"
+              />
+              <input
+                value={notifyTitleEn}
+                onChange={(e) => setNotifyTitleEn(e.target.value)}
+                placeholder={`${t("admin.events.notifyTitle")} (EN)`}
+                className="rounded-lg border border-gray-200 px-2 py-1 text-xs"
+              />
+              <input
+                value={notifyTitleDe}
+                onChange={(e) => setNotifyTitleDe(e.target.value)}
+                placeholder={`${t("admin.events.notifyTitle")} (DE)`}
+                className="rounded-lg border border-gray-200 px-2 py-1 text-xs"
+              />
+            </div>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <input
+                value={notifyMessageBs}
+                onChange={(e) => setNotifyMessageBs(e.target.value)}
+                placeholder={`${t("admin.events.notifyMessage")} (BS)`}
+                className="rounded-lg border border-gray-200 px-2 py-1 text-xs"
+              />
+              <input
+                value={notifyMessageEn}
+                onChange={(e) => setNotifyMessageEn(e.target.value)}
+                placeholder={`${t("admin.events.notifyMessage")} (EN)`}
+                className="rounded-lg border border-gray-200 px-2 py-1 text-xs"
+              />
+              <input
+                value={notifyMessageDe}
+                onChange={(e) => setNotifyMessageDe(e.target.value)}
+                placeholder={`${t("admin.events.notifyMessage")} (DE)`}
+                className="rounded-lg border border-gray-200 px-2 py-1 text-xs"
+              />
+            </div>
+            <input
+              value={notifyTargetPath}
+              onChange={(e) => setNotifyTargetPath(e.target.value)}
+              placeholder="/dashboard/..."
+              className="w-64 rounded-lg border border-gray-200 px-2 py-1 text-xs"
+            />
+          </div>
+        )}
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-1 text-xs">

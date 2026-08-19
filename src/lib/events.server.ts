@@ -23,6 +23,7 @@
 // global or app-specific, is ever evaluated for it.
 import { hasAnyActivePremium } from "@/lib/premium";
 import type { Json } from "@/integrations/supabase/types";
+import type { NotificationCategory } from "@/types/database";
 
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -273,6 +274,21 @@ export async function recordEvent(input: RecordEventParams): Promise<RecordEvent
   let points = 0;
   let lifetimePoints = 0;
   let reason: string | undefined;
+  // Application-specific notification events (CORE Notification & User
+  // Engagement System): set only when the rule passes AND has
+  // notify_category configured -- independent of points, since an admin
+  // may configure a rule to notify without granting points (points
+  // defaults to 0). Consulted after the reward_ledger insert below.
+  let notify: {
+    category: string;
+    titleBs: string | null;
+    titleEn: string | null;
+    titleDe: string | null;
+    messageBs: string | null;
+    messageEn: string | null;
+    messageDe: string | null;
+    targetPath: string | null;
+  } | null = null;
 
   const { data: mapping } = await supabaseAdmin
     .from("application_events")
@@ -402,6 +418,18 @@ export async function recordEvent(input: RecordEventParams): Promise<RecordEvent
         } else {
           points = rule.points;
           lifetimePoints = rule.lifetime_points;
+          if (rule.notify_category) {
+            notify = {
+              category: rule.notify_category,
+              titleBs: rule.notify_title_bs,
+              titleEn: rule.notify_title_en,
+              titleDe: rule.notify_title_de,
+              messageBs: rule.notify_message_bs,
+              messageEn: rule.notify_message_en,
+              messageDe: rule.notify_message_de,
+              targetPath: rule.notify_target_path,
+            };
+          }
         }
       }
     }
@@ -439,6 +467,27 @@ export async function recordEvent(input: RecordEventParams): Promise<RecordEvent
     // the event engine is the other of CORE's two point-granting paths,
     // so it needs this exact same hook checkAchievements() already has.
     await evaluatePremiumMilestones(input.recipientUserId);
+  }
+
+  // Deliberately independent of the points>0 gate above -- see the
+  // `notify` declaration comment.
+  if (notify) {
+    const { sendNotification } = await import("@/lib/notify.server");
+    await sendNotification({
+      userId: input.recipientUserId,
+      appId: input.appId,
+      category: notify.category as NotificationCategory,
+      targetPath: notify.targetPath,
+      dedupeKey: input.dedupeKey ? `event:${input.dedupeKey}` : null,
+      content: {
+        titleBs: notify.titleBs ?? "",
+        titleEn: notify.titleEn ?? "",
+        titleDe: notify.titleDe ?? "",
+        messageBs: notify.messageBs ?? "",
+        messageEn: notify.messageEn ?? "",
+        messageDe: notify.messageDe ?? "",
+      },
+    });
   }
 
   return { granted: points > 0, points, lifetimePoints, reason };

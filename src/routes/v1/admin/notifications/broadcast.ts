@@ -1,13 +1,15 @@
-// API_CONTRACT.md §17 -- POST /v1/admin/notifications/broadcast. Replicates
-// adminSendNotification (admin.functions.ts) since it's a
-// requireSupabaseAuth-middleware server function; resolvePremiumStatusBulk
-// (premium.server.ts) reused directly so target: "premium" reaches
-// Trial-only Premium users too (PROJECT_AUDIT.md -> AD-13's fix).
+// API_CONTRACT.md §17 -- POST /v1/admin/notifications/broadcast. Mirrors
+// adminSendNotification (admin.functions.ts) exactly -- both now route
+// through notify.server.ts's resolveAudience/sendNotification/
+// sendBulkNotifications rather than maintaining a second hand-duplicated
+// implementation. category/targetPath were documented in this contract
+// since Priority 15 Phase D but missing from this route's body schema
+// until the CORE Notification & User Engagement System pass.
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
 import { writeAuditLog } from "@/lib/admin.server";
-import { resolvePremiumStatusBulk } from "@/lib/premium.server";
+import { resolveAudience, sendBulkNotifications, sendNotification } from "@/lib/notify.server";
 import { ApiError, apiData, parseBody, readJsonBody, withRoute } from "@/lib/v1/http.server";
 import { requireAdminContext } from "@/lib/v1/context.server";
 
@@ -16,6 +18,15 @@ const bodySchema = z.object({
   userId: z.string().uuid().optional(),
   appId: z.string().uuid().nullable().optional(),
   type: z.enum(["info", "success", "warning", "error"]).default("info"),
+  category: z
+    .enum(["information", "reward", "premium", "offer", "warning", "system"])
+    .nullable()
+    .optional(),
+  targetPath: z
+    .string()
+    .regex(/^\/dashboard\/[a-zA-Z0-9/_-]*$/)
+    .nullable()
+    .optional(),
   title: z.object({ bs: z.string().min(1), en: z.string().min(1), de: z.string().min(1) }),
   message: z.object({ bs: z.string().min(1), en: z.string().min(1), de: z.string().min(1) }),
 });
@@ -32,41 +43,51 @@ export const Route = createFileRoute("/v1/admin/notifications/broadcast")({
           ]);
         }
 
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        let userIds: string[] = [];
+        const content = {
+          titleBs: data.title.bs,
+          titleEn: data.title.en,
+          titleDe: data.title.de,
+          messageBs: data.message.bs,
+          messageEn: data.message.en,
+          messageDe: data.message.de,
+        };
+
+        let sent: number;
         if (data.target === "user") {
-          userIds = [data.userId!];
-        } else if (data.target === "premium") {
-          userIds = [...(await resolvePremiumStatusBulk(supabaseAdmin)).keys()];
+          const result = await sendNotification({
+            userId: data.userId!,
+            appId: data.appId ?? null,
+            type: data.type,
+            category: data.category ?? "information",
+            targetPath: data.targetPath ?? null,
+            content,
+          });
+          sent = result.created ? 1 : 0;
         } else {
-          const { data: profs } = await supabaseAdmin.from("profiles").select("id");
-          userIds = (profs ?? []).map((r) => r.id);
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          const userIds = await resolveAudience(
+            supabaseAdmin,
+            data.target === "premium" ? "premium" : "all",
+          );
+          const result = await sendBulkNotifications({
+            userIds,
+            appId: data.appId ?? null,
+            type: data.type,
+            category: data.category ?? "information",
+            targetPath: data.targetPath ?? null,
+            content,
+          });
+          sent = result.sent;
         }
-
-        if (userIds.length === 0) return apiData({ sent: 0 });
-
-        const rows = userIds.map((uid) => ({
-          user_id: uid,
-          app_id: data.appId ?? null,
-          type: data.type,
-          title_bs: data.title.bs,
-          title_en: data.title.en,
-          title_de: data.title.de,
-          message_bs: data.message.bs,
-          message_en: data.message.en,
-          message_de: data.message.de,
-        }));
-        const { error } = await supabaseAdmin.from("notifications").insert(rows);
-        if (error) throw new Error(error.message);
 
         await writeAuditLog({
           userId: admin.userId,
           action: "notification.broadcast",
           entityType: "notification",
-          newData: { target: data.target, count: userIds.length },
+          newData: { target: data.target, count: sent },
         });
 
-        return apiData({ sent: userIds.length });
+        return apiData({ sent });
       }),
     },
   },

@@ -12,10 +12,60 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertAdmin, writeAuditLog } from "@/lib/admin.server";
 import { hasAnyActivePremium } from "@/lib/premium";
+import { resolveAudience, sendBulkNotifications, sendNotification } from "@/lib/notify.server";
 
 async function adminClient() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   return supabaseAdmin;
+}
+
+// Notifies the offer's own target audience the moment it becomes enabled
+// -- "Admin-created offer notification" (CORE Notification & User
+// Engagement System). Reuses the same segment vocabulary
+// resolveMyOffers()/adminSendNotification already use (all/standard/
+// premium), never a second one. dedupeKey is scoped to the offer id, so
+// disabling and re-enabling the same offer later doesn't re-notify --
+// deliberately conservative, see PROJECT_KNOWLEDGE.md -> Notifications &
+// User Engagement.
+type OfferForNotify = {
+  id: string;
+  offer_type: "global" | "individual";
+  target_segment: "all" | "standard" | "premium" | null;
+  target_user_id: string | null;
+  title_bs: string;
+  title_en: string;
+  title_de: string;
+};
+
+async function notifyOfferPublished(
+  supabaseAdmin: Awaited<ReturnType<typeof adminClient>>,
+  offer: OfferForNotify,
+): Promise<void> {
+  const content = {
+    titleBs: "Nova ponuda za vas",
+    titleEn: "A new offer for you",
+    titleDe: "Ein neues Angebot für Sie",
+    messageBs: offer.title_bs,
+    messageEn: offer.title_en,
+    messageDe: offer.title_de,
+  };
+  const dedupeKey = `offer:${offer.id}`;
+  const targetPath = "/dashboard";
+
+  if (offer.offer_type === "individual") {
+    if (!offer.target_user_id) return;
+    await sendNotification({
+      userId: offer.target_user_id,
+      category: "offer",
+      targetPath,
+      dedupeKey,
+      content,
+    });
+    return;
+  }
+  if (!offer.target_segment) return;
+  const userIds = await resolveAudience(supabaseAdmin, offer.target_segment);
+  await sendBulkNotifications({ userIds, category: "offer", targetPath, dedupeKey, content });
 }
 
 export interface ResolvedProduct {
@@ -363,6 +413,23 @@ export const adminUpsertDashboardOffer = createServerFn({ method: "POST" })
       newData: payload,
     });
 
+    // Only a brand-new offer created already-enabled counts as "publish"
+    // here -- an existing offer's other fields being edited never
+    // re-notifies (that's adminSetDashboardOfferEnabled's job, below, on
+    // an explicit disabled -> enabled transition).
+    if (!data.id && data.enabled) {
+      await notifyOfferPublished(supabaseAdmin, {
+        id: (saved as { id: string }).id,
+        offer_type: data.offerType,
+        target_segment:
+          (payload.target_segment as OfferForNotify["target_segment"] | undefined) ?? null,
+        target_user_id: payload.target_user_id ?? null,
+        title_bs: data.titleBs,
+        title_en: data.titleEn,
+        title_de: data.titleDe,
+      });
+    }
+
     return { id: (saved as { id: string }).id };
   });
 
@@ -392,6 +459,13 @@ export const adminSetDashboardOfferEnabled = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     const supabaseAdmin = await adminClient();
+
+    const { data: previous } = await supabaseAdmin
+      .from("dashboard_offers")
+      .select("enabled, offer_type, target_segment, target_user_id, title_bs, title_en, title_de")
+      .eq("id", data.id)
+      .maybeSingle();
+
     const { error } = await supabaseAdmin
       .from("dashboard_offers")
       .update({ enabled: data.enabled })
@@ -404,6 +478,21 @@ export const adminSetDashboardOfferEnabled = createServerFn({ method: "POST" })
       entityId: data.id,
       newData: { enabled: data.enabled },
     });
+
+    // "Publish" here means an explicit disabled -> enabled transition --
+    // toggling an already-enabled offer, or disabling one, never notifies.
+    if (previous && !previous.enabled && data.enabled) {
+      await notifyOfferPublished(supabaseAdmin, {
+        id: data.id,
+        offer_type: previous.offer_type as OfferForNotify["offer_type"],
+        target_segment: previous.target_segment as OfferForNotify["target_segment"],
+        target_user_id: previous.target_user_id,
+        title_bs: previous.title_bs,
+        title_en: previous.title_en,
+        title_de: previous.title_de,
+      });
+    }
+
     return { ok: true };
   });
 

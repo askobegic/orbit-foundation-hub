@@ -54,17 +54,21 @@ async function loadOrCreateProfile(u: User): Promise<ProfileRow | null> {
     if (!existing.last_name) patch.last_name = identity.lastName;
     if (!existing.avatar_url) patch.avatar_url = identity.avatarUrl;
     if (u.email && existing.email !== u.email) patch.email = u.email;
+    // Notification & User Engagement System: this function already runs
+    // exactly once per session/auth-state-change (its only two call
+    // sites, below), so it's the natural, zero-extra-round-trip place to
+    // record activity for the 7-day inactivity reminder -- no new
+    // server function, no per-request write. See the migration comment on
+    // profiles.last_active_at.
+    patch.last_active_at = new Date().toISOString();
 
-    if (Object.keys(patch).length > 0) {
-      const { data: updated } = await supabase
-        .from("profiles")
-        .update(patch)
-        .eq("id", u.id)
-        .select("*")
-        .single();
-      return (updated as ProfileRow) ?? (existing as ProfileRow);
-    }
-    return existing as ProfileRow;
+    const { data: updated } = await supabase
+      .from("profiles")
+      .update(patch)
+      .eq("id", u.id)
+      .select("*")
+      .single();
+    return (updated as ProfileRow) ?? (existing as ProfileRow);
   }
 
   // Create new profile for first-time users
@@ -80,6 +84,7 @@ async function loadOrCreateProfile(u: User): Promise<ProfileRow | null> {
       avatar_url: identity.avatarUrl,
       profile_complete: false,
       language: "bs",
+      last_active_at: new Date().toISOString(),
     })
     .select("*")
     .single();

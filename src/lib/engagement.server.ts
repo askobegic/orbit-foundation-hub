@@ -5,6 +5,7 @@
 // the /v1/events route handler only, and never mutates event recording or
 // reward-rule evaluation. See PROJECT_KNOWLEDGE.md -> Missions, Challenges &
 // Streaks.
+import { sendNotification } from "@/lib/notify.server";
 import type { Json } from "@/integrations/supabase/types";
 
 async function admin() {
@@ -220,18 +221,22 @@ async function notifyEngagementCompletion(
     .maybeSingle();
   if (!full) return;
   const titles = COMPLETION_TITLES[definition.kind] ?? COMPLETION_TITLES.mission;
-  const { error } = await supabaseAdmin.from("notifications").insert({
-    user_id: userId,
-    app_id: definition.app_id,
+  await sendNotification({
+    userId,
+    appId: definition.app_id,
+    category: "reward",
     type: "success",
-    title_bs: titles.bs,
-    title_en: titles.en,
-    title_de: titles.de,
-    message_bs: full.name_bs,
-    message_en: full.name_en,
-    message_de: full.name_de,
+    targetPath: "/dashboard/rewards",
+    dedupeKey: `engagement:${userId}:${definition.id}`,
+    content: {
+      titleBs: titles.bs,
+      titleEn: titles.en,
+      titleDe: titles.de,
+      messageBs: full.name_bs,
+      messageEn: full.name_en,
+      messageDe: full.name_de,
+    },
   });
-  if (error) console.error("notifyEngagementCompletion: notification insert failed", error);
 }
 
 // ---------- Streaks ----------
@@ -406,16 +411,20 @@ async function notifyStreakMilestone(
     .eq("id", streakDef.id)
     .maybeSingle();
   if (!full) return;
-  const { error } = await supabaseAdmin.from("notifications").insert({
-    user_id: userId,
-    app_id: streakDef.app_id,
+  await sendNotification({
+    userId,
+    appId: streakDef.app_id,
+    category: "reward",
     type: "success",
-    title_bs: `Niz od ${milestone.threshold_days} dana!`,
-    title_en: `${milestone.threshold_days}-day streak!`,
-    title_de: `${milestone.threshold_days}-Tage-Serie!`,
-    message_bs: full.name_bs,
-    message_en: full.name_en,
-    message_de: full.name_de,
+    targetPath: "/dashboard/rewards",
+    dedupeKey: `streak_milestone:${userId}:${milestone.id}`,
+    content: {
+      titleBs: `Niz od ${milestone.threshold_days} dana!`,
+      titleEn: `${milestone.threshold_days}-day streak!`,
+      titleDe: `${milestone.threshold_days}-Tage-Serie!`,
+      messageBs: full.name_bs,
+      messageEn: full.name_en,
+      messageDe: full.name_de,
+    },
   });
-  if (error) console.error("notifyStreakMilestone: notification insert failed", error);
 }

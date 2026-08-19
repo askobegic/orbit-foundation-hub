@@ -274,6 +274,18 @@
     "notifyEmailHint": "Šalji važna obavještenja na email.",
     "notifyMarketing": "Marketing poruke",
     "notifyMarketingHint": "Novosti, ponude i najave.",
+    "emailCategories": "Email kategorije",
+    "emailCategoriesHint": "Odaberite koje vrste obavještenja vam se šalju i putem emaila.",
+    "emailCategory": {
+      "information": "Opšte informacije",
+      "reward": "Nagrade i postignuća",
+      "premium": "Premium",
+      "offer": "Ponude",
+      "message": "Nove poruke",
+      "inactivity": "Podsjetnici za neaktivnost",
+      "warning": "Upozorenja",
+      "system": "Sistem"
+    },
     "saved": "Postavke sačuvane.",
     "appVisibility": "Vidljivost na aplikacijama",
     "appVisibilityHint": "Odaberite gdje se prikazujete i ko vas može kontaktirati.",
@@ -566,6 +578,10 @@
       "monthlyLimit": "Mjesečni limit",
       "priority": "Prioritet",
       "repeatable": "Ponovljivo",
+      "notifyCategory": "Pošalji obavještenje",
+      "notifyCategoryNone": "— nijedno —",
+      "notifyTitle": "Naslov",
+      "notifyMessage": "Poruka",
       "save": "Sačuvaj",
       "saved": "Pravilo je sačuvano",
       "conditions": "Uslovi",
@@ -1123,7 +1139,12 @@
       "messagePlaceholder": "Poruka",
       "sending": "Slanje…",
       "send": "Pošalji obavještenje",
-      "sentTo": "Poslano {{count}} korisniku/a"
+      "sentTo": "Poslano {{count}} korisniku/a",
+      "inactivityTitle": "Podsjetnik za neaktivnost",
+      "inactivityHint": "Šalje podsjetnik svakom korisniku koji je neaktivan 7+ dana i kojem još nije poslan podsjetnik za trenutni period neaktivnosti. Sigurno za ponovno pokretanje — korisnici kojima je već poslano se automatski preskaču.",
+      "sweepRun": "Pokreni sada",
+      "sweepRunning": "Pokretanje…",
+      "sweepResult": "Provjereno {{scanned}}, obaviješteno {{notified}}"
     },
     "payments": {
       "title": "Historija plaćanja",

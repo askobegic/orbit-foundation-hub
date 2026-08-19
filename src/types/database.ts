@@ -30,6 +30,18 @@ export type ProductType = "subscription" | "promotion" | "one_time";
 export type PaymentStatus = "pending" | "success" | "failed" | "refunded";
 export type PaymentMethod = "stripe" | "paypal";
 export type NotificationType = "info" | "success" | "warning" | "error";
+// Priority 15 Phase D added the first six; the Notification & User
+// Engagement System adds "message" and "inactivity".
+export type NotificationCategory =
+  | "information"
+  | "reward"
+  | "premium"
+  | "offer"
+  | "warning"
+  | "system"
+  | "message"
+  | "inactivity";
+export type NotificationEmailStatus = "not_applicable" | "pending" | "sent" | "failed";
 
 // -----------------------------------------------------------------------------
 // Hand-written row shapes mirroring the SQL schema.
@@ -59,6 +71,14 @@ export interface ProfileRow {
   // onboarding completes -- never client-writable. See PROJECT_KNOWLEDGE.md
   // -> Profiles (Identity Lock).
   identity_locked_at: string | null;
+  // Notification & User Engagement System: updated from AuthContext's
+  // existing loadOrCreateProfile() on every session load/auth-state
+  // change. Drives the 7-day inactivity reminder; never itself a trust
+  // boundary. Per-category email opt-out list (values from the
+  // notifications.category vocabulary) -- notify_email above is the
+  // all-or-nothing switch, this narrows it further per category.
+  last_active_at: string | null;
+  email_disabled_categories: string[];
   created_at: string;
   updated_at: string;
 }
@@ -86,6 +106,11 @@ export type ProfileUpdate = Partial<
     | "notify_email"
     | "notify_in_app"
     | "notify_marketing"
+    // GRANT UPDATE (last_active_at, email_disabled_categories) added
+    // alongside these two new columns in the same migration -- see
+    // 20260819100000_notification_engagement_system.sql.
+    | "last_active_at"
+    | "email_disabled_categories"
   >
 >;
 
@@ -238,6 +263,14 @@ export interface NotificationRow {
   type: NotificationType;
   app_id: string | null;
   is_read: boolean;
+  // Priority 15 Phase D.
+  category: NotificationCategory | null;
+  target_path: string | null;
+  // Notification & User Engagement System.
+  dedupe_key: string | null;
+  read_at: string | null;
+  email_status: NotificationEmailStatus;
+  email_error: string | null;
   created_at: string;
 }
 export type NotificationInsert = Partial<NotificationRow>;

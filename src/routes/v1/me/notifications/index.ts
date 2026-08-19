@@ -32,6 +32,10 @@ export const Route = createFileRoute("/v1/me/notifications/")({
           (data ?? []).map((n) => ({
             id: n.id,
             type: n.type,
+            // Priority 15 Phase D fields -- previously missing here despite
+            // being documented in API_CONTRACT.md §17 since that phase.
+            category: n.category,
+            targetPath: n.target_path,
             title: pickLocalized(n, "title", locale) ?? pickLocalized(n, "title", "en"),
             message: pickLocalized(n, "message", locale) ?? pickLocalized(n, "message", "en"),
             isRead: n.is_read,

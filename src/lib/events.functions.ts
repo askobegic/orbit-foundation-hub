@@ -226,6 +226,33 @@ const eventRuleSchema = z.object({
   enabled: z.boolean().default(true),
   archived: z.boolean().default(false),
   reason: z.string().trim().max(500).optional(),
+  // CORE Notification & User Engagement System: application-specific
+  // notification events -- optional, nullable throughout (a rule with no
+  // notifyCategory behaves exactly as before, points/achievements only).
+  notifyCategory: z
+    .enum([
+      "information",
+      "reward",
+      "premium",
+      "offer",
+      "warning",
+      "system",
+      "message",
+      "inactivity",
+    ])
+    .nullable()
+    .optional(),
+  notifyTitleBs: z.string().trim().max(200).nullable().optional(),
+  notifyTitleEn: z.string().trim().max(200).nullable().optional(),
+  notifyTitleDe: z.string().trim().max(200).nullable().optional(),
+  notifyMessageBs: z.string().trim().max(500).nullable().optional(),
+  notifyMessageEn: z.string().trim().max(500).nullable().optional(),
+  notifyMessageDe: z.string().trim().max(500).nullable().optional(),
+  notifyTargetPath: z
+    .string()
+    .regex(/^\/dashboard\/[a-zA-Z0-9/_-]*$/)
+    .nullable()
+    .optional(),
 });
 
 type EventRuleUpsertPayload = {
@@ -304,6 +331,14 @@ export const adminUpsertEventRule = createServerFn({ method: "POST" })
       display_order: data.displayOrder,
       enabled: data.enabled,
       archived: data.archived,
+      notify_category: data.notifyCategory ?? null,
+      notify_title_bs: data.notifyTitleBs ?? null,
+      notify_title_en: data.notifyTitleEn ?? null,
+      notify_title_de: data.notifyTitleDe ?? null,
+      notify_message_bs: data.notifyMessageBs ?? null,
+      notify_message_en: data.notifyMessageEn ?? null,
+      notify_message_de: data.notifyMessageDe ?? null,
+      notify_target_path: data.notifyTargetPath ?? null,
     };
     const { data: row, error } = data.id
       ? await supabaseAdmin

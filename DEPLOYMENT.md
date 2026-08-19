@@ -58,6 +58,9 @@ Two categories. **Build-time** variables are baked into the client JavaScript bu
 | `N8N_WEBHOOK_URL` | n8n automation webhook endpoint. |
 | `V1_JWT_PRIVATE_KEY` | Base64-encoded PKCS8 RS256 private key for the `/v1` API JWT. Generate once (see below) and keep stable. |
 | `V1_JWT_KEY_ID` | The `kid` published alongside the key. Generated together with the key above. |
+| `RESEND_API_KEY` | Resend API key for notification emails (`src/lib/email.server.ts`). If unset, email sending no-ops gracefully — in-app notifications are unaffected. |
+| `RESEND_FROM_EMAIL` | The verified "from" address configured in Resend. Required alongside `RESEND_API_KEY` for email to actually send. |
+| `SYSTEM_CRON_SECRET` | Shared secret an external scheduler presents (via the `X-Cron-Secret` header) to invoke `POST /v1/system/inactivity-sweep`. Generate once: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
 
 Generate the JWT keypair once, before the first deploy:
 
@@ -101,6 +104,7 @@ No `npm start` script exists in `package.json` — point Hostinger's Node.js App
 - **Webhook endpoints**: register these two URLs with Stripe and PayPal respectively, once the domain is live:
   - Stripe: `https://yourdomain.com/api/public/webhooks/stripe`
   - PayPal: `https://yourdomain.com/api/public/webhooks/paypal`
+- **Inactivity reminder sweep (optional, CORE Notification & User Engagement System)**: this codebase has no cron infrastructure of its own — the 7-day inactivity reminder only runs when something external calls it. If Hostinger's panel offers a Cron Jobs feature, point one at `POST https://yourdomain.com/v1/system/inactivity-sweep` with header `X-Cron-Secret: <SYSTEM_CRON_SECRET>` on a daily schedule; otherwise any external scheduler (GitHub Actions on a `schedule` trigger, etc.) that can make one authenticated HTTPS POST works equally well. Skippable entirely if this reminder isn't wanted yet — everything else in this task works without it.
 - **Security headers (known limitation, Priority 11 security audit)**: `src/server.ts` sets `X-Frame-Options`, a minimal `Content-Security-Policy: frame-ancestors 'none'`, `X-Content-Type-Options`, and `Referrer-Policy` on every response, but empirical testing showed these do not reach the client for TanStack Start's streamed page responses — Node's HTTP layer commits headers to the socket before this app-level wrapper runs, and this project's Vite config wrapper (`@lovable.dev/vite-tanstack-config`) does not expose Nitro's `routeRules`/header-injection options, so there is no supported way to set them earlier in the pipeline from application code alone. **If Hostinger's panel exposes custom response-header injection at the reverse-proxy level, configure the four headers above there** — that's the correct fix for this hosting setup. Otherwise this needs a dedicated follow-up (e.g. bypassing the config wrapper to pass Nitro `routeRules` directly, at the cost of losing the wrapper's other defaults) before these headers can be considered actually enforced in production.
 
 ## 8. Deployment steps

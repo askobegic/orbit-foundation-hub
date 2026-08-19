@@ -72,6 +72,7 @@ import { Route as V1PaymentsReferenceRouteImport } from './routes/v1/payments/re
 import { Route as V1ProductsIndexRouteImport } from './routes/v1/products/index'
 import { Route as V1ProfilesUsernameRouteImport } from './routes/v1/profiles/$username'
 import { Route as V1ShareInviteIndexRouteImport } from './routes/v1/share-invite/index'
+import { Route as V1SystemInactivitySweepRouteImport } from './routes/v1/system/inactivity-sweep'
 import { Route as V1TrialPolicyIndexRouteImport } from './routes/v1/trial-policy/index'
 import { Route as ApiPublicWebhooksPaypalRouteImport } from './routes/api/public/webhooks/paypal'
 import { Route as ApiPublicWebhooksStripeRouteImport } from './routes/api/public/webhooks/stripe'
@@ -467,6 +468,11 @@ const V1ProfilesUsernameRoute = V1ProfilesUsernameRouteImport.update({
 const V1ShareInviteIndexRoute = V1ShareInviteIndexRouteImport.update({
   id: '/v1/share-invite/',
   path: '/v1/share-invite/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1SystemInactivitySweepRoute = V1SystemInactivitySweepRouteImport.update({
+  id: '/v1/system/inactivity-sweep',
+  path: '/v1/system/inactivity-sweep',
   getParentRoute: () => rootRouteImport,
 } as any)
 const V1TrialPolicyIndexRoute = V1TrialPolicyIndexRouteImport.update({
@@ -976,6 +982,7 @@ export interface FileRoutesByFullPath {
   '/v1/media/avatar': typeof V1MediaAvatarRoute
   '/v1/payments/reference': typeof V1PaymentsReferenceRoute
   '/v1/profiles/$username': typeof V1ProfilesUsernameRoute
+  '/v1/system/inactivity-sweep': typeof V1SystemInactivitySweepRoute
   '/v1/applications/': typeof V1ApplicationsIndexRoute
   '/v1/capabilities/': typeof V1CapabilitiesIndexRoute
   '/v1/conversations/': typeof V1ConversationsIndexRoute
@@ -1120,6 +1127,7 @@ export interface FileRoutesByTo {
   '/v1/media/avatar': typeof V1MediaAvatarRoute
   '/v1/payments/reference': typeof V1PaymentsReferenceRoute
   '/v1/profiles/$username': typeof V1ProfilesUsernameRoute
+  '/v1/system/inactivity-sweep': typeof V1SystemInactivitySweepRoute
   '/v1/applications': typeof V1ApplicationsIndexRoute
   '/v1/capabilities': typeof V1CapabilitiesIndexRoute
   '/v1/conversations': typeof V1ConversationsIndexRoute
@@ -1265,6 +1273,7 @@ export interface FileRoutesById {
   '/v1/media/avatar': typeof V1MediaAvatarRoute
   '/v1/payments/reference': typeof V1PaymentsReferenceRoute
   '/v1/profiles/$username': typeof V1ProfilesUsernameRoute
+  '/v1/system/inactivity-sweep': typeof V1SystemInactivitySweepRoute
   '/v1/applications/': typeof V1ApplicationsIndexRoute
   '/v1/capabilities/': typeof V1CapabilitiesIndexRoute
   '/v1/conversations/': typeof V1ConversationsIndexRoute
@@ -1411,6 +1420,7 @@ export interface FileRouteTypes {
     | '/v1/media/avatar'
     | '/v1/payments/reference'
     | '/v1/profiles/$username'
+    | '/v1/system/inactivity-sweep'
     | '/v1/applications/'
     | '/v1/capabilities/'
     | '/v1/conversations/'
@@ -1555,6 +1565,7 @@ export interface FileRouteTypes {
     | '/v1/media/avatar'
     | '/v1/payments/reference'
     | '/v1/profiles/$username'
+    | '/v1/system/inactivity-sweep'
     | '/v1/applications'
     | '/v1/capabilities'
     | '/v1/conversations'
@@ -1699,6 +1710,7 @@ export interface FileRouteTypes {
     | '/v1/media/avatar'
     | '/v1/payments/reference'
     | '/v1/profiles/$username'
+    | '/v1/system/inactivity-sweep'
     | '/v1/applications/'
     | '/v1/capabilities/'
     | '/v1/conversations/'
@@ -1827,6 +1839,7 @@ export interface RootRouteChildren {
   V1MediaAvatarRoute: typeof V1MediaAvatarRoute
   V1PaymentsReferenceRoute: typeof V1PaymentsReferenceRoute
   V1ProfilesUsernameRoute: typeof V1ProfilesUsernameRoute
+  V1SystemInactivitySweepRoute: typeof V1SystemInactivitySweepRoute
   V1ApplicationsIndexRoute: typeof V1ApplicationsIndexRoute
   V1CapabilitiesIndexRoute: typeof V1CapabilitiesIndexRoute
   V1ConversationsIndexRoute: typeof V1ConversationsIndexRoute
@@ -2356,6 +2369,13 @@ declare module '@tanstack/react-router' {
       path: '/v1/share-invite'
       fullPath: '/v1/share-invite/'
       preLoaderRoute: typeof V1ShareInviteIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/system/inactivity-sweep': {
+      id: '/v1/system/inactivity-sweep'
+      path: '/v1/system/inactivity-sweep'
+      fullPath: '/v1/system/inactivity-sweep'
+      preLoaderRoute: typeof V1SystemInactivitySweepRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/v1/trial-policy/': {
@@ -3015,6 +3035,7 @@ const rootRouteChildren: RootRouteChildren = {
   V1MediaAvatarRoute: V1MediaAvatarRoute,
   V1PaymentsReferenceRoute: V1PaymentsReferenceRoute,
   V1ProfilesUsernameRoute: V1ProfilesUsernameRoute,
+  V1SystemInactivitySweepRoute: V1SystemInactivitySweepRoute,
   V1ApplicationsIndexRoute: V1ApplicationsIndexRoute,
   V1CapabilitiesIndexRoute: V1CapabilitiesIndexRoute,
   V1ConversationsIndexRoute: V1ConversationsIndexRoute,

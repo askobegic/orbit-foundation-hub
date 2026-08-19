@@ -14,6 +14,7 @@
 // configured application action) still gets a reward_ledger row for full
 // auditability, it just carries 0 points.
 import { hasAnyActivePremium } from "@/lib/premium";
+import { sendNotification } from "@/lib/notify.server";
 import type { Json } from "@/integrations/supabase/types";
 
 async function admin() {
@@ -222,7 +223,7 @@ export async function checkAchievements(userId: string, action: string): Promise
   const supabaseAdmin = await admin();
   const { data: achievements } = await supabaseAdmin
     .from("reward_achievements")
-    .select("key, trigger_count")
+    .select("key, label, trigger_count")
     .eq("trigger_action", action)
     .eq("enabled", true)
     .eq("archived", false);
@@ -237,13 +238,39 @@ export async function checkAchievements(userId: string, action: string): Promise
 
   for (const a of achievements) {
     if ((actionCount ?? 0) < a.trigger_count) continue;
-    const { error } = await supabaseAdmin
+    // .select() after an ignoreDuplicates upsert returns a row only when
+    // the insert actually happened (Postgres's ON CONFLICT DO NOTHING
+    // omits conflicting rows from RETURNING) -- the same signal
+    // evaluatePremiumMilestones already relies on below to notify only on
+    // a genuinely new milestone, not every time this runs.
+    const { data: inserted, error } = await supabaseAdmin
       .from("user_achievements")
       .upsert(
         { user_id: userId, achievement_key: a.key },
         { onConflict: "user_id,achievement_key", ignoreDuplicates: true },
-      );
-    if (error) console.error("checkAchievements: upsert failed", a.key, error);
+      )
+      .select("achievement_key");
+    if (error) {
+      console.error("checkAchievements: upsert failed", a.key, error);
+      continue;
+    }
+    if (!inserted || inserted.length === 0) continue; // already earned
+
+    await sendNotification({
+      userId,
+      category: "reward",
+      type: "success",
+      targetPath: "/dashboard/rewards",
+      dedupeKey: `achievement:${userId}:${a.key}`,
+      content: {
+        titleBs: "Postignuće otključano!",
+        titleEn: "Achievement unlocked!",
+        titleDe: "Erfolg freigeschaltet!",
+        messageBs: a.label,
+        messageEn: a.label,
+        messageDe: a.label,
+      },
+    });
   }
 }
 
@@ -331,20 +358,21 @@ export async function evaluatePremiumMilestones(userId: string): Promise<void> {
       .eq("user_id", userId)
       .eq("milestone_id", milestone.id);
 
-    const { error: notifyErr } = await supabaseAdmin.from("notifications").insert({
-      user_id: userId,
-      type: "success",
+    await sendNotification({
+      userId,
       category: "premium",
-      target_path: "/dashboard/rewards",
-      title_bs: "Premium prekretnica dostignuta!",
-      title_en: "Premium milestone reached!",
-      title_de: "Premium-Meilenstein erreicht!",
-      message_bs: milestone.label,
-      message_en: milestone.label,
-      message_de: milestone.label,
+      type: "success",
+      targetPath: "/dashboard/rewards",
+      dedupeKey: `premium_milestone:${userId}:${milestone.id}`,
+      content: {
+        titleBs: "Premium prekretnica dostignuta!",
+        titleEn: "Premium milestone reached!",
+        titleDe: "Premium-Meilenstein erreicht!",
+        messageBs: milestone.label,
+        messageEn: milestone.label,
+        messageDe: milestone.label,
+      },
     });
-    if (notifyErr)
-      console.error("evaluatePremiumMilestones: notification insert failed", notifyErr);
   }
 }
 

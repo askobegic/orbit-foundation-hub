@@ -5,6 +5,7 @@
 // subscriptions and promotional_trials for has_any_active_premium() --
 // neither of those is touched or replaced. See PROJECT_KNOWLEDGE.md ->
 // Entitlements for the full architectural decision (C2).
+import { sendNotification } from "@/lib/notify.server";
 import type { Json } from "@/integrations/supabase/types";
 
 async function admin() {
@@ -116,20 +117,25 @@ export async function grantEntitlement(params: GrantEntitlementParams): Promise<
 
   // Engagement Notifications (Phase D, 15.13): "Benefit granted" -- one
   // central place so every grant path (admin grant, Mission/Challenge/
-  // Streak fulfillment, reward redemption) notifies uniformly, via the
-  // existing notifications table.
-  await supabaseAdmin.from("notifications").insert({
-    user_id: params.userId,
-    app_id: appId,
-    type: "success",
+  // Streak fulfillment, reward redemption) notifies uniformly. Routed
+  // through the shared sendNotification() (CORE Notification & User
+  // Engagement System) for dedup/preference/email handling, same as every
+  // other notification-creating path.
+  await sendNotification({
+    userId: params.userId,
+    appId,
     category: "premium",
-    target_path: "/dashboard/rewards",
-    title_bs: "Beneficija dodijeljena",
-    title_en: "Benefit granted",
-    title_de: "Vorteil gewährt",
-    message_bs: params.benefitType,
-    message_en: params.benefitType,
-    message_de: params.benefitType,
+    type: "success",
+    targetPath: "/dashboard/rewards",
+    dedupeKey: `entitlement:${row.id}`,
+    content: {
+      titleBs: "Beneficija dodijeljena",
+      titleEn: "Benefit granted",
+      titleDe: "Vorteil gewährt",
+      messageBs: params.benefitType,
+      messageEn: params.benefitType,
+      messageDe: params.benefitType,
+    },
   });
 
   return { ok: true, entitlementId: row.id };

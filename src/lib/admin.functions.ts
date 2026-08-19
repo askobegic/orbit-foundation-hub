@@ -602,45 +602,86 @@ export const adminSendNotification = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { resolveAudience, sendBulkNotifications, sendNotification } = await import("@/lib/notify.server");
 
-    let userIds: string[] = [];
+    // Single-recipient ("user") broadcasts go through the full
+    // preference/dedup/email pipeline; "all"/"premium" stay a fast
+    // batched in-app insert (see notify.server.ts's sendBulkNotifications
+    // comment for why bulk email fan-out isn't synchronous here).
     if (data.target === "user") {
       if (!data.user_id) throw new Error("user_id required");
-      userIds = [data.user_id];
-    } else if (data.target === "premium") {
-      // Priority 8.7 (R-1): via the shared resolver, so a Trial-only
-      // Premium user is reachable by a "Premium users" broadcast too.
-      userIds = [...(await resolvePremiumStatusBulk(supabaseAdmin)).keys()];
-    } else {
-      const { data: profs } = await supabaseAdmin.from("profiles").select("id");
-      userIds = ((profs ?? []) as { id: string }[]).map((r) => r.id);
+      const result = await sendNotification({
+        userId: data.user_id,
+        appId: data.app_id ?? null,
+        type: data.type,
+        category: data.category ?? "information",
+        targetPath: data.target_path ?? null,
+        content: {
+          titleBs: data.title_bs,
+          titleEn: data.title_en,
+          titleDe: data.title_de,
+          messageBs: data.message_bs,
+          messageEn: data.message_en,
+          messageDe: data.message_de,
+        },
+      });
+      await writeAuditLog({
+        userId: context.userId,
+        action: "notification.broadcast",
+        entityType: "notification",
+        newData: { target: data.target, count: result.created ? 1 : 0 },
+      });
+      return { sent: result.created ? 1 : 0 };
     }
 
-    if (userIds.length === 0) return { sent: 0 };
+    const userIds =
+      data.target === "premium"
+        ? await resolveAudience(supabaseAdmin, "premium")
+        : await resolveAudience(supabaseAdmin, "all");
 
-    const rows = userIds.map((uid) => ({
-      user_id: uid,
-      app_id: data.app_id ?? null,
+    const { sent } = await sendBulkNotifications({
+      userIds,
+      appId: data.app_id ?? null,
       type: data.type,
-      category: data.category ?? null,
-      target_path: data.target_path ?? null,
-      title_bs: data.title_bs,
-      title_en: data.title_en,
-      title_de: data.title_de,
-      message_bs: data.message_bs,
-      message_en: data.message_en,
-      message_de: data.message_de,
-    }));
-    const { error } = await supabaseAdmin.from("notifications").insert(rows);
-    if (error) throw new Error(error.message);
+      category: (data.category ?? "information") as NonNullable<typeof data.category>,
+      targetPath: data.target_path ?? null,
+      content: {
+        titleBs: data.title_bs,
+        titleEn: data.title_en,
+        titleDe: data.title_de,
+        messageBs: data.message_bs,
+        messageEn: data.message_en,
+        messageDe: data.message_de,
+      },
+    });
 
     await writeAuditLog({
       userId: context.userId,
       action: "notification.broadcast",
       entityType: "notification",
-      newData: { target: data.target, count: userIds.length },
+      newData: { target: data.target, count: sent },
     });
-    return { sent: userIds.length };
+    return { sent };
+  });
+
+// Manual admin trigger for the inactivity sweep (src/routes/v1/system/
+// inactivity-sweep.ts is the production/scheduled path; this is the
+// same underlying function, exposed for visibility and on-demand testing
+// from /admin/communication). Idempotent -- see
+// runInactivityReminderSweep's own comment.
+export const adminRunInactivitySweep = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { runInactivityReminderSweep } = await import("@/lib/notify.server");
+    const result = await runInactivityReminderSweep();
+    await writeAuditLog({
+      userId: context.userId,
+      action: "notification.inactivity_sweep",
+      entityType: "notification",
+      newData: result,
+    });
+    return result;
   });
 
 // ---------- Payments list ----------

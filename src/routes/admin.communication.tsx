@@ -8,7 +8,7 @@ import { toast } from "sonner";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { supabase } from "@/integrations/supabase/client";
-import { adminSendNotification } from "@/lib/admin.functions";
+import { adminRunInactivitySweep, adminSendNotification } from "@/lib/admin.functions";
 import type { ApplicationRow } from "@/types/database";
 
 export const Route = createFileRoute("/admin/communication")({
@@ -37,6 +37,13 @@ function CommunicationPage() {
   const { t } = useTranslation();
   const search = useSearch({ from: "/admin/communication" });
   const send = useServerFn(adminSendNotification);
+  const runSweep = useServerFn(adminRunInactivitySweep);
+  const sweepMut = useMutation({
+    mutationFn: () => runSweep(),
+    onSuccess: (r) =>
+      toast.success(t("admin.communication.sweepResult", { scanned: r.scanned, notified: r.notified })),
+    onError: (e: Error) => toast.error(e.message),
+  });
   const [target, setTarget] = useState<"all" | "premium" | "user">(search.userId ? "user" : "all");
   const [userId, setUserId] = useState(search.userId ?? "");
   const [appId, setAppId] = useState<string>("");
@@ -208,6 +215,19 @@ function CommunicationPage() {
           >
             <Send className="h-4 w-4" />
             {mut.isPending ? t("admin.communication.sending") : t("admin.communication.send")}
+          </button>
+        </section>
+
+        <section className="mt-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
+          <h2 className="text-sm font-semibold text-gray-900">{t("admin.communication.inactivityTitle")}</h2>
+          <p className="mt-1 text-xs text-gray-500">{t("admin.communication.inactivityHint")}</p>
+          <button
+            type="button"
+            disabled={sweepMut.isPending}
+            onClick={() => sweepMut.mutate()}
+            className="mt-4 inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+          >
+            {sweepMut.isPending ? t("admin.communication.sweepRunning") : t("admin.communication.sweepRun")}
           </button>
         </section>
       </div>

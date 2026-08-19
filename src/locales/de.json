@@ -274,6 +274,18 @@
     "notifyEmailHint": "Wichtige Updates per E-Mail senden.",
     "notifyMarketing": "Marketing-E-Mails",
     "notifyMarketingHint": "Neuigkeiten, Angebote und Ankündigungen.",
+    "emailCategories": "E-Mail-Kategorien",
+    "emailCategoriesHint": "Wählen Sie, welche Benachrichtigungsarten Ihnen auch per E-Mail zugestellt werden.",
+    "emailCategory": {
+      "information": "Allgemeine Informationen",
+      "reward": "Prämien & Erfolge",
+      "premium": "Premium",
+      "offer": "Angebote",
+      "message": "Neue Nachrichten",
+      "inactivity": "Inaktivitäts-Erinnerungen",
+      "warning": "Warnungen",
+      "system": "System"
+    },
     "saved": "Einstellungen gespeichert.",
     "appVisibility": "App-Sichtbarkeit",
     "appVisibilityHint": "Wählen Sie, wo Sie erscheinen und wer Sie kontaktieren kann.",
@@ -566,6 +578,10 @@
       "monthlyLimit": "Monatslimit",
       "priority": "Priorität",
       "repeatable": "Wiederholbar",
+      "notifyCategory": "Benachrichtigung senden",
+      "notifyCategoryNone": "— keine —",
+      "notifyTitle": "Titel",
+      "notifyMessage": "Nachricht",
       "save": "Speichern",
       "saved": "Regel gespeichert",
       "conditions": "Bedingungen",
@@ -1123,7 +1139,12 @@
       "messagePlaceholder": "Nachricht",
       "sending": "Wird gesendet…",
       "send": "Benachrichtigung senden",
-      "sentTo": "An {{count}} Nutzer gesendet"
+      "sentTo": "An {{count}} Nutzer gesendet",
+      "inactivityTitle": "Inaktivitäts-Erinnerung",
+      "inactivityHint": "Sendet eine Erinnerung an jeden seit 7+ Tagen inaktiven Nutzer, der für seinen aktuellen Inaktivitätszeitraum noch keine Erinnerung erhalten hat. Kann gefahrlos wiederholt ausgeführt werden — bereits erinnerte Nutzer werden automatisch übersprungen.",
+      "sweepRun": "Jetzt ausführen",
+      "sweepRunning": "Wird ausgeführt…",
+      "sweepResult": "{{scanned}} geprüft, {{notified}} benachrichtigt"
     },
     "payments": {
       "title": "Zahlungsverlauf",

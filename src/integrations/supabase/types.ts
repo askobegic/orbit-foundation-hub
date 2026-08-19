@@ -1500,6 +1500,14 @@ export type Database = {
           lifetime_points: number
           max_executions: number | null
           monthly_limit: number | null
+          notify_category: string | null
+          notify_message_bs: string | null
+          notify_message_de: string | null
+          notify_message_en: string | null
+          notify_target_path: string | null
+          notify_title_bs: string | null
+          notify_title_de: string | null
+          notify_title_en: string | null
           points: number
           priority: number
           repeatable: boolean
@@ -1519,6 +1527,14 @@ export type Database = {
           lifetime_points?: number
           max_executions?: number | null
           monthly_limit?: number | null
+          notify_category?: string | null
+          notify_message_bs?: string | null
+          notify_message_de?: string | null
+          notify_message_en?: string | null
+          notify_target_path?: string | null
+          notify_title_bs?: string | null
+          notify_title_de?: string | null
+          notify_title_en?: string | null
           points?: number
           priority?: number
           repeatable?: boolean
@@ -1538,6 +1554,14 @@ export type Database = {
           lifetime_points?: number
           max_executions?: number | null
           monthly_limit?: number | null
+          notify_category?: string | null
+          notify_message_bs?: string | null
+          notify_message_de?: string | null
+          notify_message_en?: string | null
+          notify_target_path?: string | null
+          notify_title_bs?: string | null
+          notify_title_de?: string | null
+          notify_title_en?: string | null
           points?: number
           priority?: number
           repeatable?: boolean
@@ -2144,11 +2168,15 @@ export type Database = {
           app_id: string | null
           category: string | null
           created_at: string | null
+          dedupe_key: string | null
+          email_error: string | null
+          email_status: string
           id: string
           is_read: boolean | null
           message_bs: string | null
           message_de: string | null
           message_en: string | null
+          read_at: string | null
           target_path: string | null
           title_bs: string | null
           title_de: string | null
@@ -2160,11 +2188,15 @@ export type Database = {
           app_id?: string | null
           category?: string | null
           created_at?: string | null
+          dedupe_key?: string | null
+          email_error?: string | null
+          email_status?: string
           id?: string
           is_read?: boolean | null
           message_bs?: string | null
           message_de?: string | null
           message_en?: string | null
+          read_at?: string | null
           target_path?: string | null
           title_bs?: string | null
           title_de?: string | null
@@ -2176,11 +2208,15 @@ export type Database = {
           app_id?: string | null
           category?: string | null
           created_at?: string | null
+          dedupe_key?: string | null
+          email_error?: string | null
+          email_status?: string
           id?: string
           is_read?: boolean | null
           message_bs?: string | null
           message_de?: string | null
           message_en?: string | null
+          read_at?: string | null
           target_path?: string | null
           title_bs?: string | null
           title_de?: string | null
@@ -2457,12 +2493,14 @@ export type Database = {
           country: string | null
           created_at: string | null
           email: string | null
+          email_disabled_categories: string[]
           first_name: string | null
           id: string
           identity_locked_at: string | null
           is_active: boolean | null
           is_verified: boolean | null
           language: string | null
+          last_active_at: string | null
           last_name: string | null
           notify_email: boolean
           notify_in_app: boolean
@@ -2480,12 +2518,14 @@ export type Database = {
           country?: string | null
           created_at?: string | null
           email?: string | null
+          email_disabled_categories?: string[]
           first_name?: string | null
           id: string
           identity_locked_at?: string | null
           is_active?: boolean | null
           is_verified?: boolean | null
           language?: string | null
+          last_active_at?: string | null
           last_name?: string | null
           notify_email?: boolean
           notify_in_app?: boolean
@@ -2503,12 +2543,14 @@ export type Database = {
           country?: string | null
           created_at?: string | null
           email?: string | null
+          email_disabled_categories?: string[]
           first_name?: string | null
           id?: string
           identity_locked_at?: string | null
           is_active?: boolean | null
           is_verified?: boolean | null
           language?: string | null
+          last_active_at?: string | null
           last_name?: string | null
           notify_email?: boolean
           notify_in_app?: boolean

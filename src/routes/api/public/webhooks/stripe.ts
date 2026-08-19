@@ -9,6 +9,7 @@ import {
   verifyPaymentReference,
 } from "@/lib/payment-reference.server";
 import { clientIp, isRateLimited } from "@/lib/rate-limit.server";
+import { sendNotification } from "@/lib/notify.server";
 
 // Verifies the HMAC signature created by createPaymentReference
 // (src/lib/payments.functions.ts) -- see PROJECT_AUDIT.md -> SE-7. A
@@ -749,46 +750,48 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
         // `subscriptions`, upserted above when granted) -- profiles.user_type
         // is no longer written here.
 
-        const { error: notifyErr } = await supabaseAdmin.from("notifications").insert(
-          dependencyRefunded
+        // Routed through the shared sendNotification() (CORE Notification
+        // & User Engagement System) -- same content/behavior as before,
+        // now with dedup (keyed by the payment id where the insert above
+        // succeeded, else session.id -- same safe fallback already used
+        // for entityId below -- so a webhook retry can never double-
+        // notify) and preference/email handling for free.
+        await sendNotification({
+          userId: ref.user_id,
+          appId: ref.app_id,
+          category: dependencyRefunded ? "warning" : "premium",
+          type: dependencyRefunded ? "warning" : "success",
+          dedupeKey: `payment:${insertedPayment?.id ?? session.id}`,
+          content: dependencyRefunded
             ? {
-                user_id: ref.user_id,
-                title_bs: "Kupovina nije aktivirana",
-                title_en: "Purchase could not be activated",
-                title_de: "Kauf konnte nicht aktiviert werden",
-                message_bs:
+                titleBs: "Kupovina nije aktivirana",
+                titleEn: "Purchase could not be activated",
+                titleDe: "Kauf konnte nicht aktiviert werden",
+                messageBs:
                   "Vaša uplata je vraćena jer potreban preduslov za ovaj proizvod više nije aktivan.",
-                message_en:
+                messageEn:
                   "Your payment was refunded because a required prerequisite for this product is no longer active.",
-                message_de:
+                messageDe:
                   "Ihre Zahlung wurde erstattet, da eine erforderliche Voraussetzung für dieses Produkt nicht mehr aktiv ist.",
-                type: "warning",
-                app_id: ref.app_id,
               }
             : {
-                user_id: ref.user_id,
-                title_bs: "Uplata primljena",
-                title_en: "Payment received",
-                title_de: "Zahlung erhalten",
+                titleBs: "Uplata primljena",
+                titleEn: "Payment received",
+                titleDe: "Zahlung erhalten",
                 // Wording must not claim Premium was activated when this
                 // plan doesn't grant it (Commercial Products / benefit-only
                 // purchase).
-                message_bs: planGrantsPremium
+                messageBs: planGrantsPremium
                   ? "Vaša premium pretplata je aktivirana."
                   : "Vaša kupovina je aktivirana.",
-                message_en: planGrantsPremium
+                messageEn: planGrantsPremium
                   ? "Your premium subscription is active."
                   : "Your purchase is now active.",
-                message_de: planGrantsPremium
+                messageDe: planGrantsPremium
                   ? "Ihr Premium-Abonnement ist aktiv."
                   : "Ihr Kauf ist jetzt aktiv.",
-                type: "success",
-                app_id: ref.app_id,
               },
-        );
-        if (notifyErr) {
-          console.error("Stripe webhook: notification insert failed", notifyErr);
-        }
+        });
 
         await writeAuditLog({
           userId: ref.user_id,

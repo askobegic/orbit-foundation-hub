@@ -8,6 +8,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { sendNotification } from "@/lib/notify.server";
 import type { Message } from "@/types/messaging";
 
 type MessageRow = {
@@ -88,18 +89,27 @@ export const sendMessage = createServerFn({ method: "POST" })
       .eq("id", data.conversationId);
     if (bumpError) console.error("sendMessage: conversation bump failed", bumpError);
 
-    const { error: notifyError } = await context.supabase.from("notifications").insert({
-      user_id: recipientId,
-      title_bs: "Nova poruka",
-      title_en: "New message",
-      title_de: "Neue Nachricht",
-      message_bs: "Imate novu poruku.",
-      message_en: "You have a new message.",
-      message_de: "Sie haben eine neue Nachricht.",
-      type: "info",
-      app_id: null,
+    // Routed through the shared sendNotification() (service-role-backed --
+    // notifications has no INSERT policy for a regular authenticated
+    // caller, only "own row" SELECT/UPDATE, so the previous
+    // context.supabase.insert() here was silently rejected by RLS on every
+    // call; see PROJECT_AUDIT.md -> MSG-1) rather than a direct insert, so
+    // this path also gets dedup (one notification per message, even under
+    // a client retry) and preference/email handling for free.
+    await sendNotification({
+      userId: recipientId,
+      category: "message",
+      targetPath: `/dashboard/messages/${data.conversationId}`,
+      dedupeKey: `message:${(inserted as MessageRow).id}`,
+      content: {
+        titleBs: "Nova poruka",
+        titleEn: "New message",
+        titleDe: "Neue Nachricht",
+        messageBs: "Imate novu poruku.",
+        messageEn: "You have a new message.",
+        messageDe: "Sie haben eine neue Nachricht.",
+      },
     });
-    if (notifyError) console.error("sendMessage: notification insert failed", notifyError);
 
     return toMessage(inserted as MessageRow);
   });

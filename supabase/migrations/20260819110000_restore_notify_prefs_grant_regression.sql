@@ -1,0 +1,29 @@
+-- Restores public.profiles.notify_email / notify_in_app / notify_marketing
+-- to the `authenticated` column-level UPDATE allowlist -- a regression
+-- discovered while live-verifying the grant added by this same day's
+-- 20260819100000 migration (CORE Notification & User Engagement System),
+-- directly within that task's own "Notification Preferences" scope, not
+-- an unrelated finding.
+--
+-- Root cause, confirmed via information_schema.column_privileges, not
+-- assumed: 20260729130100_restore_missing_notification_prefs.sql
+-- correctly added these three columns to the allowlist. But
+-- 20260807100000_priority11_security_hardening.sql later re-asserted the
+-- *original* 20260726120000_protect_profile_privileged_columns.sql
+-- grant list verbatim (because live inspection at the time showed that
+-- original migration had never actually taken effect in production --
+-- see that migration's own comment) -- and that original list predates
+-- 20260729130100, so it does not include notify_email/notify_in_app/
+-- notify_marketing. `REVOKE UPDATE ON public.profiles FROM authenticated`
+-- followed by a GRANT list missing these three columns silently dropped
+-- their previously-restored grant a second time. Since 2026-08-07, any
+-- attempt to save these three preference toggles (dashboard.settings.tsx
+-- via updateUserSettings) has been failing with a permission-denied
+-- error at the database level -- this is the same "migration tracked
+-- applied but the SQL never actually took effect" class of drift already
+-- documented in PROJECT_AUDIT.md (DB-10/DB-11), just discovered on a
+-- different table/column set.
+--
+-- Purely additive (GRANT, not REVOKE+GRANT) -- does not touch the RLS
+-- policy or any other column's grant.
+GRANT UPDATE (notify_email, notify_in_app, notify_marketing) ON public.profiles TO authenticated;

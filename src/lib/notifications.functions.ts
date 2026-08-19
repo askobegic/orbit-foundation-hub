@@ -24,6 +24,10 @@ const prefsSchema = z.object({
   notify_email: z.boolean().optional(),
   notify_in_app: z.boolean().optional(),
   notify_marketing: z.boolean().optional(),
+  // CORE Notification & User Engagement System: per-category email
+  // opt-out, narrower than notify_email above (which stays the
+  // all-or-nothing switch).
+  email_disabled_categories: z.array(z.string()).optional(),
 });
 
 export const updateUserSettings = createServerFn({ method: "POST" })
@@ -43,7 +47,7 @@ export const markAllNotificationsRead = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const { error } = await context.supabase
       .from("notifications")
-      .update({ is_read: true })
+      .update({ is_read: true, read_at: new Date().toISOString() })
       .eq("user_id", context.userId)
       .eq("is_read", false);
     if (error) throw new Error(error.message);
@@ -56,7 +60,7 @@ export const markNotificationRead = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("notifications")
-      .update({ is_read: true })
+      .update({ is_read: true, read_at: new Date().toISOString() })
       .eq("id", data.id)
       .eq("user_id", context.userId);
     if (error) throw new Error(error.message);

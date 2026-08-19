@@ -880,7 +880,7 @@ Business rules: `PROJECT_KNOWLEDGE.md` → Notifications, Communication Center.
 
 ### `GET /v1/me/notifications`
 - **Auth:** user. **Query:** `?isRead=false` (filter), `?sort=-createdAt` (default).
-- **Response 200:** `{ "data": [ { "id": "...", "type": "info", "title": "New message", "message": "You have a new message.", "isRead": false, "createdAt": "..." } ] }` — `title`/`message` already resolved to the caller's own locale server-side (never three parallel `_bs/_en/_de` fields — see §21).
+- **Response 200:** `{ "data": [ { "id": "...", "type": "info", "category": "message", "targetPath": "/dashboard/messages/...", "title": "New message", "message": "You have a new message.", "isRead": false, "createdAt": "..." } ] }` — `title`/`message` already resolved to the caller's own locale server-side (never three parallel `_bs/_en/_de` fields — see §21). `category`/`targetPath` are nullable.
 
 ### `POST /v1/me/notifications/read-all`
 - **Auth:** user. **Response 200:** `{ "data": { "ok": true } }`
@@ -889,11 +889,12 @@ Business rules: `PROJECT_KNOWLEDGE.md` → Notifications, Communication Center.
 - **Auth:** user (must own the notification). **Response 200:** `{ "data": { "ok": true } }`
 
 ### `POST /v1/admin/notifications/broadcast`
-The one and only bulk-communication mechanism (`PROJECT_KNOWLEDGE.md` → Communication Center — "applications do not send their own broadcast notifications").
+The one and only bulk-communication mechanism (`PROJECT_KNOWLEDGE.md` → Communication Center — "applications do not send their own broadcast notifications"). Internally routes through the same `sendNotification()`/`sendBulkNotifications()` (`notify.server.ts`) every other notification-creating path in CORE uses (CORE Notification & User Engagement System) — not a second implementation.
 - **Auth:** admin.
-- **Request body:** `{ "target": "premium", "appId": null, "type": "success", "title": { "bs": "...", "en": "...", "de": "..." }, "message": { "bs": "...", "en": "...", "de": "..." } }` — `target` is `"all" | "premium" | "user"` (`userId` required when `target: "user"`); `premium` resolves via the shared resolver (§1, Design Principle 5), reaching Trial-only Premium users too (`PROJECT_AUDIT.md` → `AD-13`'s fix, carried into this contract).
+- **Request body:** `{ "target": "premium", "appId": null, "type": "success", "category": "offer", "targetPath": "/dashboard/rewards", "title": { "bs": "...", "en": "...", "de": "..." }, "message": { "bs": "...", "en": "...", "de": "..." } }` — `target` is `"all" | "premium" | "user"` (`userId` required when `target: "user"`); `premium` resolves via the shared resolver (§1, Design Principle 5), reaching Trial-only Premium users too (`PROJECT_AUDIT.md` → `AD-13`'s fix, carried into this contract). `category` (`"information" | "reward" | "premium" | "offer" | "warning" | "system"` — a richer, admin-facing classification, deliberately separate from `type`, which stays UI severity only) and `targetPath` (a deep link, internal `/dashboard/...` paths only — `PROJECT_AUDIT.md` → `MSG-3`) are both optional/nullable.
 - **Response 200:** `{ "data": { "sent": 812 } }`
-- **Priority 15 Phase D:** the request body gains two optional fields, `category` (`"information" | "reward" | "premium" | "offer" | "warning" | "system"` — a richer, admin-facing classification, deliberately separate from `type` above, which stays UI severity only) and `targetPath` (a deep link, internal `/dashboard/...` paths only — `PROJECT_AUDIT.md` → `MSG-3`, resolved). `GET /v1/me/notifications`'s response gains the same two fields, both nullable.
+- **Delivery:** `target: "user"` goes through the full pipeline (in-app + email, subject to the recipient's preferences); `target: "all" | "premium"` is in-app only — this codebase has no background job queue, so bulk email fan-out is not attempted synchronously inside this request.
+- Not part of this contract: `POST /v1/system/inactivity-sweep`, a shared-secret-gated (not JWT-authenticated) endpoint an external scheduler calls to trigger the 7-day inactivity reminder — an operational/infrastructure endpoint, not a connected-application-facing one. See `PROJECT_KNOWLEDGE.md` → CORE Notification & User Engagement System.
 
 ### User → Admin Support (Priority 15 Phase D)
 
