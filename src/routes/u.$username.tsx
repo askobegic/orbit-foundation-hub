@@ -1,12 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { useTranslation } from "react-i18next";
 
 import { useAuth } from "@/context/AuthContext";
 import { useApplication } from "@/context/ApplicationContext";
-import { supabase } from "@/integrations/supabase/client";
 import { ProfileCard } from "@/components/profile/ProfileCard";
-import type { PremiumProfileRow, ProfileRow } from "@/types/database";
+import { getPublicProfileForViewer, type PublicProfileBundle } from "@/lib/profile.functions";
 
 export const Route = createFileRoute("/u/$username")({
   head: ({ params }) => ({
@@ -27,77 +27,47 @@ function PublicBioCard() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { application, loading: applicationLoading } = useApplication();
+  const getPublicProfileForViewerFn = useServerFn(getPublicProfileForViewer);
 
-  const [profile, setProfile] = useState<ProfileRow | null>(null);
-  const [premium, setPremium] = useState<PremiumProfileRow | null>(null);
+  const [bundle, setBundle] = useState<PublicProfileBundle | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  // null = not checked yet. `user_app_settings.is_visible` means "does this
-  // user have a public profile on this application at all" -- it is a
-  // presence gate, never a Premium-to-Standard downgrade (that logic lives
-  // entirely in ProfileCard, which does not consume is_visible).
-  const [visibleHere, setVisibleHere] = useState<boolean | null>(null);
 
   useEffect(() => {
+    if (applicationLoading) return;
+    let cancelled = false;
     void (async () => {
       setLoading(true);
       setNotFound(false);
-      setVisibleHere(null);
-      const { data } = await supabase
-        .from("profiles_public")
-        .select("*")
-        .eq("username", username)
-        .eq("is_active", true)
-        .maybeSingle();
-      const p = data as ProfileRow | null;
-      if (!p) {
+      // Every protected value (WhatsApp/phone/email/website) is resolved
+      // and, when the viewer isn't eligible, withheld entirely by this
+      // server call -- see profile.functions.ts. Nothing sensitive is
+      // fetched directly from the browser here anymore.
+      const result = await getPublicProfileForViewerFn({
+        data: { username, appId: application?.id ?? null },
+      });
+      if (cancelled) return;
+      if (!result) {
         setNotFound(true);
         setLoading(false);
         return;
       }
-      setProfile(p);
-
-      const { data: prem } = await supabase
-        .from("premium_profiles_public")
-        .select("*")
-        .eq("user_id", p.id)
-        .maybeSingle();
-      setPremium((prem as PremiumProfileRow | null) ?? null);
+      setBundle(result);
       setLoading(false);
-    })();
-  }, [username]);
-
-  useEffect(() => {
-    if (!profile || applicationLoading) return;
-    if (!application) {
-      setVisibleHere(true);
-      return;
-    }
-    let cancelled = false;
-    void (async () => {
-      const { data } = await supabase
-        .from("user_app_settings")
-        .select("is_visible")
-        .eq("user_id", profile.id)
-        .eq("app_id", application.id)
-        .maybeSingle();
-      if (!cancelled) {
-        setVisibleHere((data as { is_visible: boolean } | null)?.is_visible ?? true);
-      }
     })();
     return () => {
       cancelled = true;
     };
-  }, [profile, application, applicationLoading]);
+  }, [username, application, applicationLoading, getPublicProfileForViewerFn]);
 
-  if (loading || (profile && !notFound && (applicationLoading || visibleHere === null))) {
+  if (loading || applicationLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#1D6BF3] border-t-transparent" />
       </div>
     );
   }
-  if (notFound || !profile || visibleHere === false) {
+  if (notFound || !bundle) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
         <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
@@ -131,7 +101,9 @@ function PublicBioCard() {
               {application?.name.slice(0, 1) ?? ""}
             </div>
           )}
-          <span className="truncate text-lg font-bold text-gray-900">{application?.name ?? ""}</span>
+          <span className="truncate text-lg font-bold text-gray-900">
+            {application?.name ?? ""}
+          </span>
         </Link>
         {!user && (
           <div className="flex shrink-0 gap-2">
@@ -152,7 +124,7 @@ function PublicBioCard() {
       </nav>
 
       <div className="mx-auto flex w-full max-w-[420px] flex-col items-center">
-        <ProfileCard profile={profile} premiumProfile={premium} viewerId={user?.id ?? null} />
+        <ProfileCard bundle={bundle} viewerId={user?.id ?? null} />
 
         {!user && (
           <div className="mt-5 w-full rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 p-4 text-center text-white">

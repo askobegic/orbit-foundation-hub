@@ -861,6 +861,16 @@ This section aggregates the highest-impact, trust-boundary-crossing issues found
 - **Commit:** —
 - **Date:** Logged 2026-07-27, resolved 2026-07-27
 
+**SE-20 — CORE's own public profile page sent every visitor the real WhatsApp/phone/email/website value regardless of Premium eligibility, relying on client-side masking**
+- **Status:** ✅ Resolved (2026-08-21)
+- **Files:** `src/routes/u.$username.tsx`, `src/components/profile/ProfileCard.tsx` (both since rewritten)
+- **Description:** `u.$username.tsx` fetched `premium_profiles_public` directly from the browser via the anon/authenticated Supabase client and stored the full row (`whatsapp`, `phone`, `contact_email`, `website`, all six social URLs) in React state, passed straight into `ProfileCard`. `ProfileCard` computed viewer/owner Premium eligibility (`canContact`) with its own client-side `hasAnyActivePremium()` queries and used it only to decide which *label* to render (`canContact ? value : platformLabel`) — the real value was already present in every visitor's network response and component state, Standard or Premium, readable from the response body alone with no client manipulation required. `/v1/profiles/$username.ts` (the public REST API) already implemented this correctly server-side and was unaffected.
+- **Risk:** Any visitor to any Premium user's public profile page (`/u/:username`) on any CORE-connected application could read that user's real WhatsApp number, phone number, contact email, and website straight from the page's own network response, regardless of their own Premium status — a live PII exposure on a shipped route, not a theoretical gap.
+- **Recommendation:** Resolve Contact Actions eligibility and mask every protected value server-side, before it ever reaches the browser, mirroring the already-correct `/v1/profiles/$username.ts` pattern.
+- **Resolution:** Built as the CORE Universal Premium-Locked Content capability: `src/lib/content-lock.server.ts` (`isContentUnlocked()`, a generic Global-Premium-OR-Entitlement eligibility primitive reusable by any current or future CORE-connected application) and `src/lib/profile.functions.ts` (`getPublicProfileForViewer`, a new server function that resolves the caller's own identity from their verified Supabase session token — never a client-supplied id — and returns a bundle where every protected field is an `{ exists, locked, value }` triple; `value` is populated only when the caller is actually eligible, so an ineligible response never contains the real value at all, only whether the field exists, which the UI needs to render "WhatsApp 🔒 Premium" instead of hiding the row entirely). `u.$username.tsx` now calls this function instead of querying `profiles_public`/`premium_profiles_public` directly; `ProfileCard.tsx`'s prop contract changed from raw `profile`/`premiumProfile` rows plus its own client-side Premium queries to the server-resolved bundle, and `ContactActionButton` now renders from a `locked` flag with `value` present in props only when unlocked. `/v1/profiles/$username.ts`, already correct, was left untouched. See `PROJECT_KNOWLEDGE.md` → Premium-Locked Content.
+- **Commit:** —
+- **Date:** Logged 2026-08-21, resolved 2026-08-21
+
 ### High
 
 **SE-4 — Stripe webhook grants entitlement without checking `session.payment_status`**

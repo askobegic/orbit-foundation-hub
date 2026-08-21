@@ -29,7 +29,8 @@ import { useApplication } from "@/context/ApplicationContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getApplicationCapabilities } from "@/lib/capabilities.functions";
 import { getOrCreateConversation } from "@/lib/conversation.functions";
-import { getVisibleApplications, hasAnyActivePremium } from "@/lib/premium";
+import { getVisibleApplications } from "@/lib/premium";
+import type { PublicProfileBundle } from "@/lib/profile.functions";
 import { isSafeProfileUrl } from "@/lib/url";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -42,9 +43,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import type { ApplicationRow, PremiumProfileRow, ProfileRow } from "@/types/database";
+import type { ApplicationRow } from "@/types/database";
 
 // Shared CORE component -- rendered identically by every application
 // (BosniaFans, Muzika.ba, Svadba.ba, Gradovi.ba, Bosanci.info, and every
@@ -79,78 +79,74 @@ import type { ApplicationRow, PremiumProfileRow, ProfileRow } from "@/types/data
 // upgrade dialog instead of the destination.
 // See PROJECT_KNOWLEDGE.md -> Profile Card & Messaging System.
 export interface ProfileCardProps {
-  profile: ProfileRow;
-  premiumProfile: PremiumProfileRow | null;
+  // Server-resolved bundle (src/lib/profile.functions.ts) -- tier,
+  // Contact Actions eligibility, and every protected contact value are all
+  // decided server-side; a Standard visitor's bundle never carries a real
+  // WhatsApp/phone/email/website value at all (CORE Universal Premium-
+  // Locked Content, PROJECT_KNOWLEDGE.md -> Premium-Locked Content).
+  bundle: PublicProfileBundle;
   /** The currently authenticated visitor, or null if not logged in. */
   viewerId: string | null;
   className?: string;
 }
 
-export function ProfileCard({ profile, premiumProfile, viewerId, className }: ProfileCardProps) {
+export function ProfileCard({ bundle, viewerId, className }: ProfileCardProps) {
   const { t } = useTranslation();
   const { application } = useApplication();
   const navigate = useNavigate();
   const getOrCreateConversationFn = useServerFn(getOrCreateConversation);
   const [gateModalOpen, setGateModalOpen] = useState(false);
 
+  const {
+    profile,
+    primaryProfession,
+    secondaryProfessions,
+    whatsapp,
+    phone,
+    contactEmail,
+    website,
+    socials,
+  } = bundle;
+
   // "Which card renders" -- Premium iff the owner holds active Premium on at
-  // least one application anywhere on the platform. Not a stored flag: the
-  // same CORE Premium Service check used everywhere else.
-  const ownerPremiumQuery = useQuery({
-    queryKey: ["premium", "hasAny", profile.id],
-    queryFn: () => hasAnyActivePremium(profile.id),
-  });
-  const isOwnerPremium = ownerPremiumQuery.data ?? false;
+  // least one application anywhere on the platform, resolved server-side.
+  const showPremiumContent = bundle.tier === "premium";
+  const isOwnerContactableHere = bundle.isOwnerContactableHere;
+  // Both sides' Premium status and the owner's is_contactable setting were
+  // already checked server-side; this is the one flag the UI needs.
+  const canContact = bundle.canContact;
 
   // "Public profile on" section content -- independent call, per
-  // getVisibleApplications(userId).
+  // getVisibleApplications(userId). Not protected content (a Premium user's
+  // own choice of where they're publicly listed), so this stays a plain
+  // client-side fetch, unchanged.
   const visibleAppsQuery = useQuery({
     queryKey: ["visibleApplications", profile.id],
     queryFn: () => getVisibleApplications(profile.id),
-    enabled: isOwnerPremium,
+    enabled: showPremiumContent,
   });
   const visibleApps = visibleAppsQuery.data ?? [];
 
-  // Owner's per-application visibility/contactability (Unified Profile
-  // Onboarding & Premium Visibility Model). Only fetched when the owner is
-  // Premium somewhere -- Standard users have nothing for this to gate.
+  // Owner's per-application visibility, for the "Public profile on" tiles
+  // only (which of those applications to link to vs. fall back to the
+  // application's homepage) -- not used for contactability here anymore,
+  // that comes from the server-resolved bundle above.
   const appSettingsQuery = useQuery({
     queryKey: ["userAppSettings", profile.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("user_app_settings")
-        .select("app_id, is_visible, is_contactable")
+        .select("app_id, is_visible")
         .eq("user_id", profile.id);
       if (error) {
         console.error("ProfileCard: user_app_settings fetch failed", error);
         return [];
       }
-      return (data ?? []) as { app_id: string; is_visible: boolean; is_contactable: boolean }[];
+      return (data ?? []) as { app_id: string; is_visible: boolean }[];
     },
-    enabled: isOwnerPremium,
+    enabled: showPremiumContent,
   });
   const appSettingsById = new Map((appSettingsQuery.data ?? []).map((s) => [s.app_id, s]));
-  // No row yet (e.g. seeded true at onboarding, never toggled since) defaults
-  // to contactable -- same fallback dashboard.settings.tsx uses. Whether the
-  // owner has a profile on this application AT ALL (is_visible) is enforced
-  // one level up by the route, not here -- see the file-level comment above.
-  const currentAppSetting = application ? appSettingsById.get(application.id) : undefined;
-  const isOwnerContactableHere = currentAppSetting?.is_contactable ?? true;
-
-  // "Which card renders" is Premium status alone -- see the file-level
-  // comment above for why is_visible does not affect this.
-  const showPremiumContent = isOwnerPremium;
-
-  // Cross-application contact privilege (Priority 6): both sides need
-  // Premium on ANY application, not the same one -- plus the owner must not
-  // have turned off contact for the application currently being browsed.
-  const viewerPremiumQuery = useQuery({
-    queryKey: ["premium", "hasAny", viewerId],
-    queryFn: () => hasAnyActivePremium(viewerId!),
-    enabled: !!viewerId,
-  });
-  const isViewerPremium = viewerPremiumQuery.data ?? false;
-  const canContact = showPremiumContent && isViewerPremium && isOwnerContactableHere;
 
   // R-2: the Send Message action is a UI-action-level capability gate,
   // matching the same "hide the app-scoped action, not the whole card"
@@ -174,36 +170,32 @@ export function ProfileCard({ profile, premiumProfile, viewerId, className }: Pr
   }
 
   function handleWhatsApp() {
-    if (!premiumProfile?.whatsapp) return;
-    window.open(
-      `https://wa.me/${premiumProfile.whatsapp.replace(/\D/g, "")}`,
-      "_blank",
-      "noreferrer",
-    );
+    if (!whatsapp.value) return;
+    window.open(`https://wa.me/${whatsapp.value.replace(/\D/g, "")}`, "_blank", "noreferrer");
   }
 
   function handleViber() {
-    if (!premiumProfile?.phone) return;
+    if (!phone.value) return;
     window.open(
-      `viber://chat?number=${encodeURIComponent(premiumProfile.phone.replace(/\D/g, ""))}`,
+      `viber://chat?number=${encodeURIComponent(phone.value.replace(/\D/g, ""))}`,
       "_blank",
       "noreferrer",
     );
   }
 
   function handleCall() {
-    if (!premiumProfile?.phone) return;
-    window.location.href = `tel:${premiumProfile.phone.replace(/\D/g, "")}`;
+    if (!phone.value) return;
+    window.location.href = `tel:${phone.value.replace(/\D/g, "")}`;
   }
 
   function handleEmail() {
-    if (!premiumProfile?.contact_email) return;
-    window.location.href = `mailto:${premiumProfile.contact_email}`;
+    if (!contactEmail.value) return;
+    window.location.href = `mailto:${contactEmail.value}`;
   }
 
   function handleWebsite() {
-    if (!premiumProfile?.website || !isSafeProfileUrl(premiumProfile.website)) return;
-    window.open(premiumProfile.website, "_blank", "noreferrer");
+    if (!website.value || !isSafeProfileUrl(website.value)) return;
+    window.open(website.value, "_blank", "noreferrer");
   }
 
   function handleSocial(url: string | null) {
@@ -265,25 +257,6 @@ export function ProfileCard({ profile, premiumProfile, viewerId, className }: Pr
   const fullName = `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim();
   const primaryColor = application?.primary_color ?? "#1D6BF3";
   const secondaryColor = application?.secondary_color ?? "#8B5CF6";
-
-  if (ownerPremiumQuery.isLoading || (isOwnerPremium && appSettingsQuery.isLoading)) {
-    return (
-      <div
-        className={cn(
-          "mx-auto w-full max-w-[420px] overflow-hidden rounded-2xl bg-white",
-          className,
-        )}
-      >
-        <Skeleton className="h-28 w-full rounded-none" />
-        <div className="flex flex-col items-center space-y-3 p-6">
-          <Skeleton className="-mt-14 h-20 w-20 rounded-full border-4 border-white" />
-          <Skeleton className="h-5 w-40" />
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-9 w-full" />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <TooltipProvider>
@@ -359,25 +332,23 @@ export function ProfileCard({ profile, premiumProfile, viewerId, className }: Pr
 
           {showPremiumContent && (
             <>
-              {premiumProfile?.primary_profession && (
+              {primaryProfession && (
                 <div className="mt-4 flex flex-col items-center gap-1">
                   <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500">
                     <Briefcase className="h-3.5 w-3.5" style={{ color: primaryColor }} />
                     {t("profile.primaryProfession")}
                   </div>
-                  <p className="text-sm font-medium text-gray-900">
-                    {premiumProfile.primary_profession}
-                  </p>
+                  <p className="text-sm font-medium text-gray-900">{primaryProfession}</p>
                 </div>
               )}
-              {!!premiumProfile?.secondary_professions?.length && (
+              {secondaryProfessions.length > 0 && (
                 <div className="mt-3 flex flex-col items-center gap-1">
                   <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500">
                     <Star className="h-3.5 w-3.5" style={{ color: secondaryColor }} />
                     {t("profile.secondaryProfessions")}
                   </div>
                   <p className="text-sm font-medium text-gray-900">
-                    {premiumProfile.secondary_professions.join(", ")}
+                    {secondaryProfessions.join(", ")}
                   </p>
                 </div>
               )}
@@ -440,70 +411,68 @@ export function ProfileCard({ profile, premiumProfile, viewerId, className }: Pr
 
               {isOwnerContactableHere && (
                 <div className="mt-5 flex w-full flex-col gap-2">
-                  {premiumProfile?.whatsapp && premiumProfile.whatsapp_public && (
+                  {whatsapp.exists && (
                     <ContactActionButton
                       icon={MessageCircle}
-                      value={premiumProfile.whatsapp}
+                      value={whatsapp.value}
+                      locked={whatsapp.locked}
                       platformLabel={t("profile.whatsapp")}
-                      canContact={canContact}
                       onClick={() => handleGatedContact(handleWhatsApp)}
                       className="bg-green-500 text-white hover:bg-green-600"
                     />
                   )}
-                  {premiumProfile?.phone && premiumProfile.phone_public && (
+                  {phone.exists && (
                     <ContactActionButton
                       icon={Phone}
-                      value={premiumProfile.phone}
+                      value={phone.value}
+                      locked={phone.locked}
                       platformLabel={t("profile.viber")}
-                      canContact={canContact}
                       onClick={() => handleGatedContact(handleViber)}
                       className="bg-purple-600 text-white hover:bg-purple-700"
                     />
                   )}
-                  {premiumProfile?.phone && premiumProfile.phone_public && (
+                  {phone.exists && (
                     <ContactActionButton
                       icon={PhoneCall}
-                      value={premiumProfile.phone}
+                      value={phone.value}
+                      locked={phone.locked}
                       platformLabel={t("profile.call")}
-                      canContact={canContact}
                       onClick={() => handleGatedContact(handleCall)}
                       className="bg-blue-600 text-white hover:bg-blue-700"
                     />
                   )}
-                  {premiumProfile?.contact_email && premiumProfile.contact_email_public && (
+                  {contactEmail.exists && (
                     <ContactActionButton
                       icon={Mail}
-                      value={premiumProfile.contact_email}
+                      value={contactEmail.value}
+                      locked={contactEmail.locked}
                       platformLabel={t("profile.contactEmail")}
-                      canContact={canContact}
                       onClick={() => handleGatedContact(handleEmail)}
                       className="bg-gray-700 text-white hover:bg-gray-800"
                     />
                   )}
-                  {premiumProfile?.website &&
-                    premiumProfile.website_public &&
-                    isSafeProfileUrl(premiumProfile.website) && (
-                      <ContactActionButton
-                        icon={Globe}
-                        value={premiumProfile.website}
-                        platformLabel={t("profile.website")}
-                        canContact={canContact}
-                        onClick={() => handleGatedContact(handleWebsite)}
-                        className="text-white hover:opacity-90"
-                        style={{ backgroundColor: primaryColor }}
-                      />
-                    )}
+                  {website.exists && (
+                    <ContactActionButton
+                      icon={Globe}
+                      value={website.value}
+                      locked={website.locked}
+                      platformLabel={t("profile.website")}
+                      onClick={() => handleGatedContact(handleWebsite)}
+                      className="text-white hover:opacity-90"
+                      style={{ backgroundColor: primaryColor }}
+                    />
+                  )}
                   {SOCIAL_LINKS.map(({ key, label, icon }) => {
-                    const url = premiumProfile?.[key] ?? null;
-                    if (!url || !isSafeProfileUrl(url)) return null;
+                    const field = socials[key];
+                    if (!field.exists) return null;
                     return (
                       <ContactActionButton
                         key={key}
                         icon={icon}
-                        value={url}
+                        value={field.value}
+                        locked={field.locked}
                         platformLabel={label}
-                        canContact={canContact}
-                        onClick={() => handleGatedContact(() => handleSocial(url))}
+                        onClick={() => handleGatedContact(() => handleSocial(field.value))}
                         className="bg-gray-100 text-gray-800 hover:bg-gray-200"
                       />
                     );
@@ -511,9 +480,9 @@ export function ProfileCard({ profile, premiumProfile, viewerId, className }: Pr
                   {messagingEnabled && (
                     <ContactActionButton
                       icon={MessageSquare}
-                      value={t("profile.sendMessage")}
+                      value={null}
+                      locked={!canContact}
                       platformLabel={t("profile.sendMessage")}
-                      canContact={canContact}
                       onClick={() => handleGatedContact(handleSendMessage)}
                       className="text-white hover:opacity-90"
                       style={{ backgroundColor: primaryColor }}
@@ -577,45 +546,50 @@ export function ProfileCard({ profile, premiumProfile, viewerId, className }: Pr
 // Social link fields shown as Contact Actions, in the same order/labels
 // SocialLinksSection.tsx (the edit form) already uses -- no privacy toggle
 // exists for these today, matching current editing UX: shown whenever set.
+// Keys match profile.functions.ts's SOCIAL_FIELDS labels exactly -- that
+// file is the single place deciding which social columns are exposed.
 const SOCIAL_LINKS: {
-  key: "facebook_url" | "instagram_url" | "tiktok_url" | "youtube_url" | "linkedin_url" | "x_url";
+  key: "facebook" | "instagram" | "tiktok" | "youtube" | "linkedin" | "x";
   label: string;
   icon: ComponentType<{ className?: string }>;
 }[] = [
-  { key: "facebook_url", label: "Facebook", icon: Facebook },
-  { key: "instagram_url", label: "Instagram", icon: Instagram },
-  { key: "tiktok_url", label: "TikTok", icon: Music2 },
-  { key: "youtube_url", label: "YouTube", icon: Youtube },
-  { key: "linkedin_url", label: "LinkedIn", icon: Linkedin },
-  { key: "x_url", label: "X (Twitter)", icon: Twitter },
+  { key: "facebook", label: "Facebook", icon: Facebook },
+  { key: "instagram", label: "Instagram", icon: Instagram },
+  { key: "tiktok", label: "TikTok", icon: Music2 },
+  { key: "youtube", label: "YouTube", icon: Youtube },
+  { key: "linkedin", label: "LinkedIn", icon: Linkedin },
+  { key: "x", label: "X (Twitter)", icon: Twitter },
 ];
 
-// A Contact Action is always rendered (so a Standard visitor can see the
-// channel exists -- "browse the complete Premium profile"), but its label
-// only reveals the real value when `canContact` is true. Otherwise it shows
-// a generic locked label with no value hint at all -- reveals nothing about
-// the actual contact information. Clicking always goes through the
-// caller's `onClick` (handleGatedContact), which itself decides whether to
-// perform the action or open the upgrade dialog -- this component only
-// controls what's displayed, never the gating logic itself.
+// CORE's generic, reusable Premium-locked action button (Universal
+// Premium-Locked Content) -- a Contact Action is always rendered once its
+// underlying field `exists` (so a Standard visitor can see the channel
+// exists -- "browse the complete Premium profile"), but `value` is only
+// ever non-null when the caller already resolved eligibility server-side
+// and `locked` is false; this component never decides eligibility itself,
+// it only renders whichever state it's given. When locked, no value is
+// present in props at all -- there is nothing here for client-side
+// manipulation to reveal. Clicking always goes through the caller's
+// `onClick` (handleGatedContact), which decides whether to perform the
+// action or open the upgrade dialog.
 function ContactActionButton({
   icon: Icon,
   value,
+  locked,
   platformLabel,
-  canContact,
   onClick,
   className,
   style,
 }: {
   icon: ComponentType<{ className?: string }>;
-  value: string;
+  value: string | null;
+  locked: boolean;
   platformLabel: string;
-  canContact: boolean;
   onClick: () => void;
   className?: string;
   style?: CSSProperties;
 }) {
-  const DisplayIcon = canContact ? Icon : Lock;
+  const DisplayIcon = locked ? Lock : Icon;
   return (
     <Button
       type="button"
@@ -624,7 +598,7 @@ function ContactActionButton({
       style={style}
     >
       <DisplayIcon className="h-4 w-4 shrink-0" />
-      <span className="truncate">{canContact ? value : platformLabel}</span>
+      <span className="truncate">{!locked && value ? value : platformLabel}</span>
     </Button>
   );
 }
