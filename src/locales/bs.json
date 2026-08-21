@@ -1104,7 +1104,9 @@
         "support": { "title": "Podrška", "desc": "Korisnički zahtjevi za podršku i odgovori." },
         "members": { "title": "Članovi", "desc": "Konfigurišite broj kartica po sekciji i paginaciju direktorija za stranicu Članovi." },
         "offersCoupons": { "title": "Ponude i kuponi", "desc": "Globalne ponude, individualne ponude, javni kuponi, bonus poeni." },
-        "dashboardActions": { "title": "Akcije na nadzornoj ploči", "desc": "Generičke ponude, akcije i reference na resurse prikazane korisnicima." }
+        "dashboardActions": { "title": "Akcije na nadzornoj ploči", "desc": "Generičke ponude, akcije i reference na resurse prikazane korisnicima." },
+        "affiliate": { "title": "Affiliate", "desc": "Affiliate ponude, affiliate korisnici, konverzije, provizije i isplate." },
+        "pointsPackages": { "title": "Points paketi", "desc": "Paketi Points-a za kupovinu i prekidač za kupovinu Points-a." }
       }
     },
     "verification": {
@@ -1221,6 +1223,41 @@
       "resourceType": "Tip resursa",
       "status": "Status",
       "resourceCreated": "Referenca na resurs sačuvana"
+    },
+    "affiliate": {
+      "title": "Affiliate",
+      "subtitle": "Upravljajte Affiliate programom: ponude, affiliate korisnici, konverzije, provizije i isplate.",
+      "configTitle": "Globalne postavke",
+      "offersTitle": "Affiliate ponude",
+      "sourceType": "Tip izvora",
+      "sourceCore": "CORE",
+      "sourceApplication": "Aplikacija",
+      "sourceProductType": "Tip proizvoda izvora",
+      "sourceProductId": "ID proizvoda izvora",
+      "destinationUrl": "Odredišni URL",
+      "commissionType": "Tip provizije",
+      "commissionRate": "Stopa provizije (%)",
+      "commissionFixedAmount": "Fiksna provizija (€)",
+      "affiliatesTitle": "Affiliate korisnici",
+      "conversionsTitle": "Konverzije",
+      "reverse": "Poništi",
+      "payoutsTitle": "Isplate",
+      "payoutsHint": "Označavanje isplate kao izvršene je ručni korak -- nije konfigurisan automatizovani vanjski isplatni provajder. Zabilježite stvarnu referencu plaćanja (bankovni transfer, ručni PayPal Payout itd.) nakon slanja.",
+      "payoutReferencePlaceholder": "Referenca isplate",
+      "markPaid": "Označi kao isplaćeno"
+    },
+    "pointsPackages": {
+      "title": "Points paketi",
+      "subtitle": "Upravljajte paketima Points-a za kupovinu i prekidačem za kupovinu Points-a.",
+      "buySwitchTitle": "Kupovina Points-a",
+      "buySwitchLabel": "Dozvoli korisnicima kupovinu Points paketa",
+      "packagesTitle": "Paketi",
+      "price": "Cijena (€)",
+      "pointsAmount": "Količina Points-a",
+      "bonusPoints": "Bonus Points",
+      "stripeLink": "Stripe link za plaćanje",
+      "paypalLink": "PayPal link za plaćanje",
+      "purchasesTitle": "Nedavne kupovine Points-a"
     }
   },
   "members": {
@@ -1282,6 +1319,48 @@
       "incomplete": "nepotpuno",
       "inactive": "neaktivno"
     }
+  },
+  "affiliate": {
+    "title": "Affiliate",
+    "subtitle": "Preporuči odobrene proizvode i usluge i ostvari proviziju.",
+    "status": {
+      "notAffiliate": "Još nisi Affiliate.",
+      "active": "Aktivan",
+      "suspended": "Tvoj Affiliate nalog je trenutno suspendiran.",
+      "disabled": "Tvoj Affiliate nalog je trenutno onemogućen."
+    },
+    "joinDescription": "Preporuči odabrane proizvode i usluge i ostvari proviziju.",
+    "joinCta": "Postani Affiliate",
+    "joined": "Affiliate nalog aktiviran",
+    "joinError": {
+      "affiliate_program_disabled": "Affiliate program je trenutno onemogućen.",
+      "already_active": "Već si Affiliate.",
+      "already_suspended": "Tvoj Affiliate nalog je suspendiran.",
+      "already_disabled": "Tvoj Affiliate nalog je onemogućen."
+    },
+    "clicks": "Klikovi",
+    "approvedBalance": "Odobreni saldo",
+    "pendingBalance": "Saldo na čekanju",
+    "paidTotal": "Isplaćeno",
+    "thresholdInfo": "Minimalni prag za isplatu: {{threshold}} {{currency}}.",
+    "nextPayout": "Posljednja isplata: {{amount}} {{currency}} ({{status}})",
+    "payoutStatus": { "pending": "na čekanju", "paid": "isplaćeno", "failed": "neuspješno" },
+    "catalogTitle": "Dostupno za promociju",
+    "commissionPercent": "{{rate}}% provizije",
+    "commissionFixed": "{{amount}} {{currency}} provizije",
+    "copyLink": "Kopiraj link",
+    "promote": "Promoviraj",
+    "recentConversions": "Nedavne konverzije",
+    "noConversions": "Još nema konverzija.",
+    "conversionStatus": { "pending": "Na čekanju", "approved": "Odobreno", "paid": "Isplaćeno", "reversed": "Poništeno" },
+    "linkNotFound": "Ovaj link više nije dostupan."
+  },
+  "pointsPurchase": {
+    "title": "Treba ti više Points-a?",
+    "subtitle": "Kupi Points paket da ubrzaš svoj napredak.",
+    "bonus": "+{{count}} bonus Points",
+    "buyWithStripe": "Kupi karticom",
+    "buyWithPaypal": "Kupi putem PayPal-a"
   },
   "advertisingSlot": {
     "title": "VAŠA REKLAMA NA OVOM MJESTU!",

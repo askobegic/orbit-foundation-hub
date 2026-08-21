@@ -89,6 +89,34 @@ export function verifyCampaignReference(
 // unchanged. What this reference adds is purely the extra coupon_id tag,
 // so the webhook can additionally call redeem_coupon_atomic() once the
 // underlying subscription purchase (unchanged logic) succeeds.
+// CORE Rewards / Points Purchase: same tagged-reference pattern as
+// campaign checkout -- carries the points_packages id itself, not a
+// computed points amount (the server always re-resolves the package's
+// real price/points/bonus at both reference-creation and webhook-
+// fulfillment time; the client never supplies how many Points are
+// granted).
+export function signPointsPackageReference(userId: string, appId: string, packageId: string): string {
+  const base = `points__${userId}__${appId}__${packageId}`;
+  return `${base}__${sign(base)}`;
+}
+
+export function verifyPointsPackageReference(
+  ref: string | null | undefined,
+): { user_id: string; app_id: string; package_id: string } | null {
+  if (!ref) return null;
+  const parts = ref.split("__");
+  if (parts.length !== 5 || parts[0] !== "points") return null;
+  const [, user_id, app_id, package_id, signature] = parts;
+  if (!user_id || !app_id || !package_id || !signature) return null;
+
+  const expected = sign(`points__${user_id}__${app_id}__${package_id}`);
+  const a = Buffer.from(signature, "hex");
+  const b = Buffer.from(expected, "hex");
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+
+  return { user_id, app_id, package_id };
+}
+
 export function signCouponReference(
   userId: string,
   appId: string,

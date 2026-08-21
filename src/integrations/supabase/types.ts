@@ -824,6 +824,480 @@ export type Database = {
           },
         ]
       }
+      affiliate_clicks: {
+        Row: {
+          clicked_at: string
+          id: string
+          link_id: string
+        }
+        Insert: {
+          clicked_at?: string
+          id?: string
+          link_id: string
+        }
+        Update: {
+          clicked_at?: string
+          id?: string
+          link_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_clicks_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_config: {
+        Row: {
+          description: string | null
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          description?: string | null
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          description?: string | null
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      affiliate_conversions: {
+        Row: {
+          affiliate_user_id: string
+          click_id: string | null
+          commission_amount: number
+          commission_fixed_amount: number | null
+          commission_rate: number | null
+          commission_type: string
+          converted_user_id: string | null
+          created_at: string
+          currency: string
+          eligible_amount: number
+          id: string
+          link_id: string | null
+          offer_id: string
+          payout_id: string | null
+          return_period_days: number
+          reversed_at: string | null
+          reversed_conversion_id: string | null
+          reversed_reason: string | null
+          source_app_id: string | null
+          status: string
+          transaction_ref: string
+        }
+        Insert: {
+          affiliate_user_id: string
+          click_id?: string | null
+          commission_amount: number
+          commission_fixed_amount?: number | null
+          commission_rate?: number | null
+          commission_type: string
+          converted_user_id?: string | null
+          created_at?: string
+          currency: string
+          eligible_amount: number
+          id?: string
+          link_id?: string | null
+          offer_id: string
+          payout_id?: string | null
+          return_period_days: number
+          reversed_at?: string | null
+          reversed_conversion_id?: string | null
+          reversed_reason?: string | null
+          source_app_id?: string | null
+          status?: string
+          transaction_ref: string
+        }
+        Update: {
+          affiliate_user_id?: string
+          click_id?: string | null
+          commission_amount?: number
+          commission_fixed_amount?: number | null
+          commission_rate?: number | null
+          commission_type?: string
+          converted_user_id?: string | null
+          created_at?: string
+          currency?: string
+          eligible_amount?: number
+          id?: string
+          link_id?: string | null
+          offer_id?: string
+          payout_id?: string | null
+          return_period_days?: number
+          reversed_at?: string | null
+          reversed_conversion_id?: string | null
+          reversed_reason?: string | null
+          source_app_id?: string | null
+          status?: string
+          transaction_ref?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_conversions_affiliate_user_id_fkey"
+            columns: ["affiliate_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_conversions_affiliate_user_id_fkey"
+            columns: ["affiliate_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_conversions_click_id_fkey"
+            columns: ["click_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_clicks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_conversions_converted_user_id_fkey"
+            columns: ["converted_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_conversions_converted_user_id_fkey"
+            columns: ["converted_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_conversions_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_conversions_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_conversions_payout_id_fkey"
+            columns: ["payout_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_payouts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_conversions_reversed_conversion_id_fkey"
+            columns: ["reversed_conversion_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_conversions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_conversions_source_app_id_fkey"
+            columns: ["source_app_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_links: {
+        Row: {
+          affiliate_user_id: string
+          code: string
+          created_at: string
+          id: string
+          offer_id: string
+        }
+        Insert: {
+          affiliate_user_id: string
+          code: string
+          created_at?: string
+          id?: string
+          offer_id: string
+        }
+        Update: {
+          affiliate_user_id?: string
+          code?: string
+          created_at?: string
+          id?: string
+          offer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_links_affiliate_user_id_fkey"
+            columns: ["affiliate_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_links_affiliate_user_id_fkey"
+            columns: ["affiliate_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_links_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_offers: {
+        Row: {
+          archived: boolean
+          attribution_window_days: number | null
+          commission_fixed_amount: number | null
+          commission_rate: number | null
+          commission_type: string
+          created_at: string
+          created_by: string | null
+          currency: string
+          description_bs: string | null
+          description_de: string | null
+          description_en: string | null
+          destination_url: string
+          display_order: number
+          enabled: boolean
+          id: string
+          return_period_days: number | null
+          source_app_id: string | null
+          source_product_id: string
+          source_product_type: string
+          source_type: string
+          title_bs: string
+          title_de: string
+          title_en: string
+          updated_at: string
+        }
+        Insert: {
+          archived?: boolean
+          attribution_window_days?: number | null
+          commission_fixed_amount?: number | null
+          commission_rate?: number | null
+          commission_type: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          description_bs?: string | null
+          description_de?: string | null
+          description_en?: string | null
+          destination_url: string
+          display_order?: number
+          enabled?: boolean
+          id?: string
+          return_period_days?: number | null
+          source_app_id?: string | null
+          source_product_id: string
+          source_product_type: string
+          source_type: string
+          title_bs: string
+          title_de: string
+          title_en: string
+          updated_at?: string
+        }
+        Update: {
+          archived?: boolean
+          attribution_window_days?: number | null
+          commission_fixed_amount?: number | null
+          commission_rate?: number | null
+          commission_type?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          description_bs?: string | null
+          description_de?: string | null
+          description_en?: string | null
+          destination_url?: string
+          display_order?: number
+          enabled?: boolean
+          id?: string
+          return_period_days?: number | null
+          source_app_id?: string | null
+          source_product_id?: string
+          source_product_type?: string
+          source_type?: string
+          title_bs?: string
+          title_de?: string
+          title_en?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_offers_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_offers_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_offers_source_app_id_fkey"
+            columns: ["source_app_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_payouts: {
+        Row: {
+          affiliate_user_id: string
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          notes: string | null
+          paid_at: string | null
+          payout_reference: string | null
+          status: string
+        }
+        Insert: {
+          affiliate_user_id: string
+          amount: number
+          created_at?: string
+          currency?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          payout_reference?: string | null
+          status?: string
+        }
+        Update: {
+          affiliate_user_id?: string
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          payout_reference?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_payouts_affiliate_user_id_fkey"
+            columns: ["affiliate_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_payouts_affiliate_user_id_fkey"
+            columns: ["affiliate_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_pending_attributions: {
+        Row: {
+          affiliate_code: string
+          created_at: string
+          id: string
+          source_product_id: string
+          source_product_type: string
+          user_id: string
+        }
+        Insert: {
+          affiliate_code: string
+          created_at?: string
+          id?: string
+          source_product_id: string
+          source_product_type: string
+          user_id: string
+        }
+        Update: {
+          affiliate_code?: string
+          created_at?: string
+          id?: string
+          source_product_id?: string
+          source_product_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_pending_attributions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_pending_attributions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliates: {
+        Row: {
+          created_at: string
+          payout_notes: string | null
+          status: string
+          suspended_reason: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          payout_notes?: string | null
+          status?: string
+          suspended_reason?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          payout_notes?: string | null
+          status?: string
+          suspended_reason?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliates_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliates_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       application_capabilities: {
         Row: {
           app_id: string
@@ -2259,6 +2733,7 @@ export type Database = {
           invoice_url: string | null
           payment_method: string | null
           paypal_payment_id: string | null
+          points_package_id: string | null
           status: string | null
           stripe_payment_id: string | null
           stripe_payment_intent_id: string | null
@@ -2275,6 +2750,7 @@ export type Database = {
           invoice_url?: string | null
           payment_method?: string | null
           paypal_payment_id?: string | null
+          points_package_id?: string | null
           status?: string | null
           stripe_payment_id?: string | null
           stripe_payment_intent_id?: string | null
@@ -2291,6 +2767,7 @@ export type Database = {
           invoice_url?: string | null
           payment_method?: string | null
           paypal_payment_id?: string | null
+          points_package_id?: string | null
           status?: string | null
           stripe_payment_id?: string | null
           stripe_payment_intent_id?: string | null
@@ -2303,6 +2780,13 @@ export type Database = {
             columns: ["app_id"]
             isOneToOne: false
             referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_points_package_id_fkey"
+            columns: ["points_package_id"]
+            isOneToOne: false
+            referencedRelation: "points_packages"
             referencedColumns: ["id"]
           },
           {
@@ -2331,6 +2815,74 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      points_packages: {
+        Row: {
+          app_id: string | null
+          bonus_points: number
+          created_at: string
+          currency: string
+          description: string | null
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+          paypal_payment_link: string | null
+          points_amount: number
+          price: number
+          purchase_limit_per_user: number | null
+          stripe_payment_link: string | null
+          updated_at: string
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          app_id?: string | null
+          bonus_points?: number
+          created_at?: string
+          currency?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          paypal_payment_link?: string | null
+          points_amount: number
+          price: number
+          purchase_limit_per_user?: number | null
+          stripe_payment_link?: string | null
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          app_id?: string | null
+          bonus_points?: number
+          created_at?: string
+          currency?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          paypal_payment_link?: string | null
+          points_amount?: number
+          price?: number
+          purchase_limit_per_user?: number | null
+          stripe_payment_link?: string | null
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "points_packages_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
             referencedColumns: ["id"]
           },
         ]
@@ -2661,7 +3213,7 @@ export type Database = {
       }
       resource_references: {
         Row: {
-          app_id: string
+          app_id: string | null
           created_at: string
           destination: string | null
           id: string
@@ -2672,7 +3224,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          app_id: string
+          app_id?: string | null
           created_at?: string
           destination?: string | null
           id?: string
@@ -2683,7 +3235,7 @@ export type Database = {
           user_id: string
         }
         Update: {
-          app_id?: string
+          app_id?: string | null
           created_at?: string
           destination?: string | null
           id?: string

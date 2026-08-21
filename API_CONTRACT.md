@@ -785,6 +785,30 @@ The generic layer for duration/access benefits (Premium, VIP, feature access) �
 - Redemption TOCTOU fixed: `redeem_reward_atomic()` (`service_role`-only Postgres function, transaction-scoped per-user advisory lock) replaces the previous non-atomic balance-check-then-insert in `redeemReward` (`PROJECT_AUDIT.md` → `PR11-13`).
 - Minimal rate limiting is now enforced on the two most abuse-exposed Priority 15 surfaces: `POST /v1/events` (120/min per application+user, `429 RATE_LIMITED`) and reward redemption (10/min per user) — via the existing `enforceRateLimit()` (`src/lib/rate-limit.server.ts`, Priority 11 security audit's in-memory limiter, already protecting `auth/session`/`auth/refresh`/both payment webhooks), not a new mechanism. §4.5's `RATE_LIMITED` code is no longer purely theoretical for these two endpoints; the other ~80 `/v1` endpoints (`PROJECT_AUDIT.md` → `PR11-20`) remain unprotected, outside Priority 15's scope.
 
+### Universal Affiliate System & Points Purchase (Priority 22)
+
+Business rules: `PROJECT_KNOWLEDGE.md` → Universal Affiliate System and → Points Purchase. Two separate CORE modules — Affiliate is financial/attribution, Points Purchase extends the existing Rewards ledger (§13 above) — documented together here only because both shipped in the same pass.
+
+**Points Purchase has no new public `/v1` endpoints.** Package browsing (`getPointsPackages`) and purchase-reference creation (`createPointsPurchaseReference`) are internal TanStack server functions (`src/lib/points-purchase.functions.ts`), the same status `createPaymentReference`/`pricing.tsx` already has — purchased Points land in the existing `reward_ledger`, already covered by §13's Rewards data model with no separate read surface needed.
+
+**Affiliate is mostly internal too** (`getMyAffiliateDashboard`, `getAffiliateCatalog`, `getMyAffiliateLink`, `joinAffiliateProgram`, all in `src/lib/affiliate.functions.ts`) — **except the one genuinely cross-application surface**, since a connected application's own confirmed transaction is exactly the kind of caller-authenticated report `POST /v1/events` already established the pattern for:
+
+### `POST /v1/affiliate/conversions`
+The one endpoint a connected application uses to report its own confirmed transaction for Affiliate attribution. CORE never sees the application's order/payment/product data beyond what's passed here.
+- **Auth:** user (application-authenticated, the calling application's own token for the current end user). **Capability:** none (an application not participating in Affiliate simply has no eligible offers, so this always resolves `ok: false` harmlessly for it).
+- **Request body:** `{ "affiliateCode": "aBc123", "sourceProductType": "shop_product", "sourceProductId": "sku-42", "transactionRef": "order-8891", "eligibleAmount": 79.00, "currency": "EUR" }`. `transactionRef` is namespaced internally as `{azp}:{transactionRef}` — two applications can never collide on the same reference string, and an application can never reference another application's transaction.
+- **Response 200:** `{ "data": { "ok": true } }` or `{ "data": { "ok": false, "reason": "..." } }` — `reason` is one of `affiliate_program_disabled` / `invalid_code` / `offer_not_found` / `offer_mismatch` / `offer_not_eligible` / `self_referral` / `affiliate_not_active` / `no_click_on_record` / `outside_attribution_window` / `duplicate_transaction` / `insert_failed`. Never throws for a business-rule miss — a 200 with `ok: false` is the normal "this didn't qualify" outcome, matching `POST /v1/events`' own `granted: false` convention.
+
+### `POST /v1/affiliate/conversions/{transactionRef}/reverse`
+The application's own confirmation that a transaction it previously reported was cancelled, refunded, returned, or charged back — `{transactionRef}` is the same value the application originally supplied (the `{azp}:` prefix is applied transparently); an application can only ever reverse its own previously-reported conversions.
+- **Auth:** user (application-authenticated, same as above). **Capability:** none.
+- **Request body:** `{ "reason": "customer_refund" }`.
+- **Response 200:** `{ "data": { "ok": true } }` (idempotent — reversing an already-reversed or nonexistent conversion is a safe no-op) or `{ "data": { "ok": false, "reason": "conversion_not_found" } }`.
+
+CORE-native purchases (Premium, Points Packages) never call either endpoint — Affiliate conversion recording/reversal for those happens directly from the Stripe/PayPal webhooks (`recordAffiliateConversionForCorePurchase`/`reverseAffiliateConversion`, called in-process, no HTTP round-trip), reusing the exact same underlying functions.
+
+**Not part of this contract, deliberately:** `POST /v1/system/affiliate-payout-sweep` (the external-scheduler hook for automatic payout batching) is an operational endpoint gated by a shared secret, not a connected-application capability — same status as `POST /v1/system/inactivity-sweep`, absent from this document for the same reason.
+
 ---
 
 ## 14. Advertising

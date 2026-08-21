@@ -2,10 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { addMonthsIso, writeAuditLog } from "@/lib/admin.server";
 import { activateCampaignFromPurchase } from "@/lib/advertising.server";
+import { resolvePointsPackagePurchase } from "@/lib/points-purchase.server";
 import {
   verifyCampaignReference,
   verifyCouponReference,
   verifyPaymentReference,
+  verifyPointsPackageReference,
 } from "@/lib/payment-reference.server";
 import { clientIp, isRateLimited } from "@/lib/rate-limit.server";
 import { sendNotification } from "@/lib/notify.server";
@@ -197,6 +199,11 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
                 });
               }
             }
+
+            // Universal CORE Affiliate System -- see the matching, more
+            // fully commented block in the Stripe webhook.
+            const { reverseAffiliateConversion } = await import("@/lib/affiliate.server");
+            await reverseAffiliateConversion(paymentRow.id, "payment_refunded");
           }
 
           if (paymentRow.status !== "refunded") {
@@ -349,6 +356,106 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
               newData: { currency, amount },
             });
           }
+
+          return Response.json({ received: true });
+        }
+
+        // CORE Rewards / Points Purchase -- see the matching branch in the
+        // Stripe webhook for the full rationale.
+        const pointsRef = verifyPointsPackageReference(resource.custom_id);
+        if (pointsRef) {
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+          const { data: existingPointsPayment } = await supabaseAdmin
+            .from("payments")
+            .select("id")
+            .eq("paypal_payment_id", resource.id)
+            .maybeSingle();
+          if (existingPointsPayment) {
+            return Response.json({ received: true, duplicate: true });
+          }
+
+          const amount = Number(resource.amount?.value ?? 0);
+          const currency = (resource.amount?.currency_code ?? "EUR").toUpperCase();
+
+          const result = await resolvePointsPackagePurchase({
+            packageId: pointsRef.package_id,
+            paidAmount: amount,
+            paidCurrency: currency,
+          });
+          if (!result.ok) {
+            console.warn("PayPal webhook: points package purchase not fulfilled", {
+              capture_id: resource.id,
+              reason: result.reason,
+            });
+            return Response.json({ received: true, ignored: result.reason });
+          }
+
+          const { data: insertedPointsPayment, error: pointsPaymentErr } = await supabaseAdmin
+            .from("payments")
+            .insert({
+              user_id: pointsRef.user_id,
+              app_id: pointsRef.app_id,
+              points_package_id: pointsRef.package_id,
+              paypal_payment_id: resource.id,
+              amount,
+              currency,
+              status: "success",
+              payment_method: "paypal",
+            })
+            .select("id")
+            .single();
+          if (pointsPaymentErr || !insertedPointsPayment) {
+            console.error("PayPal webhook: points package payment insert failed", pointsPaymentErr);
+            return Response.json({ received: true, duplicate: true });
+          }
+
+          const { grantPurchasedPoints } = await import("@/lib/rewards.server");
+          const grant = await grantPurchasedPoints({
+            userId: pointsRef.user_id,
+            points: result.pointsToGrant,
+            paymentId: insertedPointsPayment.id,
+            packageId: pointsRef.package_id,
+            sourceAppId: result.sourceAppId,
+            dedupeKey: `payment:${insertedPointsPayment.id}`,
+          });
+
+          await writeAuditLog({
+            userId: pointsRef.user_id,
+            action: "payment.paypal.points_purchase_success",
+            entityType: "points_package",
+            entityId: pointsRef.package_id,
+            newData: { paypal_id: resource.id, amount, currency, pointsGranted: result.pointsToGrant },
+          });
+
+          if (grant.granted) {
+            await sendNotification({
+              userId: pointsRef.user_id,
+              appId: pointsRef.app_id,
+              category: "reward",
+              type: "success",
+              dedupeKey: `points-purchase-notify:${insertedPointsPayment.id}`,
+              content: {
+                titleBs: "Points su dodani",
+                titleEn: "Points added",
+                titleDe: "Points hinzugefügt",
+                messageBs: `Dodano ti je ${result.pointsToGrant} Points.`,
+                messageEn: `${result.pointsToGrant} Points have been added to your balance.`,
+                messageDe: `${result.pointsToGrant} Points wurden deinem Guthaben hinzugefügt.`,
+              },
+            });
+          }
+
+          const { recordAffiliateConversionForCorePurchase } = await import("@/lib/affiliate.server");
+          await recordAffiliateConversionForCorePurchase({
+            userId: pointsRef.user_id,
+            appId: pointsRef.app_id,
+            sourceProductType: "points_package",
+            sourceProductId: pointsRef.package_id,
+            paymentId: insertedPointsPayment.id,
+            eligibleAmount: amount,
+            currency,
+          });
 
           return Response.json({ received: true });
         }
@@ -796,6 +903,21 @@ export const Route = createFileRoute("/api/public/webhooks/paypal")({
             amount,
             currency,
             paypal_id: resource.id,
+          });
+        }
+
+        // Universal CORE Affiliate System -- see the matching, more fully
+        // commented block in the Stripe webhook.
+        if (!dependencyRefunded && insertedPayment) {
+          const { recordAffiliateConversionForCorePurchase } = await import("@/lib/affiliate.server");
+          await recordAffiliateConversionForCorePurchase({
+            userId: ref.user_id,
+            appId: ref.app_id,
+            sourceProductType: "subscription_plan",
+            sourceProductId: ref.plan_id,
+            paymentId: insertedPayment.id,
+            eligibleAmount: amount,
+            currency,
           });
         }
 

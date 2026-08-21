@@ -216,6 +216,52 @@ export async function grantRewardAction(params: {
   return { granted: points > 0, points, reason };
 }
 
+// CORE Rewards / Points Purchase: grants Points for a verified Points
+// Package purchase. Deliberately NOT routed through grantRewardAction() --
+// that function's entire design is "look up a configured value for a
+// known action key" (reward_action_rules), but a points purchase's amount
+// is decided by which package was bought, already resolved by the caller
+// from the points_packages row itself (never a client-supplied value).
+// `resourceType: "payment"`/`resourceId: paymentId` is what makes
+// reversePaymentPoints() (below) already reverse this automatically on a
+// Stripe/PayPal refund -- no new reversal code needed for Points Purchase.
+export async function grantPurchasedPoints(params: {
+  userId: string;
+  points: number;
+  paymentId: string;
+  packageId: string;
+  sourceAppId: string | null;
+  dedupeKey: string;
+}): Promise<{ granted: boolean; reason?: string }> {
+  const supabaseAdmin = await admin();
+
+  const { error } = await supabaseAdmin.from("reward_ledger").insert({
+    user_id: params.userId,
+    action: "points_purchased",
+    points: params.points,
+    lifetime_points: params.points,
+    resource_type: "payment",
+    resource_id: params.paymentId,
+    source_app_id: params.sourceAppId,
+    actor_user_id: params.userId,
+    origin: "points_purchase",
+    metadata: { packageId: params.packageId } as Json,
+    dedupe_key: params.dedupeKey,
+  });
+  if (error) {
+    if (error.code === "23505") return { granted: false, reason: "duplicate" };
+    console.error("grantPurchasedPoints: ledger insert failed", error);
+    return { granted: false, reason: "insert_failed" };
+  }
+
+  if (params.points > 0) {
+    await checkAchievements(params.userId, "points_purchased");
+    await evaluatePremiumMilestones(params.userId);
+  }
+
+  return { granted: true };
+}
+
 // Exported for events.server.ts's recordEvent() pipeline (Priority 12
 // Phase 3) -- an event-driven grant completes the same achievements a
 // CORE-internal action can, since both write the same reward_ledger.

@@ -1104,7 +1104,9 @@
         "support": { "title": "Support", "desc": "User support tickets and replies." },
         "members": { "title": "Members", "desc": "Configure section counts and directory pagination for the Members page." },
         "offersCoupons": { "title": "Offers & Coupons", "desc": "Global Offers, Individual Offers, Public Coupons, Reward Boosts." },
-        "dashboardActions": { "title": "Dashboard Actions", "desc": "Generic Dashboard offers, actions, and resource references shown to users." }
+        "dashboardActions": { "title": "Dashboard Actions", "desc": "Generic Dashboard offers, actions, and resource references shown to users." },
+        "affiliate": { "title": "Affiliate", "desc": "Affiliate offers, affiliates, conversions, commissions, and payouts." },
+        "pointsPackages": { "title": "Points Packages", "desc": "Purchasable Points packages and the Buy Points switch." }
       }
     },
     "verification": {
@@ -1221,6 +1223,41 @@
       "resourceType": "Resource type",
       "status": "Status",
       "resourceCreated": "Resource reference saved"
+    },
+    "affiliate": {
+      "title": "Affiliate",
+      "subtitle": "Manage the Affiliate Program: offers, affiliates, conversions, commissions, and payouts.",
+      "configTitle": "Global Config",
+      "offersTitle": "Affiliate Offers",
+      "sourceType": "Source type",
+      "sourceCore": "CORE",
+      "sourceApplication": "Application",
+      "sourceProductType": "Source product type",
+      "sourceProductId": "Source product ID",
+      "destinationUrl": "Destination URL",
+      "commissionType": "Commission type",
+      "commissionRate": "Commission rate (%)",
+      "commissionFixedAmount": "Fixed commission (€)",
+      "affiliatesTitle": "Affiliates",
+      "conversionsTitle": "Conversions",
+      "reverse": "Reverse",
+      "payoutsTitle": "Payouts",
+      "payoutsHint": "Marking a payout paid is a manual step -- no automated external payout provider is configured. Record the actual payment reference (bank transfer, manual PayPal Payout, etc.) once sent.",
+      "payoutReferencePlaceholder": "Payout reference",
+      "markPaid": "Mark paid"
+    },
+    "pointsPackages": {
+      "title": "Points Packages",
+      "subtitle": "Manage purchasable Points packages and the Buy Points switch.",
+      "buySwitchTitle": "Buy Points",
+      "buySwitchLabel": "Allow users to purchase Points packages",
+      "packagesTitle": "Packages",
+      "price": "Price (€)",
+      "pointsAmount": "Points amount",
+      "bonusPoints": "Bonus Points",
+      "stripeLink": "Stripe payment link",
+      "paypalLink": "PayPal payment link",
+      "purchasesTitle": "Recent Points purchases"
     }
   },
   "members": {
@@ -1282,6 +1319,48 @@
       "incomplete": "incomplete",
       "inactive": "inactive"
     }
+  },
+  "affiliate": {
+    "title": "Affiliate",
+    "subtitle": "Promote approved products and services and earn commission.",
+    "status": {
+      "notAffiliate": "You're not an Affiliate yet.",
+      "active": "Active",
+      "suspended": "Your Affiliate account is currently suspended.",
+      "disabled": "Your Affiliate account is currently disabled."
+    },
+    "joinDescription": "Recommend selected products and services and earn commission.",
+    "joinCta": "Become an Affiliate",
+    "joined": "Affiliate account activated",
+    "joinError": {
+      "affiliate_program_disabled": "The Affiliate Program is currently disabled.",
+      "already_active": "You're already an Affiliate.",
+      "already_suspended": "Your Affiliate account is suspended.",
+      "already_disabled": "Your Affiliate account is disabled."
+    },
+    "clicks": "Clicks",
+    "approvedBalance": "Approved balance",
+    "pendingBalance": "Pending balance",
+    "paidTotal": "Paid out",
+    "thresholdInfo": "Minimum payout threshold: {{threshold}} {{currency}}.",
+    "nextPayout": "Latest payout: {{amount}} {{currency}} ({{status}})",
+    "payoutStatus": { "pending": "pending", "paid": "paid", "failed": "failed" },
+    "catalogTitle": "Available to promote",
+    "commissionPercent": "{{rate}}% commission",
+    "commissionFixed": "{{amount}} {{currency}} commission",
+    "copyLink": "Copy link",
+    "promote": "Promote",
+    "recentConversions": "Recent conversions",
+    "noConversions": "No conversions yet.",
+    "conversionStatus": { "pending": "Pending", "approved": "Approved", "paid": "Paid", "reversed": "Reversed" },
+    "linkNotFound": "This link is no longer available."
+  },
+  "pointsPurchase": {
+    "title": "Need more Points?",
+    "subtitle": "Buy a Points package to speed up your progress.",
+    "bonus": "+{{count}} bonus Points",
+    "buyWithStripe": "Buy with card",
+    "buyWithPaypal": "Buy with PayPal"
   },
   "advertisingSlot": {
     "title": "YOUR AD IN THIS SPOT!",

@@ -3,10 +3,12 @@ import Stripe from "stripe";
 
 import { addMonthsIso, writeAuditLog } from "@/lib/admin.server";
 import { activateCampaignFromPurchase } from "@/lib/advertising.server";
+import { resolvePointsPackagePurchase } from "@/lib/points-purchase.server";
 import {
   verifyCampaignReference,
   verifyCouponReference,
   verifyPaymentReference,
+  verifyPointsPackageReference,
 } from "@/lib/payment-reference.server";
 import { clientIp, isRateLimited } from "@/lib/rate-limit.server";
 import { sendNotification } from "@/lib/notify.server";
@@ -174,6 +176,17 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
                 }
               }
             }
+
+            // Universal CORE Affiliate System: any commission tied to this
+            // payment (via transaction_ref, CORE-native purchases only --
+            // an application-reported conversion is reversed by that
+            // application's own call to POST /v1/affiliate/conversions/
+            // {ref}/reverse, not from here) must not remain payable once
+            // the originating payment itself is refunded. Idempotent
+            // no-op if there was never a conversion for this payment, or
+            // it's already reversed.
+            const { reverseAffiliateConversion } = await import("@/lib/affiliate.server");
+            await reverseAffiliateConversion(paymentRow.id, "payment_refunded");
           }
 
           if (paymentRow.status !== "refunded") {
@@ -351,6 +364,113 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
               newData: { currency, amount },
             });
           }
+
+          return Response.json({ received: true });
+        }
+
+        // CORE Rewards / Points Purchase: a points-package-tagged reference
+        // is checked before the plan flow below, exactly like the campaign
+        // branch above -- its own distinct reference shape can never be
+        // confused with a subscription/coupon reference.
+        const pointsRef = verifyPointsPackageReference(session.client_reference_id ?? undefined);
+        if (pointsRef) {
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+          const { data: existingPointsPayment } = await supabaseAdmin
+            .from("payments")
+            .select("id")
+            .eq("stripe_payment_id", session.id)
+            .maybeSingle();
+          if (existingPointsPayment) {
+            return Response.json({ received: true, duplicate: true });
+          }
+
+          const amount = (session.amount_total ?? 0) / 100;
+          const currency = (session.currency ?? "eur").toUpperCase();
+
+          const result = await resolvePointsPackagePurchase({
+            packageId: pointsRef.package_id,
+            paidAmount: amount,
+            paidCurrency: currency,
+          });
+          if (!result.ok) {
+            console.warn("Stripe webhook: points package purchase not fulfilled", {
+              session_id: session.id,
+              reason: result.reason,
+            });
+            return Response.json({ received: true, ignored: result.reason });
+          }
+
+          const { data: insertedPointsPayment, error: pointsPaymentErr } = await supabaseAdmin
+            .from("payments")
+            .insert({
+              user_id: pointsRef.user_id,
+              app_id: pointsRef.app_id,
+              points_package_id: pointsRef.package_id,
+              stripe_payment_id: session.id,
+              stripe_payment_intent_id:
+                typeof session.payment_intent === "string"
+                  ? session.payment_intent
+                  : (session.payment_intent?.id ?? null),
+              amount,
+              currency,
+              status: "success",
+              payment_method: "stripe",
+              invoice_url: session.invoice ? String(session.invoice) : null,
+            })
+            .select("id")
+            .single();
+          if (pointsPaymentErr || !insertedPointsPayment) {
+            console.error("Stripe webhook: points package payment insert failed", pointsPaymentErr);
+            return Response.json({ received: true, duplicate: true });
+          }
+
+          const { grantPurchasedPoints } = await import("@/lib/rewards.server");
+          const grant = await grantPurchasedPoints({
+            userId: pointsRef.user_id,
+            points: result.pointsToGrant,
+            paymentId: insertedPointsPayment.id,
+            packageId: pointsRef.package_id,
+            sourceAppId: result.sourceAppId,
+            dedupeKey: `payment:${insertedPointsPayment.id}`,
+          });
+
+          await writeAuditLog({
+            userId: pointsRef.user_id,
+            action: "payment.stripe.points_purchase_success",
+            entityType: "points_package",
+            entityId: pointsRef.package_id,
+            newData: { session_id: session.id, amount, currency, pointsGranted: result.pointsToGrant },
+          });
+
+          if (grant.granted) {
+            await sendNotification({
+              userId: pointsRef.user_id,
+              appId: pointsRef.app_id,
+              category: "reward",
+              type: "success",
+              dedupeKey: `points-purchase-notify:${insertedPointsPayment.id}`,
+              content: {
+                titleBs: "Points su dodani",
+                titleEn: "Points added",
+                titleDe: "Points hinzugefügt",
+                messageBs: `Dodano ti je ${result.pointsToGrant} Points.`,
+                messageEn: `${result.pointsToGrant} Points have been added to your balance.`,
+                messageDe: `${result.pointsToGrant} Points wurden deinem Guthaben hinzugefügt.`,
+              },
+            });
+          }
+
+          const { recordAffiliateConversionForCorePurchase } = await import("@/lib/affiliate.server");
+          await recordAffiliateConversionForCorePurchase({
+            userId: pointsRef.user_id,
+            appId: pointsRef.app_id,
+            sourceProductType: "points_package",
+            sourceProductId: pointsRef.package_id,
+            paymentId: insertedPointsPayment.id,
+            eligibleAmount: amount,
+            currency,
+          });
 
           return Response.json({ received: true });
         }
@@ -865,6 +985,24 @@ export const Route = createFileRoute("/api/public/webhooks/stripe")({
             amount,
             currency,
             session_id: session.id,
+          });
+        }
+
+        // Universal CORE Affiliate System: applies to any plan purchase
+        // (Premium or a benefit-only Commercial Product alike) -- CORE
+        // doesn't need to know which; the offer catalog is what decides
+        // whether this plan_id is currently promotable. No-ops harmlessly
+        // when there's no pending attribution for this user/plan.
+        if (!dependencyRefunded && insertedPayment) {
+          const { recordAffiliateConversionForCorePurchase } = await import("@/lib/affiliate.server");
+          await recordAffiliateConversionForCorePurchase({
+            userId: ref.user_id,
+            appId: ref.app_id,
+            sourceProductType: "subscription_plan",
+            sourceProductId: ref.plan_id,
+            paymentId: insertedPayment.id,
+            eligibleAmount: amount,
+            currency,
           });
         }
 

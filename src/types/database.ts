@@ -40,7 +40,8 @@ export type NotificationCategory =
   | "warning"
   | "system"
   | "message"
-  | "inactivity";
+  | "inactivity"
+  | "affiliate";
 export type NotificationEmailStatus = "not_applicable" | "pending" | "sent" | "failed";
 
 // -----------------------------------------------------------------------------

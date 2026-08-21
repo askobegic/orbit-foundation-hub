@@ -9,6 +9,7 @@ import {
   CreditCard,
   Compass,
   Gift,
+  Handshake,
   HelpCircle,
   Image,
   LayoutGrid,
@@ -208,6 +209,18 @@ function AdminGate() {
       icon: Compass,
       title: t("admin.hub.cards.dashboardActions.title"),
       desc: t("admin.hub.cards.dashboardActions.desc"),
+    },
+    {
+      to: "/admin/affiliate",
+      icon: Handshake,
+      title: t("admin.hub.cards.affiliate.title"),
+      desc: t("admin.hub.cards.affiliate.desc"),
+    },
+    {
+      to: "/admin/points-packages",
+      icon: Zap,
+      title: t("admin.hub.cards.pointsPackages.title"),
+      desc: t("admin.hub.cards.pointsPackages.desc"),
     },
   ];
   return (

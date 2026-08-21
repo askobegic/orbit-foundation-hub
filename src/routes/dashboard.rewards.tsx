@@ -6,6 +6,7 @@ import { ArrowLeft, Flame, Gift, Target, Trophy, Star, Users } from "lucide-reac
 import { toast } from "sonner";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { BuyPoints } from "@/components/dashboard/BuyPoints";
 import { DashboardMobileNav } from "@/components/dashboard/DashboardNav";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useApplication } from "@/context/ApplicationContext";
@@ -135,6 +136,8 @@ function RewardsPage() {
                 <p className="mt-1 text-xs text-gray-500">{t("rewards.verifiedReferrals")}</p>
               </div>
             </section>
+
+            <BuyPoints appId={application?.id} />
 
             {data.pointsByApp.length > 1 && (
               <section className="mt-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-100">

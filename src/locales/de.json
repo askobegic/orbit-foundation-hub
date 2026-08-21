@@ -1104,7 +1104,9 @@
         "support": { "title": "Support", "desc": "Support-Anfragen und Antworten der Nutzer." },
         "members": { "title": "Mitglieder", "desc": "Anzahl der Karten pro Bereich und Verzeichnis-Paginierung für die Mitgliederseite konfigurieren." },
         "offersCoupons": { "title": "Angebote & Gutscheine", "desc": "Globale Angebote, individuelle Angebote, öffentliche Gutscheine, Bonuspunkte." },
-        "dashboardActions": { "title": "Dashboard-Aktionen", "desc": "Generische Dashboard-Angebote, -Aktionen und Ressourcenreferenzen für Nutzer." }
+        "dashboardActions": { "title": "Dashboard-Aktionen", "desc": "Generische Dashboard-Angebote, -Aktionen und Ressourcenreferenzen für Nutzer." },
+        "affiliate": { "title": "Affiliate", "desc": "Affiliate-Angebote, Affiliates, Conversions, Provisionen und Auszahlungen." },
+        "pointsPackages": { "title": "Points-Pakete", "desc": "Käufliche Points-Pakete und der Points-Kauf-Schalter." }
       }
     },
     "verification": {
@@ -1221,6 +1223,41 @@
       "resourceType": "Ressourcentyp",
       "status": "Status",
       "resourceCreated": "Ressourcenreferenz gespeichert"
+    },
+    "affiliate": {
+      "title": "Affiliate",
+      "subtitle": "Verwalte das Affiliate-Programm: Angebote, Affiliates, Conversions, Provisionen und Auszahlungen.",
+      "configTitle": "Globale Einstellungen",
+      "offersTitle": "Affiliate-Angebote",
+      "sourceType": "Quelltyp",
+      "sourceCore": "CORE",
+      "sourceApplication": "Anwendung",
+      "sourceProductType": "Quellprodukttyp",
+      "sourceProductId": "Quellprodukt-ID",
+      "destinationUrl": "Ziel-URL",
+      "commissionType": "Provisionstyp",
+      "commissionRate": "Provisionssatz (%)",
+      "commissionFixedAmount": "Feste Provision (€)",
+      "affiliatesTitle": "Affiliates",
+      "conversionsTitle": "Conversions",
+      "reverse": "Stornieren",
+      "payoutsTitle": "Auszahlungen",
+      "payoutsHint": "Eine Auszahlung als bezahlt zu markieren ist ein manueller Schritt -- es ist kein automatisierter externer Auszahlungsanbieter konfiguriert. Erfasse die tatsächliche Zahlungsreferenz (Banküberweisung, manueller PayPal Payout usw.) nach dem Versand.",
+      "payoutReferencePlaceholder": "Auszahlungsreferenz",
+      "markPaid": "Als bezahlt markieren"
+    },
+    "pointsPackages": {
+      "title": "Points-Pakete",
+      "subtitle": "Verwalte käufliche Points-Pakete und den Points-Kauf-Schalter.",
+      "buySwitchTitle": "Points kaufen",
+      "buySwitchLabel": "Nutzern erlauben, Points-Pakete zu kaufen",
+      "packagesTitle": "Pakete",
+      "price": "Preis (€)",
+      "pointsAmount": "Points-Menge",
+      "bonusPoints": "Bonus-Points",
+      "stripeLink": "Stripe-Zahlungslink",
+      "paypalLink": "PayPal-Zahlungslink",
+      "purchasesTitle": "Neueste Points-Käufe"
     }
   },
   "members": {
@@ -1282,6 +1319,48 @@
       "incomplete": "unvollständig",
       "inactive": "inaktiv"
     }
+  },
+  "affiliate": {
+    "title": "Affiliate",
+    "subtitle": "Empfiehl ausgewählte Produkte und Dienstleistungen und verdiene Provision.",
+    "status": {
+      "notAffiliate": "Du bist noch kein Affiliate.",
+      "active": "Aktiv",
+      "suspended": "Dein Affiliate-Konto ist derzeit gesperrt.",
+      "disabled": "Dein Affiliate-Konto ist derzeit deaktiviert."
+    },
+    "joinDescription": "Empfiehl ausgewählte Produkte und Dienstleistungen und verdiene Provision.",
+    "joinCta": "Werde Affiliate",
+    "joined": "Affiliate-Konto aktiviert",
+    "joinError": {
+      "affiliate_program_disabled": "Das Affiliate-Programm ist derzeit deaktiviert.",
+      "already_active": "Du bist bereits Affiliate.",
+      "already_suspended": "Dein Affiliate-Konto ist gesperrt.",
+      "already_disabled": "Dein Affiliate-Konto ist deaktiviert."
+    },
+    "clicks": "Klicks",
+    "approvedBalance": "Genehmigtes Guthaben",
+    "pendingBalance": "Ausstehendes Guthaben",
+    "paidTotal": "Ausgezahlt",
+    "thresholdInfo": "Mindestauszahlungsschwelle: {{threshold}} {{currency}}.",
+    "nextPayout": "Letzte Auszahlung: {{amount}} {{currency}} ({{status}})",
+    "payoutStatus": { "pending": "ausstehend", "paid": "bezahlt", "failed": "fehlgeschlagen" },
+    "catalogTitle": "Verfügbar zur Bewerbung",
+    "commissionPercent": "{{rate}}% Provision",
+    "commissionFixed": "{{amount}} {{currency}} Provision",
+    "copyLink": "Link kopieren",
+    "promote": "Bewerben",
+    "recentConversions": "Neueste Conversions",
+    "noConversions": "Noch keine Conversions.",
+    "conversionStatus": { "pending": "Ausstehend", "approved": "Genehmigt", "paid": "Bezahlt", "reversed": "Storniert" },
+    "linkNotFound": "Dieser Link ist nicht mehr verfügbar."
+  },
+  "pointsPurchase": {
+    "title": "Brauchst du mehr Points?",
+    "subtitle": "Kaufe ein Points-Paket, um deinen Fortschritt zu beschleunigen.",
+    "bonus": "+{{count}} Bonus-Points",
+    "buyWithStripe": "Mit Karte kaufen",
+    "buyWithPaypal": "Mit PayPal kaufen"
   },
   "advertisingSlot": {
     "title": "IHRE WERBUNG AN DIESER STELLE!",

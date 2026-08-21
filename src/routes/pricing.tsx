@@ -8,6 +8,8 @@ import { Check, Crown, ArrowLeft } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { getStoredAffiliateCode } from "@/lib/affiliate-tracking";
+import { registerCheckoutAttribution } from "@/lib/affiliate.functions";
 import { createPaymentReference } from "@/lib/payments.functions";
 import type { ApplicationRow, SubscriptionPlanRow } from "@/types/database";
 
@@ -44,6 +46,7 @@ function PricingPage() {
   const [selectedApp, setSelectedApp] = useState<string | null>(null);
   const [payingPlanId, setPayingPlanId] = useState<string | null>(null);
   const createReference = useServerFn(createPaymentReference);
+  const registerAttribution = useServerFn(registerCheckoutAttribution);
 
   // /pricing is the actual purchase surface, not a status display -- unlike
   // the Dashboard "My Applications" widget (which also shows coming_soon,
@@ -99,6 +102,18 @@ function PricingPage() {
     if (!link || !user || !activeAppId) return;
     setPayingPlanId(plan.id);
     try {
+      // Universal CORE Affiliate System: if this visitor arrived via an
+      // Affiliate link, bridge that code to the later webhook confirmation
+      // (this codebase has no dynamic Checkout Session to carry it through
+      // the payment provider itself -- see payment-reference.server.ts).
+      // Best-effort: a missing/expired code is the normal, non-affiliate
+      // case and never blocks checkout.
+      const affiliateCode = getStoredAffiliateCode();
+      if (affiliateCode) {
+        await registerAttribution({
+          data: { sourceProductType: "subscription_plan", sourceProductId: plan.id, affiliateCode },
+        }).catch(() => {});
+      }
       const { reference } = await createReference({
         data: { app_id: activeAppId, plan_id: plan.id },
       });

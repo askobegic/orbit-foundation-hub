@@ -16,6 +16,7 @@ import { Route as MembersRouteImport } from './routes/members'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as AdminAdvertisingRouteImport } from './routes/admin.advertising'
+import { Route as AdminAffiliateRouteImport } from './routes/admin.affiliate'
 import { Route as AdminApplicationsRouteImport } from './routes/admin.applications'
 import { Route as AdminCapabilitiesRouteImport } from './routes/admin.capabilities'
 import { Route as AdminCommunicationRouteImport } from './routes/admin.communication'
@@ -26,6 +27,7 @@ import { Route as AdminEventsRouteImport } from './routes/admin.events'
 import { Route as AdminMembersRouteImport } from './routes/admin.members'
 import { Route as AdminOffersCouponsRouteImport } from './routes/admin.offers-coupons'
 import { Route as AdminPaymentsRouteImport } from './routes/admin.payments'
+import { Route as AdminPointsPackagesRouteImport } from './routes/admin.points-packages'
 import { Route as AdminRewardsRouteImport } from './routes/admin.rewards'
 import { Route as AdminSupportRouteImport } from './routes/admin.support'
 import { Route as AdminTrialsRouteImport } from './routes/admin.trials'
@@ -35,6 +37,7 @@ import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
 import { Route as DashboardActivityRouteImport } from './routes/dashboard.activity'
 import { Route as DashboardAdvertisingRouteImport } from './routes/dashboard.advertising'
+import { Route as DashboardAffiliateRouteImport } from './routes/dashboard.affiliate'
 import { Route as DashboardHelpRouteImport } from './routes/dashboard.help'
 import { Route as DashboardMessagesRouteImport } from './routes/dashboard.messages'
 import { Route as DashboardNotificationsRouteImport } from './routes/dashboard.notifications'
@@ -46,6 +49,7 @@ import { Route as DashboardSettingsRouteImport } from './routes/dashboard.settin
 import { Route as OfferCodeRouteImport } from './routes/offer.$code'
 import { Route as PaymentSuccessRouteImport } from './routes/payment.success'
 import { Route as ProfileUsernameRouteImport } from './routes/profile.$username'
+import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as UUsernameRouteImport } from './routes/u.$username'
 import { Route as DashboardMessagesConversationIdRouteImport } from './routes/dashboard.messages.$conversationId'
 import { Route as UUsernameShareRouteImport } from './routes/u.$username.share'
@@ -73,6 +77,7 @@ import { Route as V1PaymentsReferenceRouteImport } from './routes/v1/payments/re
 import { Route as V1ProductsIndexRouteImport } from './routes/v1/products/index'
 import { Route as V1ProfilesUsernameRouteImport } from './routes/v1/profiles/$username'
 import { Route as V1ShareInviteIndexRouteImport } from './routes/v1/share-invite/index'
+import { Route as V1SystemAffiliatePayoutSweepRouteImport } from './routes/v1/system/affiliate-payout-sweep'
 import { Route as V1SystemInactivitySweepRouteImport } from './routes/v1/system/inactivity-sweep'
 import { Route as V1TrialPolicyIndexRouteImport } from './routes/v1/trial-policy/index'
 import { Route as ApiPublicWebhooksPaypalRouteImport } from './routes/api/public/webhooks/paypal'
@@ -97,6 +102,7 @@ import { Route as V1AdminUsersIndexRouteImport } from './routes/v1/admin/users/i
 import { Route as V1AdminVerificationRequestsIndexRouteImport } from './routes/v1/admin/verification-requests/index'
 import { Route as V1AdminVerificationUserIdRouteImport } from './routes/v1/admin/verification/$userId'
 import { Route as V1AdvertisingPlacementsIndexRouteImport } from './routes/v1/advertising/placements/index'
+import { Route as V1AffiliateConversionsIndexRouteImport } from './routes/v1/affiliate/conversions/index'
 import { Route as V1ConversationsConversationIdHideRouteImport } from './routes/v1/conversations/$conversationId/hide'
 import { Route as V1ConversationsConversationIdReadRouteImport } from './routes/v1/conversations/$conversationId/read'
 import { Route as V1DashboardWidgetsIndexRouteImport } from './routes/v1/dashboard/widgets/index'
@@ -141,6 +147,7 @@ import { Route as V1AdminUsersUserIdIndexRouteImport } from './routes/v1/admin/u
 import { Route as V1AdminUsersUserIdReactivateRouteImport } from './routes/v1/admin/users/$userId/reactivate'
 import { Route as V1AdminUsersUserIdSuspendRouteImport } from './routes/v1/admin/users/$userId/suspend'
 import { Route as V1AdvertisingPlacementsPlacementKeyActiveAdRouteImport } from './routes/v1/advertising/placements/$placementKey/active-ad'
+import { Route as V1AffiliateConversionsTransactionRefReverseRouteImport } from './routes/v1/affiliate/conversions/$transactionRef/reverse'
 import { Route as V1ConversationsConversationIdMessagesIndexRouteImport } from './routes/v1/conversations/$conversationId/messages/index'
 import { Route as V1MeAdvertisingCampaignsIndexRouteImport } from './routes/v1/me/advertising/campaigns/index'
 import { Route as V1MeNotificationsNotificationIdReadRouteImport } from './routes/v1/me/notifications/$notificationId/read'
@@ -188,6 +195,11 @@ const PricingRoute = PricingRouteImport.update({
 const AdminAdvertisingRoute = AdminAdvertisingRouteImport.update({
   id: '/advertising',
   path: '/advertising',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAffiliateRoute = AdminAffiliateRouteImport.update({
+  id: '/affiliate',
+  path: '/affiliate',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminApplicationsRoute = AdminApplicationsRouteImport.update({
@@ -240,6 +252,11 @@ const AdminPaymentsRoute = AdminPaymentsRouteImport.update({
   path: '/payments',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminPointsPackagesRoute = AdminPointsPackagesRouteImport.update({
+  id: '/points-packages',
+  path: '/points-packages',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminRewardsRoute = AdminRewardsRouteImport.update({
   id: '/rewards',
   path: '/rewards',
@@ -283,6 +300,11 @@ const DashboardActivityRoute = DashboardActivityRouteImport.update({
 const DashboardAdvertisingRoute = DashboardAdvertisingRouteImport.update({
   id: '/dashboard/advertising',
   path: '/dashboard/advertising',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardAffiliateRoute = DashboardAffiliateRouteImport.update({
+  id: '/dashboard/affiliate',
+  path: '/dashboard/affiliate',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardHelpRoute = DashboardHelpRouteImport.update({
@@ -338,6 +360,11 @@ const PaymentSuccessRoute = PaymentSuccessRouteImport.update({
 const ProfileUsernameRoute = ProfileUsernameRouteImport.update({
   id: '/profile/$username',
   path: '/profile/$username',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RCodeRoute = RCodeRouteImport.update({
+  id: '/r/$code',
+  path: '/r/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UUsernameRoute = UUsernameRouteImport.update({
@@ -477,6 +504,12 @@ const V1ShareInviteIndexRoute = V1ShareInviteIndexRouteImport.update({
   path: '/v1/share-invite/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const V1SystemAffiliatePayoutSweepRoute =
+  V1SystemAffiliatePayoutSweepRouteImport.update({
+    id: '/v1/system/affiliate-payout-sweep',
+    path: '/v1/system/affiliate-payout-sweep',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const V1SystemInactivitySweepRoute = V1SystemInactivitySweepRouteImport.update({
   id: '/v1/system/inactivity-sweep',
   path: '/v1/system/inactivity-sweep',
@@ -604,6 +637,12 @@ const V1AdvertisingPlacementsIndexRoute =
   V1AdvertisingPlacementsIndexRouteImport.update({
     id: '/v1/advertising/placements/',
     path: '/v1/advertising/placements/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const V1AffiliateConversionsIndexRoute =
+  V1AffiliateConversionsIndexRouteImport.update({
+    id: '/v1/affiliate/conversions/',
+    path: '/v1/affiliate/conversions/',
     getParentRoute: () => rootRouteImport,
   } as any)
 const V1ConversationsConversationIdHideRoute =
@@ -859,6 +898,12 @@ const V1AdvertisingPlacementsPlacementKeyActiveAdRoute =
     path: '/v1/advertising/placements/$placementKey/active-ad',
     getParentRoute: () => rootRouteImport,
   } as any)
+const V1AffiliateConversionsTransactionRefReverseRoute =
+  V1AffiliateConversionsTransactionRefReverseRouteImport.update({
+    id: '/v1/affiliate/conversions/$transactionRef/reverse',
+    path: '/v1/affiliate/conversions/$transactionRef/reverse',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const V1ConversationsConversationIdMessagesIndexRoute =
   V1ConversationsConversationIdMessagesIndexRouteImport.update({
     id: '/v1/conversations/$conversationId/messages/',
@@ -946,6 +991,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof OnboardingRoute
   '/pricing': typeof PricingRoute
   '/admin/advertising': typeof AdminAdvertisingRoute
+  '/admin/affiliate': typeof AdminAffiliateRoute
   '/admin/applications': typeof AdminApplicationsRoute
   '/admin/capabilities': typeof AdminCapabilitiesRoute
   '/admin/communication': typeof AdminCommunicationRoute
@@ -956,6 +1002,7 @@ export interface FileRoutesByFullPath {
   '/admin/members': typeof AdminMembersRoute
   '/admin/offers-coupons': typeof AdminOffersCouponsRoute
   '/admin/payments': typeof AdminPaymentsRoute
+  '/admin/points-packages': typeof AdminPointsPackagesRoute
   '/admin/rewards': typeof AdminRewardsRoute
   '/admin/support': typeof AdminSupportRoute
   '/admin/trials': typeof AdminTrialsRoute
@@ -964,6 +1011,7 @@ export interface FileRoutesByFullPath {
   '/auth/callback': typeof AuthCallbackRoute
   '/dashboard/activity': typeof DashboardActivityRoute
   '/dashboard/advertising': typeof DashboardAdvertisingRoute
+  '/dashboard/affiliate': typeof DashboardAffiliateRoute
   '/dashboard/help': typeof DashboardHelpRoute
   '/dashboard/messages': typeof DashboardMessagesRouteWithChildren
   '/dashboard/notifications': typeof DashboardNotificationsRoute
@@ -975,6 +1023,7 @@ export interface FileRoutesByFullPath {
   '/offer/$code': typeof OfferCodeRoute
   '/payment/success': typeof PaymentSuccessRoute
   '/profile/$username': typeof ProfileUsernameRoute
+  '/r/$code': typeof RCodeRoute
   '/u/$username': typeof UUsernameRouteWithChildren
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/messages/$conversationId': typeof DashboardMessagesConversationIdRoute
@@ -996,6 +1045,7 @@ export interface FileRoutesByFullPath {
   '/v1/media/avatar': typeof V1MediaAvatarRoute
   '/v1/payments/reference': typeof V1PaymentsReferenceRoute
   '/v1/profiles/$username': typeof V1ProfilesUsernameRoute
+  '/v1/system/affiliate-payout-sweep': typeof V1SystemAffiliatePayoutSweepRoute
   '/v1/system/inactivity-sweep': typeof V1SystemInactivitySweepRoute
   '/v1/applications/': typeof V1ApplicationsIndexRoute
   '/v1/capabilities/': typeof V1CapabilitiesIndexRoute
@@ -1034,6 +1084,7 @@ export interface FileRoutesByFullPath {
   '/v1/admin/users/': typeof V1AdminUsersIndexRoute
   '/v1/admin/verification-requests/': typeof V1AdminVerificationRequestsIndexRoute
   '/v1/advertising/placements/': typeof V1AdvertisingPlacementsIndexRoute
+  '/v1/affiliate/conversions/': typeof V1AffiliateConversionsIndexRoute
   '/v1/dashboard/widgets/': typeof V1DashboardWidgetsIndexRoute
   '/v1/me/app-settings/': typeof V1MeAppSettingsIndexRoute
   '/v1/me/notifications/': typeof V1MeNotificationsIndexRoute
@@ -1057,6 +1108,7 @@ export interface FileRoutesByFullPath {
   '/v1/admin/users/$userId/reactivate': typeof V1AdminUsersUserIdReactivateRoute
   '/v1/admin/users/$userId/suspend': typeof V1AdminUsersUserIdSuspendRoute
   '/v1/advertising/placements/$placementKey/active-ad': typeof V1AdvertisingPlacementsPlacementKeyActiveAdRoute
+  '/v1/affiliate/conversions/$transactionRef/reverse': typeof V1AffiliateConversionsTransactionRefReverseRoute
   '/v1/me/notifications/$notificationId/read': typeof V1MeNotificationsNotificationIdReadRoute
   '/v1/admin/advertising/campaigns/': typeof V1AdminAdvertisingCampaignsIndexRoute
   '/v1/admin/advertising/config/': typeof V1AdminAdvertisingConfigIndexRoute
@@ -1093,6 +1145,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
   '/pricing': typeof PricingRoute
   '/admin/advertising': typeof AdminAdvertisingRoute
+  '/admin/affiliate': typeof AdminAffiliateRoute
   '/admin/applications': typeof AdminApplicationsRoute
   '/admin/capabilities': typeof AdminCapabilitiesRoute
   '/admin/communication': typeof AdminCommunicationRoute
@@ -1103,6 +1156,7 @@ export interface FileRoutesByTo {
   '/admin/members': typeof AdminMembersRoute
   '/admin/offers-coupons': typeof AdminOffersCouponsRoute
   '/admin/payments': typeof AdminPaymentsRoute
+  '/admin/points-packages': typeof AdminPointsPackagesRoute
   '/admin/rewards': typeof AdminRewardsRoute
   '/admin/support': typeof AdminSupportRoute
   '/admin/trials': typeof AdminTrialsRoute
@@ -1111,6 +1165,7 @@ export interface FileRoutesByTo {
   '/auth/callback': typeof AuthCallbackRoute
   '/dashboard/activity': typeof DashboardActivityRoute
   '/dashboard/advertising': typeof DashboardAdvertisingRoute
+  '/dashboard/affiliate': typeof DashboardAffiliateRoute
   '/dashboard/help': typeof DashboardHelpRoute
   '/dashboard/messages': typeof DashboardMessagesRouteWithChildren
   '/dashboard/notifications': typeof DashboardNotificationsRoute
@@ -1122,6 +1177,7 @@ export interface FileRoutesByTo {
   '/offer/$code': typeof OfferCodeRoute
   '/payment/success': typeof PaymentSuccessRoute
   '/profile/$username': typeof ProfileUsernameRoute
+  '/r/$code': typeof RCodeRoute
   '/u/$username': typeof UUsernameRouteWithChildren
   '/dashboard': typeof DashboardIndexRoute
   '/dashboard/messages/$conversationId': typeof DashboardMessagesConversationIdRoute
@@ -1143,6 +1199,7 @@ export interface FileRoutesByTo {
   '/v1/media/avatar': typeof V1MediaAvatarRoute
   '/v1/payments/reference': typeof V1PaymentsReferenceRoute
   '/v1/profiles/$username': typeof V1ProfilesUsernameRoute
+  '/v1/system/affiliate-payout-sweep': typeof V1SystemAffiliatePayoutSweepRoute
   '/v1/system/inactivity-sweep': typeof V1SystemInactivitySweepRoute
   '/v1/applications': typeof V1ApplicationsIndexRoute
   '/v1/capabilities': typeof V1CapabilitiesIndexRoute
@@ -1181,6 +1238,7 @@ export interface FileRoutesByTo {
   '/v1/admin/users': typeof V1AdminUsersIndexRoute
   '/v1/admin/verification-requests': typeof V1AdminVerificationRequestsIndexRoute
   '/v1/advertising/placements': typeof V1AdvertisingPlacementsIndexRoute
+  '/v1/affiliate/conversions': typeof V1AffiliateConversionsIndexRoute
   '/v1/dashboard/widgets': typeof V1DashboardWidgetsIndexRoute
   '/v1/me/app-settings': typeof V1MeAppSettingsIndexRoute
   '/v1/me/notifications': typeof V1MeNotificationsIndexRoute
@@ -1204,6 +1262,7 @@ export interface FileRoutesByTo {
   '/v1/admin/users/$userId/reactivate': typeof V1AdminUsersUserIdReactivateRoute
   '/v1/admin/users/$userId/suspend': typeof V1AdminUsersUserIdSuspendRoute
   '/v1/advertising/placements/$placementKey/active-ad': typeof V1AdvertisingPlacementsPlacementKeyActiveAdRoute
+  '/v1/affiliate/conversions/$transactionRef/reverse': typeof V1AffiliateConversionsTransactionRefReverseRoute
   '/v1/me/notifications/$notificationId/read': typeof V1MeNotificationsNotificationIdReadRoute
   '/v1/admin/advertising/campaigns': typeof V1AdminAdvertisingCampaignsIndexRoute
   '/v1/admin/advertising/config': typeof V1AdminAdvertisingConfigIndexRoute
@@ -1241,6 +1300,7 @@ export interface FileRoutesById {
   '/onboarding': typeof OnboardingRoute
   '/pricing': typeof PricingRoute
   '/admin/advertising': typeof AdminAdvertisingRoute
+  '/admin/affiliate': typeof AdminAffiliateRoute
   '/admin/applications': typeof AdminApplicationsRoute
   '/admin/capabilities': typeof AdminCapabilitiesRoute
   '/admin/communication': typeof AdminCommunicationRoute
@@ -1251,6 +1311,7 @@ export interface FileRoutesById {
   '/admin/members': typeof AdminMembersRoute
   '/admin/offers-coupons': typeof AdminOffersCouponsRoute
   '/admin/payments': typeof AdminPaymentsRoute
+  '/admin/points-packages': typeof AdminPointsPackagesRoute
   '/admin/rewards': typeof AdminRewardsRoute
   '/admin/support': typeof AdminSupportRoute
   '/admin/trials': typeof AdminTrialsRoute
@@ -1259,6 +1320,7 @@ export interface FileRoutesById {
   '/auth/callback': typeof AuthCallbackRoute
   '/dashboard/activity': typeof DashboardActivityRoute
   '/dashboard/advertising': typeof DashboardAdvertisingRoute
+  '/dashboard/affiliate': typeof DashboardAffiliateRoute
   '/dashboard/help': typeof DashboardHelpRoute
   '/dashboard/messages': typeof DashboardMessagesRouteWithChildren
   '/dashboard/notifications': typeof DashboardNotificationsRoute
@@ -1270,6 +1332,7 @@ export interface FileRoutesById {
   '/offer/$code': typeof OfferCodeRoute
   '/payment/success': typeof PaymentSuccessRoute
   '/profile/$username': typeof ProfileUsernameRoute
+  '/r/$code': typeof RCodeRoute
   '/u/$username': typeof UUsernameRouteWithChildren
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/messages/$conversationId': typeof DashboardMessagesConversationIdRoute
@@ -1291,6 +1354,7 @@ export interface FileRoutesById {
   '/v1/media/avatar': typeof V1MediaAvatarRoute
   '/v1/payments/reference': typeof V1PaymentsReferenceRoute
   '/v1/profiles/$username': typeof V1ProfilesUsernameRoute
+  '/v1/system/affiliate-payout-sweep': typeof V1SystemAffiliatePayoutSweepRoute
   '/v1/system/inactivity-sweep': typeof V1SystemInactivitySweepRoute
   '/v1/applications/': typeof V1ApplicationsIndexRoute
   '/v1/capabilities/': typeof V1CapabilitiesIndexRoute
@@ -1329,6 +1393,7 @@ export interface FileRoutesById {
   '/v1/admin/users/': typeof V1AdminUsersIndexRoute
   '/v1/admin/verification-requests/': typeof V1AdminVerificationRequestsIndexRoute
   '/v1/advertising/placements/': typeof V1AdvertisingPlacementsIndexRoute
+  '/v1/affiliate/conversions/': typeof V1AffiliateConversionsIndexRoute
   '/v1/dashboard/widgets/': typeof V1DashboardWidgetsIndexRoute
   '/v1/me/app-settings/': typeof V1MeAppSettingsIndexRoute
   '/v1/me/notifications/': typeof V1MeNotificationsIndexRoute
@@ -1352,6 +1417,7 @@ export interface FileRoutesById {
   '/v1/admin/users/$userId/reactivate': typeof V1AdminUsersUserIdReactivateRoute
   '/v1/admin/users/$userId/suspend': typeof V1AdminUsersUserIdSuspendRoute
   '/v1/advertising/placements/$placementKey/active-ad': typeof V1AdvertisingPlacementsPlacementKeyActiveAdRoute
+  '/v1/affiliate/conversions/$transactionRef/reverse': typeof V1AffiliateConversionsTransactionRefReverseRoute
   '/v1/me/notifications/$notificationId/read': typeof V1MeNotificationsNotificationIdReadRoute
   '/v1/admin/advertising/campaigns/': typeof V1AdminAdvertisingCampaignsIndexRoute
   '/v1/admin/advertising/config/': typeof V1AdminAdvertisingConfigIndexRoute
@@ -1390,6 +1456,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/pricing'
     | '/admin/advertising'
+    | '/admin/affiliate'
     | '/admin/applications'
     | '/admin/capabilities'
     | '/admin/communication'
@@ -1400,6 +1467,7 @@ export interface FileRouteTypes {
     | '/admin/members'
     | '/admin/offers-coupons'
     | '/admin/payments'
+    | '/admin/points-packages'
     | '/admin/rewards'
     | '/admin/support'
     | '/admin/trials'
@@ -1408,6 +1476,7 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/dashboard/activity'
     | '/dashboard/advertising'
+    | '/dashboard/affiliate'
     | '/dashboard/help'
     | '/dashboard/messages'
     | '/dashboard/notifications'
@@ -1419,6 +1488,7 @@ export interface FileRouteTypes {
     | '/offer/$code'
     | '/payment/success'
     | '/profile/$username'
+    | '/r/$code'
     | '/u/$username'
     | '/dashboard/'
     | '/dashboard/messages/$conversationId'
@@ -1440,6 +1510,7 @@ export interface FileRouteTypes {
     | '/v1/media/avatar'
     | '/v1/payments/reference'
     | '/v1/profiles/$username'
+    | '/v1/system/affiliate-payout-sweep'
     | '/v1/system/inactivity-sweep'
     | '/v1/applications/'
     | '/v1/capabilities/'
@@ -1478,6 +1549,7 @@ export interface FileRouteTypes {
     | '/v1/admin/users/'
     | '/v1/admin/verification-requests/'
     | '/v1/advertising/placements/'
+    | '/v1/affiliate/conversions/'
     | '/v1/dashboard/widgets/'
     | '/v1/me/app-settings/'
     | '/v1/me/notifications/'
@@ -1501,6 +1573,7 @@ export interface FileRouteTypes {
     | '/v1/admin/users/$userId/reactivate'
     | '/v1/admin/users/$userId/suspend'
     | '/v1/advertising/placements/$placementKey/active-ad'
+    | '/v1/affiliate/conversions/$transactionRef/reverse'
     | '/v1/me/notifications/$notificationId/read'
     | '/v1/admin/advertising/campaigns/'
     | '/v1/admin/advertising/config/'
@@ -1537,6 +1610,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/pricing'
     | '/admin/advertising'
+    | '/admin/affiliate'
     | '/admin/applications'
     | '/admin/capabilities'
     | '/admin/communication'
@@ -1547,6 +1621,7 @@ export interface FileRouteTypes {
     | '/admin/members'
     | '/admin/offers-coupons'
     | '/admin/payments'
+    | '/admin/points-packages'
     | '/admin/rewards'
     | '/admin/support'
     | '/admin/trials'
@@ -1555,6 +1630,7 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/dashboard/activity'
     | '/dashboard/advertising'
+    | '/dashboard/affiliate'
     | '/dashboard/help'
     | '/dashboard/messages'
     | '/dashboard/notifications'
@@ -1566,6 +1642,7 @@ export interface FileRouteTypes {
     | '/offer/$code'
     | '/payment/success'
     | '/profile/$username'
+    | '/r/$code'
     | '/u/$username'
     | '/dashboard'
     | '/dashboard/messages/$conversationId'
@@ -1587,6 +1664,7 @@ export interface FileRouteTypes {
     | '/v1/media/avatar'
     | '/v1/payments/reference'
     | '/v1/profiles/$username'
+    | '/v1/system/affiliate-payout-sweep'
     | '/v1/system/inactivity-sweep'
     | '/v1/applications'
     | '/v1/capabilities'
@@ -1625,6 +1703,7 @@ export interface FileRouteTypes {
     | '/v1/admin/users'
     | '/v1/admin/verification-requests'
     | '/v1/advertising/placements'
+    | '/v1/affiliate/conversions'
     | '/v1/dashboard/widgets'
     | '/v1/me/app-settings'
     | '/v1/me/notifications'
@@ -1648,6 +1727,7 @@ export interface FileRouteTypes {
     | '/v1/admin/users/$userId/reactivate'
     | '/v1/admin/users/$userId/suspend'
     | '/v1/advertising/placements/$placementKey/active-ad'
+    | '/v1/affiliate/conversions/$transactionRef/reverse'
     | '/v1/me/notifications/$notificationId/read'
     | '/v1/admin/advertising/campaigns'
     | '/v1/admin/advertising/config'
@@ -1684,6 +1764,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/pricing'
     | '/admin/advertising'
+    | '/admin/affiliate'
     | '/admin/applications'
     | '/admin/capabilities'
     | '/admin/communication'
@@ -1694,6 +1775,7 @@ export interface FileRouteTypes {
     | '/admin/members'
     | '/admin/offers-coupons'
     | '/admin/payments'
+    | '/admin/points-packages'
     | '/admin/rewards'
     | '/admin/support'
     | '/admin/trials'
@@ -1702,6 +1784,7 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/dashboard/activity'
     | '/dashboard/advertising'
+    | '/dashboard/affiliate'
     | '/dashboard/help'
     | '/dashboard/messages'
     | '/dashboard/notifications'
@@ -1713,6 +1796,7 @@ export interface FileRouteTypes {
     | '/offer/$code'
     | '/payment/success'
     | '/profile/$username'
+    | '/r/$code'
     | '/u/$username'
     | '/dashboard/'
     | '/dashboard/messages/$conversationId'
@@ -1734,6 +1818,7 @@ export interface FileRouteTypes {
     | '/v1/media/avatar'
     | '/v1/payments/reference'
     | '/v1/profiles/$username'
+    | '/v1/system/affiliate-payout-sweep'
     | '/v1/system/inactivity-sweep'
     | '/v1/applications/'
     | '/v1/capabilities/'
@@ -1772,6 +1857,7 @@ export interface FileRouteTypes {
     | '/v1/admin/users/'
     | '/v1/admin/verification-requests/'
     | '/v1/advertising/placements/'
+    | '/v1/affiliate/conversions/'
     | '/v1/dashboard/widgets/'
     | '/v1/me/app-settings/'
     | '/v1/me/notifications/'
@@ -1795,6 +1881,7 @@ export interface FileRouteTypes {
     | '/v1/admin/users/$userId/reactivate'
     | '/v1/admin/users/$userId/suspend'
     | '/v1/advertising/placements/$placementKey/active-ad'
+    | '/v1/affiliate/conversions/$transactionRef/reverse'
     | '/v1/me/notifications/$notificationId/read'
     | '/v1/admin/advertising/campaigns/'
     | '/v1/admin/advertising/config/'
@@ -1834,6 +1921,7 @@ export interface RootRouteChildren {
   AuthCallbackRoute: typeof AuthCallbackRoute
   DashboardActivityRoute: typeof DashboardActivityRoute
   DashboardAdvertisingRoute: typeof DashboardAdvertisingRoute
+  DashboardAffiliateRoute: typeof DashboardAffiliateRoute
   DashboardHelpRoute: typeof DashboardHelpRoute
   DashboardMessagesRoute: typeof DashboardMessagesRouteWithChildren
   DashboardNotificationsRoute: typeof DashboardNotificationsRoute
@@ -1845,6 +1933,7 @@ export interface RootRouteChildren {
   OfferCodeRoute: typeof OfferCodeRoute
   PaymentSuccessRoute: typeof PaymentSuccessRoute
   ProfileUsernameRoute: typeof ProfileUsernameRoute
+  RCodeRoute: typeof RCodeRoute
   UUsernameRoute: typeof UUsernameRouteWithChildren
   DashboardIndexRoute: typeof DashboardIndexRoute
   V1ApplicationsIdOrSlugRoute: typeof V1ApplicationsIdOrSlugRoute
@@ -1864,6 +1953,7 @@ export interface RootRouteChildren {
   V1MediaAvatarRoute: typeof V1MediaAvatarRoute
   V1PaymentsReferenceRoute: typeof V1PaymentsReferenceRoute
   V1ProfilesUsernameRoute: typeof V1ProfilesUsernameRoute
+  V1SystemAffiliatePayoutSweepRoute: typeof V1SystemAffiliatePayoutSweepRoute
   V1SystemInactivitySweepRoute: typeof V1SystemInactivitySweepRoute
   V1ApplicationsIndexRoute: typeof V1ApplicationsIndexRoute
   V1CapabilitiesIndexRoute: typeof V1CapabilitiesIndexRoute
@@ -1902,6 +1992,7 @@ export interface RootRouteChildren {
   V1AdminUsersIndexRoute: typeof V1AdminUsersIndexRoute
   V1AdminVerificationRequestsIndexRoute: typeof V1AdminVerificationRequestsIndexRoute
   V1AdvertisingPlacementsIndexRoute: typeof V1AdvertisingPlacementsIndexRoute
+  V1AffiliateConversionsIndexRoute: typeof V1AffiliateConversionsIndexRoute
   V1DashboardWidgetsIndexRoute: typeof V1DashboardWidgetsIndexRoute
   V1MeAppSettingsIndexRoute: typeof V1MeAppSettingsIndexRoute
   V1MeNotificationsIndexRoute: typeof V1MeNotificationsIndexRoute
@@ -1925,6 +2016,7 @@ export interface RootRouteChildren {
   V1AdminUsersUserIdReactivateRoute: typeof V1AdminUsersUserIdReactivateRoute
   V1AdminUsersUserIdSuspendRoute: typeof V1AdminUsersUserIdSuspendRoute
   V1AdvertisingPlacementsPlacementKeyActiveAdRoute: typeof V1AdvertisingPlacementsPlacementKeyActiveAdRoute
+  V1AffiliateConversionsTransactionRefReverseRoute: typeof V1AffiliateConversionsTransactionRefReverseRoute
   V1MeNotificationsNotificationIdReadRoute: typeof V1MeNotificationsNotificationIdReadRoute
   V1AdminAdvertisingCampaignsIndexRoute: typeof V1AdminAdvertisingCampaignsIndexRoute
   V1AdminAdvertisingConfigIndexRoute: typeof V1AdminAdvertisingConfigIndexRoute
@@ -2005,6 +2097,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdvertisingRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/affiliate': {
+      id: '/admin/affiliate'
+      path: '/affiliate'
+      fullPath: '/admin/affiliate'
+      preLoaderRoute: typeof AdminAffiliateRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/applications': {
       id: '/admin/applications'
       path: '/applications'
@@ -2075,6 +2174,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPaymentsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/points-packages': {
+      id: '/admin/points-packages'
+      path: '/points-packages'
+      fullPath: '/admin/points-packages'
+      preLoaderRoute: typeof AdminPointsPackagesRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/rewards': {
       id: '/admin/rewards'
       path: '/rewards'
@@ -2136,6 +2242,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard/advertising'
       fullPath: '/dashboard/advertising'
       preLoaderRoute: typeof DashboardAdvertisingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/affiliate': {
+      id: '/dashboard/affiliate'
+      path: '/dashboard/affiliate'
+      fullPath: '/dashboard/affiliate'
+      preLoaderRoute: typeof DashboardAffiliateRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard/help': {
@@ -2213,6 +2326,13 @@ declare module '@tanstack/react-router' {
       path: '/profile/$username'
       fullPath: '/profile/$username'
       preLoaderRoute: typeof ProfileUsernameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/r/$code': {
+      id: '/r/$code'
+      path: '/r/$code'
+      fullPath: '/r/$code'
+      preLoaderRoute: typeof RCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/u/$username': {
@@ -2404,6 +2524,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof V1ShareInviteIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/v1/system/affiliate-payout-sweep': {
+      id: '/v1/system/affiliate-payout-sweep'
+      path: '/v1/system/affiliate-payout-sweep'
+      fullPath: '/v1/system/affiliate-payout-sweep'
+      preLoaderRoute: typeof V1SystemAffiliatePayoutSweepRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/v1/system/inactivity-sweep': {
       id: '/v1/system/inactivity-sweep'
       path: '/v1/system/inactivity-sweep'
@@ -2570,6 +2697,13 @@ declare module '@tanstack/react-router' {
       path: '/v1/advertising/placements'
       fullPath: '/v1/advertising/placements/'
       preLoaderRoute: typeof V1AdvertisingPlacementsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/affiliate/conversions/': {
+      id: '/v1/affiliate/conversions/'
+      path: '/v1/affiliate/conversions'
+      fullPath: '/v1/affiliate/conversions/'
+      preLoaderRoute: typeof V1AffiliateConversionsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/v1/conversations/$conversationId/hide': {
@@ -2880,6 +3014,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof V1AdvertisingPlacementsPlacementKeyActiveAdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/v1/affiliate/conversions/$transactionRef/reverse': {
+      id: '/v1/affiliate/conversions/$transactionRef/reverse'
+      path: '/v1/affiliate/conversions/$transactionRef/reverse'
+      fullPath: '/v1/affiliate/conversions/$transactionRef/reverse'
+      preLoaderRoute: typeof V1AffiliateConversionsTransactionRefReverseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/v1/conversations/$conversationId/messages/': {
       id: '/v1/conversations/$conversationId/messages/'
       path: '/v1/conversations/$conversationId/messages'
@@ -2976,6 +3117,7 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteChildren {
   AdminAdvertisingRoute: typeof AdminAdvertisingRoute
+  AdminAffiliateRoute: typeof AdminAffiliateRoute
   AdminApplicationsRoute: typeof AdminApplicationsRoute
   AdminCapabilitiesRoute: typeof AdminCapabilitiesRoute
   AdminCommunicationRoute: typeof AdminCommunicationRoute
@@ -2986,6 +3128,7 @@ interface AdminRouteChildren {
   AdminMembersRoute: typeof AdminMembersRoute
   AdminOffersCouponsRoute: typeof AdminOffersCouponsRoute
   AdminPaymentsRoute: typeof AdminPaymentsRoute
+  AdminPointsPackagesRoute: typeof AdminPointsPackagesRoute
   AdminRewardsRoute: typeof AdminRewardsRoute
   AdminSupportRoute: typeof AdminSupportRoute
   AdminTrialsRoute: typeof AdminTrialsRoute
@@ -2995,6 +3138,7 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAdvertisingRoute: AdminAdvertisingRoute,
+  AdminAffiliateRoute: AdminAffiliateRoute,
   AdminApplicationsRoute: AdminApplicationsRoute,
   AdminCapabilitiesRoute: AdminCapabilitiesRoute,
   AdminCommunicationRoute: AdminCommunicationRoute,
@@ -3005,6 +3149,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminMembersRoute: AdminMembersRoute,
   AdminOffersCouponsRoute: AdminOffersCouponsRoute,
   AdminPaymentsRoute: AdminPaymentsRoute,
+  AdminPointsPackagesRoute: AdminPointsPackagesRoute,
   AdminRewardsRoute: AdminRewardsRoute,
   AdminSupportRoute: AdminSupportRoute,
   AdminTrialsRoute: AdminTrialsRoute,
@@ -3047,6 +3192,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthCallbackRoute: AuthCallbackRoute,
   DashboardActivityRoute: DashboardActivityRoute,
   DashboardAdvertisingRoute: DashboardAdvertisingRoute,
+  DashboardAffiliateRoute: DashboardAffiliateRoute,
   DashboardHelpRoute: DashboardHelpRoute,
   DashboardMessagesRoute: DashboardMessagesRouteWithChildren,
   DashboardNotificationsRoute: DashboardNotificationsRoute,
@@ -3058,6 +3204,7 @@ const rootRouteChildren: RootRouteChildren = {
   OfferCodeRoute: OfferCodeRoute,
   PaymentSuccessRoute: PaymentSuccessRoute,
   ProfileUsernameRoute: ProfileUsernameRoute,
+  RCodeRoute: RCodeRoute,
   UUsernameRoute: UUsernameRouteWithChildren,
   DashboardIndexRoute: DashboardIndexRoute,
   V1ApplicationsIdOrSlugRoute: V1ApplicationsIdOrSlugRoute,
@@ -3077,6 +3224,7 @@ const rootRouteChildren: RootRouteChildren = {
   V1MediaAvatarRoute: V1MediaAvatarRoute,
   V1PaymentsReferenceRoute: V1PaymentsReferenceRoute,
   V1ProfilesUsernameRoute: V1ProfilesUsernameRoute,
+  V1SystemAffiliatePayoutSweepRoute: V1SystemAffiliatePayoutSweepRoute,
   V1SystemInactivitySweepRoute: V1SystemInactivitySweepRoute,
   V1ApplicationsIndexRoute: V1ApplicationsIndexRoute,
   V1CapabilitiesIndexRoute: V1CapabilitiesIndexRoute,
@@ -3117,6 +3265,7 @@ const rootRouteChildren: RootRouteChildren = {
   V1AdminUsersIndexRoute: V1AdminUsersIndexRoute,
   V1AdminVerificationRequestsIndexRoute: V1AdminVerificationRequestsIndexRoute,
   V1AdvertisingPlacementsIndexRoute: V1AdvertisingPlacementsIndexRoute,
+  V1AffiliateConversionsIndexRoute: V1AffiliateConversionsIndexRoute,
   V1DashboardWidgetsIndexRoute: V1DashboardWidgetsIndexRoute,
   V1MeAppSettingsIndexRoute: V1MeAppSettingsIndexRoute,
   V1MeNotificationsIndexRoute: V1MeNotificationsIndexRoute,
@@ -3146,6 +3295,8 @@ const rootRouteChildren: RootRouteChildren = {
   V1AdminUsersUserIdSuspendRoute: V1AdminUsersUserIdSuspendRoute,
   V1AdvertisingPlacementsPlacementKeyActiveAdRoute:
     V1AdvertisingPlacementsPlacementKeyActiveAdRoute,
+  V1AffiliateConversionsTransactionRefReverseRoute:
+    V1AffiliateConversionsTransactionRefReverseRoute,
   V1MeNotificationsNotificationIdReadRoute:
     V1MeNotificationsNotificationIdReadRoute,
   V1AdminAdvertisingCampaignsIndexRoute: V1AdminAdvertisingCampaignsIndexRoute,
