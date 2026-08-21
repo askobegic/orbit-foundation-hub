@@ -31,6 +31,8 @@ import { getDashboardWidgets } from "@/lib/dashboard-widgets.functions";
 import { RewardsAdvertisingCards } from "@/components/dashboard/RewardsAdvertisingCards";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { SpecialOffers } from "@/components/dashboard/SpecialOffers";
+import { DashboardActions } from "@/components/dashboard/DashboardActions";
+import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { DashboardAdCards } from "@/components/dashboard/DashboardAdCards";
 import { DashboardFeaturedBanner } from "@/components/dashboard/DashboardFeaturedBanner";
 import { DashboardMobileNav } from "@/components/dashboard/DashboardNav";
@@ -562,6 +564,14 @@ export function DashboardPage() {
                 bypasses every other gating mechanism on this page. Layout
                 position only; the component itself is untouched. */}
             <RewardsAdvertisingCards />
+
+            {/* User Engagement & Dashboard Actions: My Resources plus
+                admin/application-provided For You/Complete/New/Discover
+                prompts. Placed after My Applications/Rewards/Advertising,
+                matching the conceptual Dashboard order (PROJECT_KNOWLEDGE.md
+                -> User Engagement & Dashboard Actions). Renders nothing of
+                its own when there is nothing eligible to show. */}
+            {isWidgetEnabled("dashboard_actions") && <DashboardActions userId={user?.id} />}
           </div>
 
           {/* RIGHT column */}
@@ -692,6 +702,11 @@ export function DashboardPage() {
                 )}
               </section>
             )}
+
+            {/* Recent Activity: compact preview reusing the existing
+                Cross-App Activity Dashboard data (Priority 15 Phase E) --
+                no new backend, see RecentActivity.tsx. */}
+            {isWidgetEnabled("recent_activity") && <RecentActivity userId={user?.id} />}
 
             {/* Quick links */}
             {isWidgetEnabled("quick_links") && (

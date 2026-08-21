@@ -513,6 +513,7 @@
       "disabled": "Deaktiviert",
       "archive": "Archivieren",
       "unarchive": "Wiederherstellen",
+      "delete": "Löschen",
       "create": "Erstellen",
       "enable": "Aktivieren",
       "disable": "Deaktivieren",
@@ -1102,7 +1103,8 @@
         "engagement": { "title": "Missionen, Herausforderungen & Serien", "desc": "Missionen, Herausforderungen und Serien definieren, global oder pro Anwendung." },
         "support": { "title": "Support", "desc": "Support-Anfragen und Antworten der Nutzer." },
         "members": { "title": "Mitglieder", "desc": "Anzahl der Karten pro Bereich und Verzeichnis-Paginierung für die Mitgliederseite konfigurieren." },
-        "offersCoupons": { "title": "Angebote & Gutscheine", "desc": "Globale Angebote, individuelle Angebote, öffentliche Gutscheine, Bonuspunkte." }
+        "offersCoupons": { "title": "Angebote & Gutscheine", "desc": "Globale Angebote, individuelle Angebote, öffentliche Gutscheine, Bonuspunkte." },
+        "dashboardActions": { "title": "Dashboard-Aktionen", "desc": "Generische Dashboard-Angebote, -Aktionen und Ressourcenreferenzen für Nutzer." }
       }
     },
     "verification": {
@@ -1193,6 +1195,32 @@
       "offerCreated": "Angebot erstellt",
       "couponCreated": "Gutschein erstellt",
       "boostCreated": "Bonuspunkte erstellt"
+    },
+    "dashboardActions": {
+      "title": "Dashboard-Aktionen",
+      "subtitle": "Verwalten Sie generische Dashboard-Angebote, -Aktionen und Ressourcenreferenzen, die auf dem zentralen Dashboard angezeigt werden.",
+      "globalActionsTitle": "Globale Aktionen",
+      "individualActionsTitle": "Individuelle Aktionen",
+      "resourceReferencesTitle": "Ressourcenreferenzen",
+      "actionType": "Aktionstyp",
+      "actionType_offer": "Angebot",
+      "actionType_action": "Aktion",
+      "actionType_complete_task": "Aufgabe abschließen",
+      "actionType_discovery": "Entdeckung",
+      "applicationNone": "Plattformweit (keine Anwendung)",
+      "cta": "CTA-Beschriftung",
+      "icon": "Symbol (Emoji)",
+      "destination": "Ziel",
+      "destinationPlaceholder": "/dashboard/profile oder https://eshop.ba/my-shop",
+      "requiresMissingResourceType": "Erfordert fehlenden Ressourcentyp",
+      "requiresMissingResourceTypePlaceholder": "z. B. shop (optional)",
+      "displayOrder": "Anzeigereihenfolge",
+      "actionCreated": "Dashboard-Aktion erstellt",
+      "userId": "Nutzer",
+      "userIdPlaceholder": "Suche nach Benutzername oder E-Mail",
+      "resourceType": "Ressourcentyp",
+      "status": "Status",
+      "resourceCreated": "Ressourcenreferenz gespeichert"
     }
   },
   "members": {
@@ -1237,6 +1265,22 @@
         "not_started": "Dieser Gutschein ist noch nicht aktiv.",
         "max_uses_reached": "Dieser Gutschein hat die maximale Anzahl an Einlösungen erreicht."
       }
+    }
+  },
+  "dashboardActions": {
+    "myResources": "Meine Ressourcen",
+    "forYou": "Für Sie",
+    "complete": "Abschließen",
+    "new": "Neu",
+    "discover": "Entdecken",
+    "open": "Öffnen",
+    "recentActivity": "Letzte Aktivität",
+    "core": "Core",
+    "status": {
+      "active": "aktiv",
+      "pending": "ausstehend",
+      "incomplete": "unvollständig",
+      "inactive": "inaktiv"
     }
   },
   "advertisingSlot": {

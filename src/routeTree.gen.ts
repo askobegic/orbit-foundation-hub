@@ -19,6 +19,7 @@ import { Route as AdminAdvertisingRouteImport } from './routes/admin.advertising
 import { Route as AdminApplicationsRouteImport } from './routes/admin.applications'
 import { Route as AdminCapabilitiesRouteImport } from './routes/admin.capabilities'
 import { Route as AdminCommunicationRouteImport } from './routes/admin.communication'
+import { Route as AdminDashboardActionsRouteImport } from './routes/admin.dashboard-actions'
 import { Route as AdminDashboardWidgetsRouteImport } from './routes/admin.dashboard-widgets'
 import { Route as AdminEngagementRouteImport } from './routes/admin.engagement'
 import { Route as AdminEventsRouteImport } from './routes/admin.events'
@@ -104,6 +105,7 @@ import { Route as V1MeAppSettingsIndexRouteImport } from './routes/v1/me/app-set
 import { Route as V1MeAppSettingsAppIdRouteImport } from './routes/v1/me/app-settings/$appId'
 import { Route as V1MeNotificationsIndexRouteImport } from './routes/v1/me/notifications/index'
 import { Route as V1MeNotificationsReadAllRouteImport } from './routes/v1/me/notifications/read-all'
+import { Route as V1MeResourcesResourceTypeRouteImport } from './routes/v1/me/resources/$resourceType'
 import { Route as V1MeRewardsIndexRouteImport } from './routes/v1/me/rewards/index'
 import { Route as V1MeRewardsRedeemRouteImport } from './routes/v1/me/rewards/redeem'
 import { Route as V1AdminAdvertisingCampaignsIndexRouteImport } from './routes/v1/admin/advertising/campaigns/index'
@@ -201,6 +203,11 @@ const AdminCapabilitiesRoute = AdminCapabilitiesRouteImport.update({
 const AdminCommunicationRoute = AdminCommunicationRouteImport.update({
   id: '/communication',
   path: '/communication',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDashboardActionsRoute = AdminDashboardActionsRouteImport.update({
+  id: '/dashboard-actions',
+  path: '/dashboard-actions',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminDashboardWidgetsRoute = AdminDashboardWidgetsRouteImport.update({
@@ -642,6 +649,12 @@ const V1MeNotificationsReadAllRoute =
     path: '/v1/me/notifications/read-all',
     getParentRoute: () => rootRouteImport,
   } as any)
+const V1MeResourcesResourceTypeRoute =
+  V1MeResourcesResourceTypeRouteImport.update({
+    id: '/v1/me/resources/$resourceType',
+    path: '/v1/me/resources/$resourceType',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const V1MeRewardsIndexRoute = V1MeRewardsIndexRouteImport.update({
   id: '/v1/me/rewards/',
   path: '/v1/me/rewards/',
@@ -936,6 +949,7 @@ export interface FileRoutesByFullPath {
   '/admin/applications': typeof AdminApplicationsRoute
   '/admin/capabilities': typeof AdminCapabilitiesRoute
   '/admin/communication': typeof AdminCommunicationRoute
+  '/admin/dashboard-actions': typeof AdminDashboardActionsRoute
   '/admin/dashboard-widgets': typeof AdminDashboardWidgetsRoute
   '/admin/engagement': typeof AdminEngagementRoute
   '/admin/events': typeof AdminEventsRoute
@@ -1005,6 +1019,7 @@ export interface FileRoutesByFullPath {
   '/v1/me/advertising/summary': typeof V1MeAdvertisingSummaryRoute
   '/v1/me/app-settings/$appId': typeof V1MeAppSettingsAppIdRoute
   '/v1/me/notifications/read-all': typeof V1MeNotificationsReadAllRoute
+  '/v1/me/resources/$resourceType': typeof V1MeResourcesResourceTypeRoute
   '/v1/me/rewards/redeem': typeof V1MeRewardsRedeemRoute
   '/v1/admin/applications/': typeof V1AdminApplicationsIndexRoute
   '/v1/admin/audit-logs/': typeof V1AdminAuditLogsIndexRoute
@@ -1081,6 +1096,7 @@ export interface FileRoutesByTo {
   '/admin/applications': typeof AdminApplicationsRoute
   '/admin/capabilities': typeof AdminCapabilitiesRoute
   '/admin/communication': typeof AdminCommunicationRoute
+  '/admin/dashboard-actions': typeof AdminDashboardActionsRoute
   '/admin/dashboard-widgets': typeof AdminDashboardWidgetsRoute
   '/admin/engagement': typeof AdminEngagementRoute
   '/admin/events': typeof AdminEventsRoute
@@ -1150,6 +1166,7 @@ export interface FileRoutesByTo {
   '/v1/me/advertising/summary': typeof V1MeAdvertisingSummaryRoute
   '/v1/me/app-settings/$appId': typeof V1MeAppSettingsAppIdRoute
   '/v1/me/notifications/read-all': typeof V1MeNotificationsReadAllRoute
+  '/v1/me/resources/$resourceType': typeof V1MeResourcesResourceTypeRoute
   '/v1/me/rewards/redeem': typeof V1MeRewardsRedeemRoute
   '/v1/admin/applications': typeof V1AdminApplicationsIndexRoute
   '/v1/admin/audit-logs': typeof V1AdminAuditLogsIndexRoute
@@ -1227,6 +1244,7 @@ export interface FileRoutesById {
   '/admin/applications': typeof AdminApplicationsRoute
   '/admin/capabilities': typeof AdminCapabilitiesRoute
   '/admin/communication': typeof AdminCommunicationRoute
+  '/admin/dashboard-actions': typeof AdminDashboardActionsRoute
   '/admin/dashboard-widgets': typeof AdminDashboardWidgetsRoute
   '/admin/engagement': typeof AdminEngagementRoute
   '/admin/events': typeof AdminEventsRoute
@@ -1296,6 +1314,7 @@ export interface FileRoutesById {
   '/v1/me/advertising/summary': typeof V1MeAdvertisingSummaryRoute
   '/v1/me/app-settings/$appId': typeof V1MeAppSettingsAppIdRoute
   '/v1/me/notifications/read-all': typeof V1MeNotificationsReadAllRoute
+  '/v1/me/resources/$resourceType': typeof V1MeResourcesResourceTypeRoute
   '/v1/me/rewards/redeem': typeof V1MeRewardsRedeemRoute
   '/v1/admin/applications/': typeof V1AdminApplicationsIndexRoute
   '/v1/admin/audit-logs/': typeof V1AdminAuditLogsIndexRoute
@@ -1374,6 +1393,7 @@ export interface FileRouteTypes {
     | '/admin/applications'
     | '/admin/capabilities'
     | '/admin/communication'
+    | '/admin/dashboard-actions'
     | '/admin/dashboard-widgets'
     | '/admin/engagement'
     | '/admin/events'
@@ -1443,6 +1463,7 @@ export interface FileRouteTypes {
     | '/v1/me/advertising/summary'
     | '/v1/me/app-settings/$appId'
     | '/v1/me/notifications/read-all'
+    | '/v1/me/resources/$resourceType'
     | '/v1/me/rewards/redeem'
     | '/v1/admin/applications/'
     | '/v1/admin/audit-logs/'
@@ -1519,6 +1540,7 @@ export interface FileRouteTypes {
     | '/admin/applications'
     | '/admin/capabilities'
     | '/admin/communication'
+    | '/admin/dashboard-actions'
     | '/admin/dashboard-widgets'
     | '/admin/engagement'
     | '/admin/events'
@@ -1588,6 +1610,7 @@ export interface FileRouteTypes {
     | '/v1/me/advertising/summary'
     | '/v1/me/app-settings/$appId'
     | '/v1/me/notifications/read-all'
+    | '/v1/me/resources/$resourceType'
     | '/v1/me/rewards/redeem'
     | '/v1/admin/applications'
     | '/v1/admin/audit-logs'
@@ -1664,6 +1687,7 @@ export interface FileRouteTypes {
     | '/admin/applications'
     | '/admin/capabilities'
     | '/admin/communication'
+    | '/admin/dashboard-actions'
     | '/admin/dashboard-widgets'
     | '/admin/engagement'
     | '/admin/events'
@@ -1733,6 +1757,7 @@ export interface FileRouteTypes {
     | '/v1/me/advertising/summary'
     | '/v1/me/app-settings/$appId'
     | '/v1/me/notifications/read-all'
+    | '/v1/me/resources/$resourceType'
     | '/v1/me/rewards/redeem'
     | '/v1/admin/applications/'
     | '/v1/admin/audit-logs/'
@@ -1862,6 +1887,7 @@ export interface RootRouteChildren {
   V1MeAdvertisingSummaryRoute: typeof V1MeAdvertisingSummaryRoute
   V1MeAppSettingsAppIdRoute: typeof V1MeAppSettingsAppIdRoute
   V1MeNotificationsReadAllRoute: typeof V1MeNotificationsReadAllRoute
+  V1MeResourcesResourceTypeRoute: typeof V1MeResourcesResourceTypeRoute
   V1MeRewardsRedeemRoute: typeof V1MeRewardsRedeemRoute
   V1AdminApplicationsIndexRoute: typeof V1AdminApplicationsIndexRoute
   V1AdminAuditLogsIndexRoute: typeof V1AdminAuditLogsIndexRoute
@@ -1998,6 +2024,13 @@ declare module '@tanstack/react-router' {
       path: '/communication'
       fullPath: '/admin/communication'
       preLoaderRoute: typeof AdminCommunicationRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/dashboard-actions': {
+      id: '/admin/dashboard-actions'
+      path: '/dashboard-actions'
+      fullPath: '/admin/dashboard-actions'
+      preLoaderRoute: typeof AdminDashboardActionsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/dashboard-widgets': {
@@ -2595,6 +2628,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof V1MeNotificationsReadAllRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/v1/me/resources/$resourceType': {
+      id: '/v1/me/resources/$resourceType'
+      path: '/v1/me/resources/$resourceType'
+      fullPath: '/v1/me/resources/$resourceType'
+      preLoaderRoute: typeof V1MeResourcesResourceTypeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/v1/me/rewards/': {
       id: '/v1/me/rewards/'
       path: '/v1/me/rewards'
@@ -2939,6 +2979,7 @@ interface AdminRouteChildren {
   AdminApplicationsRoute: typeof AdminApplicationsRoute
   AdminCapabilitiesRoute: typeof AdminCapabilitiesRoute
   AdminCommunicationRoute: typeof AdminCommunicationRoute
+  AdminDashboardActionsRoute: typeof AdminDashboardActionsRoute
   AdminDashboardWidgetsRoute: typeof AdminDashboardWidgetsRoute
   AdminEngagementRoute: typeof AdminEngagementRoute
   AdminEventsRoute: typeof AdminEventsRoute
@@ -2957,6 +2998,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminApplicationsRoute: AdminApplicationsRoute,
   AdminCapabilitiesRoute: AdminCapabilitiesRoute,
   AdminCommunicationRoute: AdminCommunicationRoute,
+  AdminDashboardActionsRoute: AdminDashboardActionsRoute,
   AdminDashboardWidgetsRoute: AdminDashboardWidgetsRoute,
   AdminEngagementRoute: AdminEngagementRoute,
   AdminEventsRoute: AdminEventsRoute,
@@ -3060,6 +3102,7 @@ const rootRouteChildren: RootRouteChildren = {
   V1MeAdvertisingSummaryRoute: V1MeAdvertisingSummaryRoute,
   V1MeAppSettingsAppIdRoute: V1MeAppSettingsAppIdRoute,
   V1MeNotificationsReadAllRoute: V1MeNotificationsReadAllRoute,
+  V1MeResourcesResourceTypeRoute: V1MeResourcesResourceTypeRoute,
   V1MeRewardsRedeemRoute: V1MeRewardsRedeemRoute,
   V1AdminApplicationsIndexRoute: V1AdminApplicationsIndexRoute,
   V1AdminAuditLogsIndexRoute: V1AdminAuditLogsIndexRoute,

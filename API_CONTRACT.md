@@ -525,6 +525,19 @@ Same shape as the Capabilities per-application pair in §8.
 
 A pure aggregation over already-documented data — `reward_ledger`, `reward_levels`, Missions/Challenges (§13), Streaks (§13), Entitlements (§13). **Implementation status:** internal only (`getMyActivityDashboard()`, `src/lib/activity-dashboard.functions.ts`, rendered at `/dashboard/activity`) — not yet a public `/v1` REST route, same status as the other Priority 15 internal-only surfaces documented above. A future `GET /v1/me/activity` would return per-application activity counts + total, lifetime points, current level, Missions/Challenges summary counts, active streaks, active entitlements, and a recent-activity feed — one response shape, not five separate calls — if/when an external consumer needs it.
 
+### User Engagement & Dashboard Actions (Priority 21)
+
+Business rules: `PROJECT_KNOWLEDGE.md` → User Engagement & Dashboard Actions. Admin-authored/application-scoped `dashboard_actions` (offers/actions/complete-tasks/discovery prompts) and their resolution for the current user (`resolveMyDashboardActions()`, `getMyResourceReferences()`) are **internal only** — no public `/v1` read route, the same status `dashboard_offers` (Priority 17) already has, for the same reason: this content is rendered exclusively by CORE's own Dashboard, not consumed by connected applications.
+
+**`resource_references` — a generic pointer to a resource a user owns in a connected application's own database — is the one part of this layer a connected application genuinely needs to write to, so it gets a real public endpoint:**
+
+### `PUT /v1/me/resources/{resourceType}`
+Upserts the calling application's resource reference for the calling user (e.g. `resourceType = "shop"`). Scoped to the caller's own verified identity and application (`sub`/`azp`) exactly like `POST /v1/events` (§13) — never accepts a body-supplied `userId`/`appId`. CORE stores only this generic reference; the underlying business data (the Shop itself) stays entirely in the calling application's own database.
+- **Auth:** user (application-authenticated — the calling application's own token, minted for the current end user). **Capability:** none.
+- **Request body:** `{ "label": "My Shop", "status": "active", "destination": "https://eshop.ba/my-shop" }` — `status` one of `active`/`pending`/`incomplete`/`inactive` (default `active`); `destination` optional, must be an internal relative path or an absolute `http(s)` URL.
+- **Response 200:** `{ "data": { "resourceType": "shop", "label": "My Shop", "status": "active", "destination": "https://eshop.ba/my-shop" } }`
+- One row per `(user, app, resourceType)` — calling again with the same `resourceType` updates the existing reference rather than creating a second one.
+
 ---
 
 ## 10. Premium

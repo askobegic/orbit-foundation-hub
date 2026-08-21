@@ -2659,6 +2659,64 @@ export type Database = {
           },
         ]
       }
+      resource_references: {
+        Row: {
+          app_id: string
+          created_at: string
+          destination: string | null
+          id: string
+          label: string
+          resource_type: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          app_id: string
+          created_at?: string
+          destination?: string | null
+          id?: string
+          label: string
+          resource_type: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          app_id?: string
+          created_at?: string
+          destination?: string | null
+          id?: string
+          label?: string
+          resource_type?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_references_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resource_references_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resource_references_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reward_achievements: {
         Row: {
           archived: boolean
@@ -2993,6 +3051,136 @@ export type Database = {
           label?: string
         }
         Relationships: []
+      }
+      dashboard_actions: {
+        Row: {
+          action_type: string
+          app_id: string | null
+          archived: boolean
+          created_at: string
+          created_by: string | null
+          cta_bs: string | null
+          cta_de: string | null
+          cta_en: string | null
+          description_bs: string | null
+          description_de: string | null
+          description_en: string | null
+          destination: string
+          display_order: number
+          enabled: boolean
+          ends_at: string | null
+          icon: string | null
+          id: string
+          requires_missing_resource_type: string | null
+          starts_at: string | null
+          target_segment: string | null
+          target_type: string
+          target_user_id: string | null
+          title_bs: string
+          title_de: string
+          title_en: string
+          updated_at: string
+        }
+        Insert: {
+          action_type: string
+          app_id?: string | null
+          archived?: boolean
+          created_at?: string
+          created_by?: string | null
+          cta_bs?: string | null
+          cta_de?: string | null
+          cta_en?: string | null
+          description_bs?: string | null
+          description_de?: string | null
+          description_en?: string | null
+          destination: string
+          display_order?: number
+          enabled?: boolean
+          ends_at?: string | null
+          icon?: string | null
+          id?: string
+          requires_missing_resource_type?: string | null
+          starts_at?: string | null
+          target_segment?: string | null
+          target_type: string
+          target_user_id?: string | null
+          title_bs: string
+          title_de: string
+          title_en: string
+          updated_at?: string
+        }
+        Update: {
+          action_type?: string
+          app_id?: string | null
+          archived?: boolean
+          created_at?: string
+          created_by?: string | null
+          cta_bs?: string | null
+          cta_de?: string | null
+          cta_en?: string | null
+          description_bs?: string | null
+          description_de?: string | null
+          description_en?: string | null
+          destination?: string
+          display_order?: number
+          enabled?: boolean
+          ends_at?: string | null
+          icon?: string | null
+          id?: string
+          requires_missing_resource_type?: string | null
+          starts_at?: string | null
+          target_segment?: string | null
+          target_type?: string
+          target_user_id?: string | null
+          title_bs?: string
+          title_de?: string
+          title_en?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_actions_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dashboard_actions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dashboard_actions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dashboard_actions_target_segment_fkey"
+            columns: ["target_segment"]
+            isOneToOne: false
+            referencedRelation: "offer_segments"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "dashboard_actions_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dashboard_actions_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       dashboard_offers: {
         Row: {

@@ -7,6 +7,7 @@ import {
   BadgeCheck,
   Clock,
   CreditCard,
+  Compass,
   Gift,
   HelpCircle,
   Image,
@@ -201,6 +202,12 @@ function AdminGate() {
       icon: Tag,
       title: t("admin.hub.cards.offersCoupons.title"),
       desc: t("admin.hub.cards.offersCoupons.desc"),
+    },
+    {
+      to: "/admin/dashboard-actions",
+      icon: Compass,
+      title: t("admin.hub.cards.dashboardActions.title"),
+      desc: t("admin.hub.cards.dashboardActions.desc"),
     },
   ];
   return (

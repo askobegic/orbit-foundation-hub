@@ -513,6 +513,7 @@
       "disabled": "Disabled",
       "archive": "Archive",
       "unarchive": "Unarchive",
+      "delete": "Delete",
       "create": "Create",
       "enable": "Enable",
       "disable": "Disable",
@@ -1102,7 +1103,8 @@
         "engagement": { "title": "Missions, Challenges & Streaks", "desc": "Define missions, challenges, and streaks, global or per application." },
         "support": { "title": "Support", "desc": "User support tickets and replies." },
         "members": { "title": "Members", "desc": "Configure section counts and directory pagination for the Members page." },
-        "offersCoupons": { "title": "Offers & Coupons", "desc": "Global Offers, Individual Offers, Public Coupons, Reward Boosts." }
+        "offersCoupons": { "title": "Offers & Coupons", "desc": "Global Offers, Individual Offers, Public Coupons, Reward Boosts." },
+        "dashboardActions": { "title": "Dashboard Actions", "desc": "Generic Dashboard offers, actions, and resource references shown to users." }
       }
     },
     "verification": {
@@ -1193,6 +1195,32 @@
       "offerCreated": "Offer created",
       "couponCreated": "Coupon created",
       "boostCreated": "Reward boost created"
+    },
+    "dashboardActions": {
+      "title": "Dashboard Actions",
+      "subtitle": "Manage generic Dashboard offers, actions, and resource references shown on the central Dashboard.",
+      "globalActionsTitle": "Global Actions",
+      "individualActionsTitle": "Individual Actions",
+      "resourceReferencesTitle": "Resource References",
+      "actionType": "Action type",
+      "actionType_offer": "Offer",
+      "actionType_action": "Action",
+      "actionType_complete_task": "Complete task",
+      "actionType_discovery": "Discovery",
+      "applicationNone": "Platform-wide (no application)",
+      "cta": "CTA label",
+      "icon": "Icon (emoji)",
+      "destination": "Destination",
+      "destinationPlaceholder": "/dashboard/profile or https://eshop.ba/my-shop",
+      "requiresMissingResourceType": "Requires missing resource type",
+      "requiresMissingResourceTypePlaceholder": "e.g. shop (optional)",
+      "displayOrder": "Display order",
+      "actionCreated": "Dashboard action created",
+      "userId": "User",
+      "userIdPlaceholder": "Search by username or email",
+      "resourceType": "Resource type",
+      "status": "Status",
+      "resourceCreated": "Resource reference saved"
     }
   },
   "members": {
@@ -1237,6 +1265,22 @@
         "not_started": "This coupon is not active yet.",
         "max_uses_reached": "This coupon has reached its maximum number of uses."
       }
+    }
+  },
+  "dashboardActions": {
+    "myResources": "My Resources",
+    "forYou": "For You",
+    "complete": "Complete",
+    "new": "New",
+    "discover": "Discover",
+    "open": "Open",
+    "recentActivity": "Recent Activity",
+    "core": "Core",
+    "status": {
+      "active": "active",
+      "pending": "pending",
+      "incomplete": "incomplete",
+      "inactive": "inactive"
     }
   },
   "advertisingSlot": {

@@ -513,6 +513,7 @@
       "disabled": "Onemogućeno",
       "archive": "Arhiviraj",
       "unarchive": "Vrati iz arhive",
+      "delete": "Obriši",
       "create": "Kreiraj",
       "enable": "Omogući",
       "disable": "Onemogući",
@@ -1102,7 +1103,8 @@
         "engagement": { "title": "Misije, izazovi i nizovi", "desc": "Definirajte misije, izazove i nizove, globalno ili po aplikaciji." },
         "support": { "title": "Podrška", "desc": "Korisnički zahtjevi za podršku i odgovori." },
         "members": { "title": "Članovi", "desc": "Konfigurišite broj kartica po sekciji i paginaciju direktorija za stranicu Članovi." },
-        "offersCoupons": { "title": "Ponude i kuponi", "desc": "Globalne ponude, individualne ponude, javni kuponi, bonus poeni." }
+        "offersCoupons": { "title": "Ponude i kuponi", "desc": "Globalne ponude, individualne ponude, javni kuponi, bonus poeni." },
+        "dashboardActions": { "title": "Akcije na nadzornoj ploči", "desc": "Generičke ponude, akcije i reference na resurse prikazane korisnicima." }
       }
     },
     "verification": {
@@ -1193,6 +1195,32 @@
       "offerCreated": "Ponuda kreirana",
       "couponCreated": "Kupon kreiran",
       "boostCreated": "Bonus poeni kreirani"
+    },
+    "dashboardActions": {
+      "title": "Akcije na nadzornoj ploči",
+      "subtitle": "Upravljajte generičkim ponudama, akcijama i referencama na resurse prikazanim na centralnoj nadzornoj ploči.",
+      "globalActionsTitle": "Globalne akcije",
+      "individualActionsTitle": "Individualne akcije",
+      "resourceReferencesTitle": "Reference na resurse",
+      "actionType": "Vrsta akcije",
+      "actionType_offer": "Ponuda",
+      "actionType_action": "Akcija",
+      "actionType_complete_task": "Dovršite zadatak",
+      "actionType_discovery": "Otkriće",
+      "applicationNone": "Cijela platforma (bez aplikacije)",
+      "cta": "CTA oznaka",
+      "icon": "Ikona (emoji)",
+      "destination": "Odredište",
+      "destinationPlaceholder": "/dashboard/profile ili https://eshop.ba/my-shop",
+      "requiresMissingResourceType": "Zahtijeva nedostajući tip resursa",
+      "requiresMissingResourceTypePlaceholder": "npr. shop (opcionalno)",
+      "displayOrder": "Redoslijed prikaza",
+      "actionCreated": "Akcija na nadzornoj ploči kreirana",
+      "userId": "Korisnik",
+      "userIdPlaceholder": "Pretraži po korisničkom imenu ili emailu",
+      "resourceType": "Tip resursa",
+      "status": "Status",
+      "resourceCreated": "Referenca na resurs sačuvana"
     }
   },
   "members": {
@@ -1237,6 +1265,22 @@
         "not_started": "Ovaj kupon još nije aktivan.",
         "max_uses_reached": "Ovaj kupon je dostigao maksimalan broj iskorištavanja."
       }
+    }
+  },
+  "dashboardActions": {
+    "myResources": "Moji resursi",
+    "forYou": "Za vas",
+    "complete": "Završite",
+    "new": "Novo",
+    "discover": "Otkrijte",
+    "open": "Otvori",
+    "recentActivity": "Nedavna aktivnost",
+    "core": "Core",
+    "status": {
+      "active": "aktivno",
+      "pending": "na čekanju",
+      "incomplete": "nepotpuno",
+      "inactive": "neaktivno"
     }
   },
   "advertisingSlot": {
