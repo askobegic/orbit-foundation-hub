@@ -1166,6 +1166,7 @@ This section aggregates the highest-impact, trust-boundary-crossing issues found
 - **Resolution:** Generalized, not messaging-specific — `notifications.target_path` (nullable, CHECK-constrained to `^/dashboard/...` only, no external URL ever accepted, the same validate-before-storage rule as `CO-1`). `NotificationBell.tsx` now navigates to `target_path` and marks the notification read on click, for any notification type that sets it (currently: Admin → User Communication broadcasts, "Benefit granted", "Admin reply" on a support ticket). The one-on-one messaging module itself was not touched in this pass — a "new message" notification can adopt `target_path` the same way in a future, separate change.
 - **Commit:** (Priority 15 Phase D — see `CLAUDE.md` → Priority 15 for the commit hash)
 - **Date:** 2026-08-11
+- **Update (2026-08-21, documentation synchronization pass):** The "future, separate change" this resolution anticipated has since happened — Priority 19 (CORE Notification & User Engagement System) routed `sendMessage`'s notification through `sendNotification()` with `targetPath: /dashboard/messages/{conversationId}` set (`src/lib/message.functions.ts`), as a direct consequence of fixing the unrelated `MSG-1`-adjacent RLS-insert bug found in that same pass (see `PROJECT_AUDIT.md` → Priority 19 notes elsewhere in this document and `CLAUDE.md` → Priority 19). A "new message" notification now deep-links to its conversation like every other `target_path`-bearing notification. Verified by reading the current source, not assumed.
 
 ---
 

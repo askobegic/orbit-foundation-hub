@@ -550,7 +550,7 @@ Business rules: `PROJECT_KNOWLEDGE.md` → Premium Model, CORE Premium Service. 
   ```json
   { "data": { "active": true, "source": "subscription", "expiresAt": "2026-09-01T00:00:00.000Z" } }
   ```
-  `source` is `"subscription"`, `"trial"`, or `null` (never active). Identical shape to `resolvePremiumStatus()`'s internal return (`PROJECT_AUDIT.md` → `A-5`) — the API is a direct pass-through of the one resolver, not a reinterpretation of it.
+  `source` is `"subscription"`, `"trial"`, `"entitlement"` (added Priority 15C — a third, independent Premium source, see §13's Entitlements subsection), or `null` (never active). Identical shape to `resolvePremiumStatus()`'s internal return (`PROJECT_AUDIT.md` → `A-5`) — the API is a direct pass-through of the one resolver, not a reinterpretation of it.
 
 ### `GET /v1/me/visible-applications`
 - **Auth:** user. **Capability:** none.
